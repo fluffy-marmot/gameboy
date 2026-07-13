@@ -10,8 +10,6 @@
 #define BC ((uint16_t) ((cpu.B << 8) | cpu.C))
 #define DE ((uint16_t) ((cpu.D << 8) | cpu.E))
 #define HL ((uint16_t) ((cpu.H << 8) | cpu.L))
-#define WZ ((uint16_t) ((cpu.W << 8) | cpu.Z))
-
 
 typedef struct {
     void (*cycles[MAX_MCYCLE_INSTRUCTION])(void);
@@ -20,33 +18,44 @@ typedef struct {
 
 gb_cpu_t cpu;
 
-void nop(void) {};
+// TODO: can I inline other stuff here? I'm unclear
+
+static void nop(void) {};
+
+static inline void HL_dec()         { uint16_t hl = HL - 1; cpu.H = hl >> 8; cpu.L = hl; }
+static inline void HL_inc()         { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu.L = hl; }
 
 /*
-Helper functions to load to temporary 8-bit latch Z from various 16-bit memory locations
+Helper functions to load to temporary 8-bit latch Z or W from various 16-bit memory locations
 */
-cpu_read_memory_PC_W()  { cpu.W = cpu.bus->read(cpu.PC++);       }
-cpu_read_memory_PC_Z()  { cpu.Z = cpu.bus->read(cpu.PC++);       }
-cpu_read_memory_BC_Z()  { cpu.Z = cpu.bus->read(BC);             }
-cpu_read_memory_DE_Z()  { cpu.Z = cpu.bus->read(DE);             }
-cpu_read_memory_HL_Z()  { cpu.Z = cpu.bus->read(HL);             }
-cpu_read_memory_WZ_Z()  { cpu.Z = cpu.bus->read(WZ);             }
-cpu_read_memory__C_Z()  { cpu.Z = cpu.bus->read(0xFF00 + cpu.C); }
+static void cpu_read_memory_PC_W()  { cpu.W = cpu.bus->read(cpu.PC++);       }
+static void cpu_read_memory_PC_Z()  { cpu.Z = cpu.bus->read(cpu.PC++);       }
+static void cpu_read_memory_BC_Z()  { cpu.Z = cpu.bus->read(BC);             }
+static void cpu_read_memory_DE_Z()  { cpu.Z = cpu.bus->read(DE);             }
+static void cpu_read_memory_HL_Z()  { cpu.Z = cpu.bus->read(HL);             }
+static void cpu_read_memory_HLdZ()  { cpu.Z = cpu.bus->read(HL); HL_dec();   }
+static void cpu_read_memory_HLiZ()  { cpu.Z = cpu.bus->read(HL); HL_inc();   }
+static void cpu_read_memory_WZ_Z()  { cpu.Z = cpu.bus->read(cpu.WZ);         }
+static void cpu_read_memory__C_Z()  { cpu.Z = cpu.bus->read(0xFF00 + cpu.C); }
+static void cpu_read_memory__Z_Z()  { cpu.Z = cpu.bus->read(0xFF00 + cpu.Z); }
 
 
 /*
 Helper functions to write to various 16-bit memory locations, various 8-bit values
 */
-cpu_write_memory_HL_R() { cpu.bus->write(HL, cpu.reg[IR_REG_R]); }
-cpu_write_memory_HL_Z() { cpu.bus->write(HL, cpu.Z);             }
-cpu_write_memory_BC_A() { cpu.bus->write(BC, cpu.A);             }
-cpu_write_memory_DE_A() { cpu.bus->write(DE, cpu.A);             }
-cpu_write_memory_WZ_A() { cpu.bus->write(WZ, cpu.A);             }
-cpu_write_memory__C_A() { cpu.bus->write(0xFF00 + cpu.C, cpu.A); }
+static void cpu_write_memory_HL_R() { cpu.bus->write(HL, cpu.reg[IR_REG_R]); }
+static void cpu_write_memory_HL_Z() { cpu.bus->write(HL, cpu.Z);             }
+static void cpu_write_memory_BC_A() { cpu.bus->write(BC, cpu.A);             }
+static void cpu_write_memory_DE_A() { cpu.bus->write(DE, cpu.A);             }
+static void cpu_write_memory_HLdA() { cpu.bus->write(HL, cpu.A); HL_dec();   }
+static void cpu_write_memory_HLiA() { cpu.bus->write(HL, cpu.A); HL_inc();   }
+static void cpu_write_memory_WZ_A() { cpu.bus->write(cpu.WZ, cpu.A);         }
+static void cpu_write_memory__C_A() { cpu.bus->write(0xFF00 + cpu.C, cpu.A); }
+static void cpu_write_memory__Z_A() { cpu.bus->write(0xFF00 + cpu.Z, cpu.A); }
 
 
 // Load 8-bit value of Z to register A
-void
+static void
 LD_load_A_Z(void)
 {
     cpu.A = cpu.Z;
@@ -56,9 +65,7 @@ LD_load_A_Z(void)
 Helper to load data to the 8-bit register r from latch Z
 Used by LD r n, LD r (HL)
 */
-
-
-void
+static void
 LD_load_register_Z(void)
 {
     cpu.reg[IR_REG_R] = cpu.Z;
@@ -68,13 +75,13 @@ LD_load_register_Z(void)
 Load register (register)
 LD r r' : load to the 8-bit register r, data from 8-bit register r'
 */
-void
+static void
 LD_load_register_register(void)
 {
     cpu.reg[IR_REG_L] = cpu.reg[IR_REG_R];
 }
 
-const instruction_t LD_r_r = {
+static const instruction_t LD_r_r = {
     .cycles = { LD_load_register_register },
     .cycle_count = 1
 };
@@ -83,7 +90,7 @@ const instruction_t LD_r_r = {
 Load register (immediate)
 LD r n : load to the 8-bit register r, the immediate data n
 */
-const instruction_t LD_r_n = {
+static const instruction_t LD_r_n = {
     .cycles = { cpu_read_memory_PC_Z, LD_load_register_Z },
     .cycle_count = 2
 };
@@ -92,7 +99,7 @@ const instruction_t LD_r_n = {
 Load register (indirect HL)
 LD r (HL): load to the 8-bit register r, data from address specified by HL
 */
-const instruction_t LD_r_HL = {
+static const instruction_t LD_r_HL = {
     .cycles = { cpu_read_memory_HL_Z, LD_load_register_Z },
     .cycle_count = 2
 };
@@ -101,7 +108,7 @@ const instruction_t LD_r_HL = {
 Load from register (indirect HL)
 LD (HL) r: load to the address specified by HL, data from the 8-bit register r
 */
-const instruction_t LD_HL_r = {
+static const instruction_t LD_HL_r = {
     .cycles = { cpu_write_memory_HL_R, nop },
     .cycle_count = 2
 };
@@ -110,7 +117,7 @@ const instruction_t LD_HL_r = {
 Load from immediate data (indirect HL)
 LD (HL) n: load to the address specified by HL, the immediate data n
 */
-const instruction_t LD_HL_n = {
+static const instruction_t LD_HL_n = {
     .cycles = { cpu_read_memory_PC_Z, cpu_write_memory_HL_Z, nop },
     .cycle_count = 3
 };
@@ -119,7 +126,7 @@ const instruction_t LD_HL_n = {
 Load accumulator (indirect BC)
 LD A (BC): load to the 8-bit register A, data from address specified by BC
 */
-const instruction_t LD_A_BC = {
+static const instruction_t LD_A_BC = {
     .cycles = { cpu_read_memory_BC_Z, LD_load_A_Z },
     .cycle_count = 2
 };
@@ -128,7 +135,7 @@ const instruction_t LD_A_BC = {
 Load accumulator (indirect DE)
 LD A (DE): load to the 8-bit register A, data from address specified by DE
 */
-const instruction_t LD_A_DE = {
+static const instruction_t LD_A_DE = {
     .cycles = { cpu_read_memory_DE_Z, LD_load_A_Z },
     .cycle_count = 2
 };
@@ -137,7 +144,7 @@ const instruction_t LD_A_DE = {
 Load from accumulator (indirect BC)
 LD (BC) A: load to the address specified by BC, data from 8-bit register A
 */
-const instruction_t LD_BC_A = {
+static const instruction_t LD_BC_A = {
     .cycles = { cpu_write_memory_BC_A, nop },
     .cycle_count = 2
 };
@@ -146,7 +153,7 @@ const instruction_t LD_BC_A = {
 Load from accumulator (indirect DE)
 LD (DE) A: load to the address specified by DE, data from the 8-bit register A
 */
-const instruction_t LD_DE_A = {
+static const instruction_t LD_DE_A = {
     .cycles = { cpu_write_memory_DE_A, nop },
     .cycle_count = 2
 };
@@ -155,7 +162,7 @@ const instruction_t LD_DE_A = {
 Load accumulator (direct)
 LD A (nn): load to the 8-bit register A, data from the address specified by nn
 */
-const instruction_t LD_A_nn = {
+static const instruction_t LD_A_nn = {
     .cycles = { cpu_read_memory_PC_Z, cpu_read_memory_PC_W, cpu_read_memory_WZ_Z, LD_load_A_Z },
     .cycle_count = 4
 };
@@ -164,7 +171,7 @@ const instruction_t LD_A_nn = {
 Load from accumulator (direct)
 LD (nn) A: load to the address specified by nn, data from the 8-bit register A
 */
-const instruction_t LD_nn_A = {
+static const instruction_t LD_nn_A = {
     .cycles = { cpu_read_memory_PC_Z, cpu_read_memory_PC_W, cpu_write_memory_WZ_A, nop },
     .cycle_count = 4
 };
@@ -173,7 +180,7 @@ const instruction_t LD_nn_A = {
 Load accumulator (indirect 0xFF00 + C)
 LDH A (C): load to the 8-bit register A, data from the address 0xFF00 + C
 */
-const instruction_t LDH_A__C = {
+static const instruction_t LDH_A__C = {
     .cycles = { cpu_read_memory__C_Z, LD_load_A_Z },
     .cycle_count = 2
 };
@@ -182,8 +189,62 @@ const instruction_t LDH_A__C = {
 Load from accumulator (indirect 0xFF00 + C)
 LDH (C) A: load to the address 0xFF00 + C, data from the 8-bit register A
 */
-const instruction_t LDH__C_A = {
+static const instruction_t LDH__C_A = {
     .cycles = { cpu_write_memory__C_A, nop },
+    .cycle_count = 2
+};
+
+/*
+Load accumulator (direct 0xFF00 + n)
+LDH A (n): load to the 8-bit register A, data from the address 0xFF00 + n
+*/
+static const instruction_t LDH_A__n = {
+    .cycles = { cpu_read_memory_PC_Z, cpu_read_memory__Z_Z, LD_load_A_Z },
+    .cycle_count = 3
+};
+
+/*
+Load from accumulator (direct 0xFF00 + n)
+LDH (n) A: load to the address 0xFF00 + n, data from the 8-bit register A
+*/
+static const instruction_t LDH__n_A = {
+    .cycles = { cpu_read_memory_PC_Z, cpu_write_memory__Z_A, nop },
+    .cycle_count = 3
+};
+
+/*
+Load accumulator (indirect HL, decrement)
+LD A (HL-): load to the 8-bit register A, data from address specified by HL, decrement HL after
+*/
+static const instruction_t LD_A_HLd = {
+    .cycles = { cpu_read_memory_HLdZ, LD_load_A_Z },
+    .cycle_count = 2
+};
+
+/*
+Load from accumulator (indirect HL, decrement)
+LD (HL-) A: load to the address HL, data from the 8-bit register A, decrement HL after
+*/
+static const instruction_t LD_HLd_A = {
+    .cycles = { cpu_write_memory_HLdA, nop },
+    .cycle_count = 2
+};
+
+/*
+Load accumulator (indirect HL, increment)
+LD A (HL+): load to the 8-bit register A, data from address specified by HL, increment HL after
+*/
+static const instruction_t LD_A_HLi = {
+    .cycles = { cpu_read_memory_HLiZ, LD_load_A_Z },
+    .cycle_count = 2
+};
+
+/*
+Load from accumulator (indirect HL, increment)
+LD (HL+) A: load to the address HL, data from the 8-bit register A, increment HL after
+*/
+static const instruction_t LD_HLi_A = {
+    .cycles = { cpu_write_memory_HLiA, nop },
     .cycle_count = 2
 };
 
@@ -236,7 +297,7 @@ instruction_t OPCODE_TABLE[256] = {
 
     [0x20] = ,
     [0x21] = ,
-    [0x22] = ,
+    [0x22] = LD_HLi_A,
     [0x23] = ,
     [0x24] = ,
     [0x25] = ,
@@ -244,7 +305,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x27] = ,
     [0x28] = ,
     [0x29] = ,
-    [0x2A] = ,
+    [0x2A] = LD_A_HLi,
     [0x2B] = ,
     [0x2C] = ,
     [0x2D] = ,
@@ -253,7 +314,7 @@ instruction_t OPCODE_TABLE[256] = {
 
     [0x30] = ,
     [0x31] = ,
-    [0x32] = ,
+    [0x32] = LD_HLd_A,
     [0x33] = ,
     [0x34] = ,
     [0x35] = ,
@@ -261,7 +322,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x37] = ,
     [0x38] = ,
     [0x39] = ,
-    [0x3A] = ,
+    [0x3A] = LD_A_HLd,
     [0x3B] = ,
     [0x3C] = ,
     [0x3D] = ,
@@ -438,7 +499,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xDE] = ,
     [0xDF] = ,
 
-    [0xE0] = ,
+    [0xE0] = LDH__n_A,
     [0xE1] = ,
     [0xE2] = LDH__C_A,
     [0xE3] = ,
@@ -455,7 +516,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xEE] = ,
     [0xEF] = ,
 
-    [0xF0] = ,
+    [0xF0] = LDH_A__n,
     [0xF1] = ,
     [0xF2] = LDH_A__C,
     [0xF3] = ,

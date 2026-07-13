@@ -16,7 +16,7 @@ typedef struct {
             uint8_t H;              // 0x04 0b100
             uint8_t L;              // 0x05 0b101
             union {
-                uint16_t AF;        // unfortunately other pairs have wrong endianness 
+                uint16_t AF;        // this pair has little endianness in natural order, unlike others
                 struct {
                     uint8_t F;      // z, n, h, c flags (zero, subtraction, half carry, carry)        
                     uint8_t A;      // 0x06 0b111
@@ -37,7 +37,9 @@ typedef struct {
     };
 
     gb_bus_t *bus;                  // access to memory read/write
-} gb_cpu_t;
+} sm83_cpu_t;
+
+typedef sm83_cpu_t gb_cpu_t;
 
 extern gb_cpu_t cpu;
 
