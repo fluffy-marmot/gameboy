@@ -1,18 +1,9 @@
-#ifndef GB_HARDWARE
-#define GB_HARDWARE
+#ifndef GB_CPU
+#define GB_CPU
+
+#include "bus.h"
 
 #include <stdint.h>
-
-#define KiB                         1024
-
-#define GB_DMG_WRAM             ( 8 * KiB)
-#define GB_CGB_WRAM             (32 * KiB)
-#define GB_DMG VRAM             ( 8 * KiB)
-#define GB_CGB VRAM             (16 * KiB)
-
-#define GB_DISPLAY_WIDTH            160
-#define GB_DISPLAY_HEIGHT           144
-
 
 typedef struct {
     union {
@@ -37,11 +28,11 @@ typedef struct {
     uint16_t SP;
     uint8_t IR;                     // instruction register
     uint8_t IE;                     // interrupt enable
+    uint8_t Z;                      // latch used to store data between M-cycles
+
+    gb_bus_t *bus;
 } gb_cpu_t;
 
-typedef struct {
-    gb_cpu_t cpu;
-    uint8_t *mem;       // TODO
-} gb_gameboy_t;
+extern gb_cpu_t cpu;
 
 #endif

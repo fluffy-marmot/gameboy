@@ -1,17 +1,21 @@
-#include "hardware.h"
+#include "bus.h"
+#include "cpu.h"
 
 #define REG_MASK 0b00000111
+#define MAX_MCYCLE_INSTRUCTION 4
 
 typedef struct {
-    void (*op)(void);
-} microcycle_t;
-
-typedef struct {
-    microcycle_t steps[4];
-    uint8_t step_count;
+    void (*cycles[MAX_MCYCLE_INSTRUCTION])(void);
+    uint8_t cycle_count;
 } instruction_t;
 
-gb_gameboy_t GB;
+gb_cpu_t cpu;
+
+void
+cpu_read_memory_Z(void)
+{
+    cpu.Z = cpu.bus->read(cpu.PC++);
+}
 
 /*
 LD r r' : Load to the 8-bit register r, data from 8-bit register r'
@@ -19,13 +23,28 @@ LD r r' : Load to the 8-bit register r, data from 8-bit register r'
 void
 LD_load_register_register(void)
 {
-    GB.cpu.reg[(GB.cpu.IR >> 3) & REG_MASK] = GB.cpu.reg[GB.cpu.IR & REG_MASK];
+    cpu.reg[(cpu.IR >> 3) & REG_MASK] = cpu.reg[cpu.IR & REG_MASK];
 }
 
 const instruction_t LD_R_R = {
-    .steps = { { LD_load_register_register } },
-    .step_count = 1
+    .cycles = { LD_load_register_register },
+    .cycle_count = 1
 };
+
+/*
+LD r n : Load to the 8-bit register r, the immediate data n
+*/
+void
+LD_load_register_immediate(void)
+{
+    cpu.reg[(cpu.IR >> 3) & REG_MASK] = cpu.Z;
+}
+
+const instruction_t LD_R_n = {
+    .cycles = { cpu_read_memory_Z, LD_load_register_immediate },
+    .cycle_count = 1
+};
+
 
 void
 do_machine_cycle(void)
