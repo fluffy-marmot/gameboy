@@ -29,8 +29,9 @@ typedef struct {
     uint8_t IR;                     // instruction register
     uint8_t IE;                     // interrupt enable
     uint8_t Z;                      // latch used to store data between M-cycles
+    uint8_t W;                      // latch used to store data between M-cycles
 
-    gb_bus_t *bus;
+    gb_bus_t *bus;                  // access to memory read/write
 } gb_cpu_t;
 
 extern gb_cpu_t cpu;

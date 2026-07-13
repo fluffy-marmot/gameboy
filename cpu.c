@@ -1,8 +1,17 @@
 #include "bus.h"
 #include "cpu.h"
 
-#define REG_MASK 0b00000111
 #define MAX_MCYCLE_INSTRUCTION 4
+
+#define REG_MASK 0b00000111
+#define IR_REG_L ((cpu.IR >> 3) & REG_MASK)
+#define IR_REG_R  (cpu.IR       & REG_MASK)
+
+#define BC ((uint16_t) ((cpu.B << 8) | cpu.C))
+#define DE ((uint16_t) ((cpu.D << 8) | cpu.E))
+#define HL ((uint16_t) ((cpu.H << 8) | cpu.L))
+#define WZ ((uint16_t) ((cpu.W << 8) | cpu.Z))
+
 
 typedef struct {
     void (*cycles[MAX_MCYCLE_INSTRUCTION])(void);
@@ -11,40 +20,172 @@ typedef struct {
 
 gb_cpu_t cpu;
 
+void nop(void) {};
+
+/*
+Helper functions to load to temporary 8-bit latch Z from various 16-bit memory locations
+*/
+cpu_read_memory_PC_W()  { cpu.W = cpu.bus->read(cpu.PC++);       }
+cpu_read_memory_PC_Z()  { cpu.Z = cpu.bus->read(cpu.PC++);       }
+cpu_read_memory_BC_Z()  { cpu.Z = cpu.bus->read(BC);             }
+cpu_read_memory_DE_Z()  { cpu.Z = cpu.bus->read(DE);             }
+cpu_read_memory_HL_Z()  { cpu.Z = cpu.bus->read(HL);             }
+cpu_read_memory_WZ_Z()  { cpu.Z = cpu.bus->read(WZ);             }
+cpu_read_memory__C_Z()  { cpu.Z = cpu.bus->read(0xFF00 + cpu.C); }
+
+
+/*
+Helper functions to write to various 16-bit memory locations, various 8-bit values
+*/
+cpu_write_memory_HL_R() { cpu.bus->write(HL, cpu.reg[IR_REG_R]); }
+cpu_write_memory_HL_Z() { cpu.bus->write(HL, cpu.Z);             }
+cpu_write_memory_BC_A() { cpu.bus->write(BC, cpu.A);             }
+cpu_write_memory_DE_A() { cpu.bus->write(DE, cpu.A);             }
+cpu_write_memory_WZ_A() { cpu.bus->write(WZ, cpu.A);             }
+cpu_write_memory__C_A() { cpu.bus->write(0xFF00 + cpu.C, cpu.A); }
+
+
+// Load 8-bit value of Z to register A
 void
-cpu_read_memory_Z(void)
+LD_load_A_Z(void)
 {
-    cpu.Z = cpu.bus->read(cpu.PC++);
+    cpu.A = cpu.Z;
 }
 
 /*
-LD r r' : Load to the 8-bit register r, data from 8-bit register r'
+Helper to load data to the 8-bit register r from latch Z
+Used by LD r n, LD r (HL)
+*/
+
+
+void
+LD_load_register_Z(void)
+{
+    cpu.reg[IR_REG_R] = cpu.Z;
+}
+
+/*
+Load register (register)
+LD r r' : load to the 8-bit register r, data from 8-bit register r'
 */
 void
 LD_load_register_register(void)
 {
-    cpu.reg[(cpu.IR >> 3) & REG_MASK] = cpu.reg[cpu.IR & REG_MASK];
+    cpu.reg[IR_REG_L] = cpu.reg[IR_REG_R];
 }
 
-const instruction_t LD_R_R = {
+const instruction_t LD_r_r = {
     .cycles = { LD_load_register_register },
     .cycle_count = 1
 };
 
 /*
-LD r n : Load to the 8-bit register r, the immediate data n
+Load register (immediate)
+LD r n : load to the 8-bit register r, the immediate data n
 */
-void
-LD_load_register_immediate(void)
-{
-    cpu.reg[(cpu.IR >> 3) & REG_MASK] = cpu.Z;
-}
-
-const instruction_t LD_R_n = {
-    .cycles = { cpu_read_memory_Z, LD_load_register_immediate },
-    .cycle_count = 1
+const instruction_t LD_r_n = {
+    .cycles = { cpu_read_memory_PC_Z, LD_load_register_Z },
+    .cycle_count = 2
 };
 
+/*
+Load register (indirect HL)
+LD r (HL): load to the 8-bit register r, data from address specified by HL
+*/
+const instruction_t LD_r_HL = {
+    .cycles = { cpu_read_memory_HL_Z, LD_load_register_Z },
+    .cycle_count = 2
+};
+
+/* 
+Load from register (indirect HL)
+LD (HL) r: load to the address specified by HL, data from the 8-bit register r
+*/
+const instruction_t LD_HL_r = {
+    .cycles = { cpu_write_memory_HL_R, nop },
+    .cycle_count = 2
+};
+
+/*
+Load from immediate data (indirect HL)
+LD (HL) n: load to the address specified by HL, the immediate data n
+*/
+const instruction_t LD_HL_n = {
+    .cycles = { cpu_read_memory_PC_Z, cpu_write_memory_HL_Z, nop },
+    .cycle_count = 3
+};
+
+/*
+Load accumulator (indirect BC)
+LD A (BC): load to the 8-bit register A, data from address specified by BC
+*/
+const instruction_t LD_A_BC = {
+    .cycles = { cpu_read_memory_BC_Z, LD_load_A_Z },
+    .cycle_count = 2
+};
+
+/*
+Load accumulator (indirect DE)
+LD A (DE): load to the 8-bit register A, data from address specified by DE
+*/
+const instruction_t LD_A_DE = {
+    .cycles = { cpu_read_memory_DE_Z, LD_load_A_Z },
+    .cycle_count = 2
+};
+
+/*
+Load from accumulator (indirect BC)
+LD (BC) A: load to the address specified by BC, data from 8-bit register A
+*/
+const instruction_t LD_BC_A = {
+    .cycles = { cpu_write_memory_BC_A, nop },
+    .cycle_count = 2
+};
+
+/*
+Load from accumulator (indirect DE)
+LD (DE) A: load to the address specified by DE, data from the 8-bit register A
+*/
+const instruction_t LD_DE_A = {
+    .cycles = { cpu_write_memory_DE_A, nop },
+    .cycle_count = 2
+};
+
+/*
+Load accumulator (direct)
+LD A (nn): load to the 8-bit register A, data from the address specified by nn
+*/
+const instruction_t LD_A_nn = {
+    .cycles = { cpu_read_memory_PC_Z, cpu_read_memory_PC_W, cpu_read_memory_WZ_Z, LD_load_A_Z },
+    .cycle_count = 4
+};
+
+/*
+Load from accumulator (direct)
+LD (nn) A: load to the address specified by nn, data from the 8-bit register A
+*/
+const instruction_t LD_nn_A = {
+    .cycles = { cpu_read_memory_PC_Z, cpu_read_memory_PC_W, cpu_write_memory_WZ_A, nop },
+    .cycle_count = 4
+};
+
+/*
+Load accumulator (indirect 0xFF00 + C)
+LDH A (C): load to the 8-bit register A, data from the address 0xFF00 + C
+*/
+const instruction_t LDH_A__C = {
+    .cycles = { cpu_read_memory__C_Z, LD_load_A_Z },
+    .cycle_count = 2
+};
+
+/*
+Load from accumulator (indirect 0xFF00 + C)
+LDH (C) A: load to the address 0xFF00 + C, data from the 8-bit register A
+*/
+const instruction_t LDH__C_A = {
+    .cycles = { cpu_write_memory__C_A, nop },
+    .cycle_count = 2
+};
 
 void
 do_machine_cycle(void)
@@ -61,36 +202,36 @@ main(void)
 instruction_t OPCODE_TABLE[256] = {
     [0x00] = ,
     [0x01] = ,
-    [0x02] = ,
+    [0x02] = LD_BC_A,
     [0x03] = ,
     [0x04] = ,
     [0x05] = ,
-    [0x06] = ,
+    [0x06] = LD_r_n,
     [0x07] = ,
     [0x08] = ,
     [0x09] = ,
-    [0x0A] = ,
+    [0x0A] = LD_A_BC,
     [0x0B] = ,
     [0x0C] = ,
     [0x0D] = ,
-    [0x0E] = ,
+    [0x0E] = LD_r_n,
     [0x0F] = ,
 
     [0x10] = ,
     [0x11] = ,
-    [0x12] = ,
+    [0x12] = LD_DE_A,
     [0x13] = ,
     [0x14] = ,
     [0x15] = ,
-    [0x16] = ,
+    [0x16] = LD_r_n,
     [0x17] = ,
     [0x18] = ,
     [0x19] = ,
-    [0x1A] = ,
+    [0x1A] = LD_A_DE,
     [0x1B] = ,
     [0x1C] = ,
     [0x1D] = ,
-    [0x1E] = ,
+    [0x1E] = LD_r_n,
     [0x1F] = ,
 
     [0x20] = ,
@@ -99,7 +240,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x23] = ,
     [0x24] = ,
     [0x25] = ,
-    [0x26] = ,
+    [0x26] = LD_r_n,
     [0x27] = ,
     [0x28] = ,
     [0x29] = ,
@@ -107,7 +248,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x2B] = ,
     [0x2C] = ,
     [0x2D] = ,
-    [0x2E] = ,
+    [0x2E] = LD_r_n,
     [0x2F] = ,
 
     [0x30] = ,
@@ -116,7 +257,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x33] = ,
     [0x34] = ,
     [0x35] = ,
-    [0x36] = ,
+    [0x36] = LD_HL_n,
     [0x37] = ,
     [0x38] = ,
     [0x39] = ,
@@ -124,76 +265,76 @@ instruction_t OPCODE_TABLE[256] = {
     [0x3B] = ,
     [0x3C] = ,
     [0x3D] = ,
-    [0x3E] = ,
+    [0x3E] = LD_r_n,
     [0x3F] = ,
 
-    [0x40] = LD_R_R,
-    [0x41] = LD_R_R,
-    [0x42] = LD_R_R,
-    [0x43] = LD_R_R,
-    [0x44] = LD_R_R,
-    [0x45] = LD_R_R,
-    [0x46] = ,
-    [0x47] = LD_R_R,
-    [0x48] = LD_R_R,
-    [0x49] = LD_R_R,
-    [0x4A] = LD_R_R,
-    [0x4B] = LD_R_R,
-    [0x4C] = LD_R_R,
-    [0x4D] = LD_R_R,
-    [0x4E] = ,
-    [0x4F] = LD_R_R,
+    [0x40] = LD_r_r,
+    [0x41] = LD_r_r,
+    [0x42] = LD_r_r,
+    [0x43] = LD_r_r,
+    [0x44] = LD_r_r,
+    [0x45] = LD_r_r,
+    [0x46] = LD_r_HL,
+    [0x47] = LD_r_r,
+    [0x48] = LD_r_r,
+    [0x49] = LD_r_r,
+    [0x4A] = LD_r_r,
+    [0x4B] = LD_r_r,
+    [0x4C] = LD_r_r,
+    [0x4D] = LD_r_r,
+    [0x4E] = LD_r_HL,
+    [0x4F] = LD_r_r,
 
-    [0x50] = LD_R_R,
-    [0x51] = LD_R_R,
-    [0x52] = LD_R_R,
-    [0x53] = LD_R_R,
-    [0x54] = LD_R_R,
-    [0x55] = LD_R_R,
-    [0x56] = ,
-    [0x57] = LD_R_R,
-    [0x58] = LD_R_R,
-    [0x59] = LD_R_R,
-    [0x5A] = LD_R_R,
-    [0x5B] = LD_R_R,
-    [0x5C] = LD_R_R,
-    [0x5D] = LD_R_R,
-    [0x5E] = ,
-    [0x5F] = LD_R_R,
+    [0x50] = LD_r_r,
+    [0x51] = LD_r_r,
+    [0x52] = LD_r_r,
+    [0x53] = LD_r_r,
+    [0x54] = LD_r_r,
+    [0x55] = LD_r_r,
+    [0x56] = LD_r_HL,
+    [0x57] = LD_r_r,
+    [0x58] = LD_r_r,
+    [0x59] = LD_r_r,
+    [0x5A] = LD_r_r,
+    [0x5B] = LD_r_r,
+    [0x5C] = LD_r_r,
+    [0x5D] = LD_r_r,
+    [0x5E] = LD_r_HL,
+    [0x5F] = LD_r_r,
 
-    [0x60] = LD_R_R,
-    [0x61] = LD_R_R,
-    [0x62] = LD_R_R,
-    [0x63] = LD_R_R,
-    [0x64] = LD_R_R,
-    [0x65] = LD_R_R,
-    [0x66] = ,
-    [0x67] = LD_R_R,
-    [0x68] = LD_R_R,
-    [0x69] = LD_R_R,
-    [0x6A] = LD_R_R,
-    [0x6B] = LD_R_R,
-    [0x6C] = LD_R_R,
-    [0x6D] = LD_R_R,
-    [0x6E] = ,
-    [0x6F] = LD_R_R,
+    [0x60] = LD_r_r,
+    [0x61] = LD_r_r,
+    [0x62] = LD_r_r,
+    [0x63] = LD_r_r,
+    [0x64] = LD_r_r,
+    [0x65] = LD_r_r,
+    [0x66] = LD_r_HL,
+    [0x67] = LD_r_r,
+    [0x68] = LD_r_r,
+    [0x69] = LD_r_r,
+    [0x6A] = LD_r_r,
+    [0x6B] = LD_r_r,
+    [0x6C] = LD_r_r,
+    [0x6D] = LD_r_r,
+    [0x6E] = LD_r_HL,
+    [0x6F] = LD_r_r,
 
-    [0x70] = ,
-    [0x71] = ,
-    [0x72] = ,
-    [0x73] = ,
-    [0x74] = ,
-    [0x75] = ,
+    [0x70] = LD_HL_r,
+    [0x71] = LD_HL_r,
+    [0x72] = LD_HL_r,
+    [0x73] = LD_HL_r,
+    [0x74] = LD_HL_r,
+    [0x75] = LD_HL_r,
     [0x76] = ,
-    [0x77] = ,
-    [0x78] = LD_R_R,
-    [0x79] = LD_R_R,
-    [0x7A] = LD_R_R,
-    [0x7B] = LD_R_R,
-    [0x7C] = LD_R_R,
-    [0x7D] = LD_R_R,
-    [0x7E] = ,
-    [0x7F] = LD_R_R,
+    [0x77] = LD_HL_r,
+    [0x78] = LD_r_r,
+    [0x79] = LD_r_r,
+    [0x7A] = LD_r_r,
+    [0x7B] = LD_r_r,
+    [0x7C] = LD_r_r,
+    [0x7D] = LD_r_r,
+    [0x7E] = LD_r_HL,
+    [0x7F] = LD_r_r,
 
     [0x80] = ,
     [0x81] = ,
@@ -299,7 +440,7 @@ instruction_t OPCODE_TABLE[256] = {
 
     [0xE0] = ,
     [0xE1] = ,
-    [0xE2] = ,
+    [0xE2] = LDH__C_A,
     [0xE3] = ,
     [0xE4] = ,
     [0xE5] = ,
@@ -307,7 +448,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xE7] = ,
     [0xE8] = ,
     [0xE9] = ,
-    [0xEA] = ,
+    [0xEA] = LD_nn_A,
     [0xEB] = ,
     [0xEC] = ,
     [0xED] = ,
@@ -316,7 +457,7 @@ instruction_t OPCODE_TABLE[256] = {
 
     [0xF0] = ,
     [0xF1] = ,
-    [0xF2] = ,
+    [0xF2] = LDH_A__C,
     [0xF3] = ,
     [0xF4] = ,
     [0xF5] = ,
@@ -324,7 +465,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xF7] = ,
     [0xF8] = ,
     [0xF9] = ,
-    [0xFA] = ,
+    [0xFA] = LD_A_nn,
     [0xFB] = ,
     [0xFC] = ,
     [0xFD] = ,
