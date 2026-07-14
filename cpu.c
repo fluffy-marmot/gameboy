@@ -1,11 +1,32 @@
 #include "bus.h"
 #include "cpu.h"
 
-#define MAX_MCYCLE_INSTRUCTION 4
+#define MAX_MCYCLE_INSTRUCTION 5
 
-#define REG_MASK 0b00000111
-#define IR_REG_L ((cpu.IR >> 3) & REG_MASK)
-#define IR_REG_R  (cpu.IR       & REG_MASK)
+#define MASK_BYTE       0b11111111
+#define MASK_NIBBLE_L   0b00001111
+#define MASK_NIBBLE_H   0b11110000
+#define MASK_FLAGS      0b11110000
+#define MASK_FLAG_Z     0b10000000
+#define MASK_FLAG_N     0b01000000
+#define MASK_FLAG_H     0b00100000
+#define MASK_FLAG_C     0b00010000
+#define MASK_REG_8b     0b00000111
+#define MASK_REG_16b    0b00110000
+#define MASK_REG_SPorAF 0b00000011
+
+#define SET_Z (cpu.F |=  MASK_FLAG_Z              )
+#define SET_N (cpu.F |=  MASK_FLAG_N              )
+#define SET_H (cpu.F |=  MASK_FLAG_H              )
+#define SET_C (cpu.F |=  MASK_FLAG_C              )
+#define CLR_Z (cpu.F &= (MASK_FLAG_Z ^ MASK_FLAGS))
+#define CLR_N (cpu.F &= (MASK_FLAG_N ^ MASK_FLAGS))
+#define CLR_H (cpu.F &= (MASK_FLAG_H ^ MASK_FLAGS))
+#define CLR_C (cpu.F &= (MASK_FLAG_C ^ MASK_FLAGS))
+
+#define IR_REG_L ((cpu.IR >> 3) & MASK_REG_8b )
+#define IR_REG_R  (cpu.IR       & MASK_REG_8b )
+#define IR_REG_16 (cpu.IR >> 4  & MASK_REG_16b)
 
 #define BC ((uint16_t) ((cpu.B << 8) | cpu.C))
 #define DE ((uint16_t) ((cpu.D << 8) | cpu.E))
@@ -19,40 +40,95 @@ typedef struct {
 gb_cpu_t cpu;
 
 // TODO: can I inline other stuff here? I'm unclear
-
+// TODO: get rid of nop, leave blank?
 static void nop(void) {};
 
+static inline void SP_dec()         { cpu.SP--;                                          }
 static inline void HL_dec()         { uint16_t hl = HL - 1; cpu.H = hl >> 8; cpu.L = hl; }
 static inline void HL_inc()         { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu.L = hl; }
 
 /*
 Helper functions to load to temporary 8-bit latch Z or W from various 16-bit memory locations
 */
-static void cpu_read_memory_PC_W()  { cpu.W = cpu.bus->read(cpu.PC++);       }
-static void cpu_read_memory_PC_Z()  { cpu.Z = cpu.bus->read(cpu.PC++);       }
-static void cpu_read_memory_BC_Z()  { cpu.Z = cpu.bus->read(BC);             }
-static void cpu_read_memory_DE_Z()  { cpu.Z = cpu.bus->read(DE);             }
-static void cpu_read_memory_HL_Z()  { cpu.Z = cpu.bus->read(HL);             }
-static void cpu_read_memory_HLdZ()  { cpu.Z = cpu.bus->read(HL); HL_dec();   }
-static void cpu_read_memory_HLiZ()  { cpu.Z = cpu.bus->read(HL); HL_inc();   }
-static void cpu_read_memory_WZ_Z()  { cpu.Z = cpu.bus->read(cpu.WZ);         }
-static void cpu_read_memory__C_Z()  { cpu.Z = cpu.bus->read(0xFF00 + cpu.C); }
-static void cpu_read_memory__Z_Z()  { cpu.Z = cpu.bus->read(0xFF00 + cpu.Z); }
-
+static void memory_read_PC_Z   () { cpu.Z = cpu.bus->read(cpu.PC++);            }
+static void memory_read_PC_W   () { cpu.W = cpu.bus->read(cpu.PC++);            }
+static void memory_read_SP_Z   () { cpu.Z = cpu.bus->read(cpu.SP++);            }
+static void memory_read_SP_W   () { cpu.W = cpu.bus->read(cpu.SP++);            }
+static void memory_read_BC_Z   () { cpu.Z = cpu.bus->read(BC);                  }
+static void memory_read_DE_Z   () { cpu.Z = cpu.bus->read(DE);                  }
+static void memory_read_HL_Z   () { cpu.Z = cpu.bus->read(HL);                  }
+static void memory_read_HLdZ   () { cpu.Z = cpu.bus->read(HL); HL_dec();        }
+static void memory_read_HLiZ   () { cpu.Z = cpu.bus->read(HL); HL_inc();        }
+static void memory_read_WZ_Z   () { cpu.Z = cpu.bus->read(cpu.WZ);              }
+static void memory_read__C_Z   () { cpu.Z = cpu.bus->read(0xFF00 + cpu.C);      }
+static void memory_read__Z_Z   () { cpu.Z = cpu.bus->read(0xFF00 + cpu.Z);      }
 
 /*
 Helper functions to write to various 16-bit memory locations, various 8-bit values
 */
-static void cpu_write_memory_HL_R() { cpu.bus->write(HL, cpu.reg[IR_REG_R]); }
-static void cpu_write_memory_HL_Z() { cpu.bus->write(HL, cpu.Z);             }
-static void cpu_write_memory_BC_A() { cpu.bus->write(BC, cpu.A);             }
-static void cpu_write_memory_DE_A() { cpu.bus->write(DE, cpu.A);             }
-static void cpu_write_memory_HLdA() { cpu.bus->write(HL, cpu.A); HL_dec();   }
-static void cpu_write_memory_HLiA() { cpu.bus->write(HL, cpu.A); HL_inc();   }
-static void cpu_write_memory_WZ_A() { cpu.bus->write(cpu.WZ, cpu.A);         }
-static void cpu_write_memory__C_A() { cpu.bus->write(0xFF00 + cpu.C, cpu.A); }
-static void cpu_write_memory__Z_A() { cpu.bus->write(0xFF00 + cpu.Z, cpu.A); }
+static void memory_write_HL_R  () { cpu.bus->write(HL, cpu.reg[IR_REG_R]);      }
+static void memory_write_HL_Z  () { cpu.bus->write(HL, cpu.Z);                  }
+static void memory_write_BC_A  () { cpu.bus->write(BC, cpu.A);                  }
+static void memory_write_DE_A  () { cpu.bus->write(DE, cpu.A);                  }
+static void memory_write_HLdA  () { cpu.bus->write(HL, cpu.A); HL_dec();        }
+static void memory_write_HLiA  () { cpu.bus->write(HL, cpu.A); HL_inc();        }
+static void memory_write_WZ_A  () { cpu.bus->write(cpu.WZ, cpu.A);              }
+static void memory_write_WZ_SPl() { cpu.bus->write(cpu.WZ, cpu.SP); cpu.WZ++;   }
+static void memory_write_WZ_SPh() { cpu.bus->write(cpu.WZ, cpu.SP >> 8);        }
+static void memory_write__C_A  () { cpu.bus->write(0xFF00 + cpu.C, cpu.A);      }
+static void memory_write__Z_A  () { cpu.bus->write(0xFF00 + cpu.Z, cpu.A);      }
 
+
+static void
+memory_write_SP_rrh(void)
+{
+    uint8_t reg16 = IR_REG_16;
+    if (reg16 == MASK_REG_SPorAF)
+        cpu.bus->write(cpu.SP--, cpu.reg[reg16 * 2]);
+    else
+        cpu.bus->write(cpu.SP--, cpu.A);
+}
+
+static void
+memory_write_SP_rrl(void)
+{
+    uint8_t reg16 = IR_REG_16;
+    if (reg16 == MASK_REG_SPorAF)
+        cpu.bus->write(cpu.SP, cpu.reg[reg16 * 2 + 1]);
+    else
+        cpu.bus->write(cpu.SP, cpu.F & MASK_NIBBLE_H);
+}
+
+static void
+memory_write_rr_nn (void)
+{
+    uint8_t reg16 = IR_REG_16;
+    if (reg16 == MASK_REG_SPorAF)
+        cpu.SP = (cpu.W << 8) |  cpu.Z;
+    else {
+        cpu.reg[reg16 * 2]     = cpu.W;
+        cpu.reg[reg16 * 2 + 1] = cpu.Z;
+    }
+}
+
+static void
+LD_load_HL_SPel(void)
+{
+    CLR_N; CLR_Z;
+    uint8_t  nib_add = (cpu.SP & MASK_NIBBLE_L) + (cpu.Z & MASK_NIBBLE_L);
+    if (nib_add > MASK_NIBBLE_L) SET_H; else CLR_H;
+
+    uint16_t low_add = (cpu.SP & MASK_BYTE) + cpu.Z;
+    if (low_add > MASK_BYTE) SET_C; else CLR_C;
+
+    cpu.L = cpu.SP + (int8_t) cpu.Z;
+}
+
+static void
+LD_load_HL_SPeh(void)
+{
+    cpu.H = (cpu.SP + *(int8_t *) &cpu.Z) >> 8; 
+}
 
 // Load 8-bit value of Z to register A
 static void
@@ -60,6 +136,30 @@ LD_load_A_Z(void)
 {
     cpu.A = cpu.Z;
 }
+
+// Load 16-bit value of HL to register SP
+static void
+LD_load_SP_HL(void)
+{
+    cpu.SP = HL;
+}
+
+// Load 16-bit value of WZ latches to register rr
+static void
+LD_load_rr_WZ(void)
+{
+    uint8_t reg16 = IR_REG_16;
+    if (reg16 == MASK_REG_SPorAF) {
+        cpu.A = cpu.W;
+        cpu.F = cpu.Z & MASK_NIBBLE_H;
+    } else {
+        cpu.reg[reg16 * 2] = cpu.W;
+        cpu.reg[reg16 * 2 + 1] = cpu.Z;
+    }
+}
+
+
+
 
 /*
 Helper to load data to the 8-bit register r from latch Z
@@ -91,7 +191,7 @@ Load register (immediate)
 LD r n : load to the 8-bit register r, the immediate data n
 */
 static const instruction_t LD_r_n = {
-    .cycles = { cpu_read_memory_PC_Z, LD_load_register_Z },
+    .cycles = { memory_read_PC_Z, LD_load_register_Z },
     .cycle_count = 2
 };
 
@@ -100,7 +200,7 @@ Load register (indirect HL)
 LD r (HL): load to the 8-bit register r, data from address specified by HL
 */
 static const instruction_t LD_r_HL = {
-    .cycles = { cpu_read_memory_HL_Z, LD_load_register_Z },
+    .cycles = { memory_read_HL_Z, LD_load_register_Z },
     .cycle_count = 2
 };
 
@@ -109,7 +209,7 @@ Load from register (indirect HL)
 LD (HL) r: load to the address specified by HL, data from the 8-bit register r
 */
 static const instruction_t LD_HL_r = {
-    .cycles = { cpu_write_memory_HL_R, nop },
+    .cycles = { memory_write_HL_R, nop },
     .cycle_count = 2
 };
 
@@ -118,7 +218,7 @@ Load from immediate data (indirect HL)
 LD (HL) n: load to the address specified by HL, the immediate data n
 */
 static const instruction_t LD_HL_n = {
-    .cycles = { cpu_read_memory_PC_Z, cpu_write_memory_HL_Z, nop },
+    .cycles = { memory_read_PC_Z, memory_write_HL_Z, nop },
     .cycle_count = 3
 };
 
@@ -127,7 +227,7 @@ Load accumulator (indirect BC)
 LD A (BC): load to the 8-bit register A, data from address specified by BC
 */
 static const instruction_t LD_A_BC = {
-    .cycles = { cpu_read_memory_BC_Z, LD_load_A_Z },
+    .cycles = { memory_read_BC_Z, LD_load_A_Z },
     .cycle_count = 2
 };
 
@@ -136,7 +236,7 @@ Load accumulator (indirect DE)
 LD A (DE): load to the 8-bit register A, data from address specified by DE
 */
 static const instruction_t LD_A_DE = {
-    .cycles = { cpu_read_memory_DE_Z, LD_load_A_Z },
+    .cycles = { memory_read_DE_Z, LD_load_A_Z },
     .cycle_count = 2
 };
 
@@ -145,7 +245,7 @@ Load from accumulator (indirect BC)
 LD (BC) A: load to the address specified by BC, data from 8-bit register A
 */
 static const instruction_t LD_BC_A = {
-    .cycles = { cpu_write_memory_BC_A, nop },
+    .cycles = { memory_write_BC_A, nop },
     .cycle_count = 2
 };
 
@@ -154,7 +254,7 @@ Load from accumulator (indirect DE)
 LD (DE) A: load to the address specified by DE, data from the 8-bit register A
 */
 static const instruction_t LD_DE_A = {
-    .cycles = { cpu_write_memory_DE_A, nop },
+    .cycles = { memory_write_DE_A, nop },
     .cycle_count = 2
 };
 
@@ -163,7 +263,7 @@ Load accumulator (direct)
 LD A (nn): load to the 8-bit register A, data from the address specified by nn
 */
 static const instruction_t LD_A_nn = {
-    .cycles = { cpu_read_memory_PC_Z, cpu_read_memory_PC_W, cpu_read_memory_WZ_Z, LD_load_A_Z },
+    .cycles = { memory_read_PC_Z, memory_read_PC_W, memory_read_WZ_Z, LD_load_A_Z },
     .cycle_count = 4
 };
 
@@ -172,7 +272,7 @@ Load from accumulator (direct)
 LD (nn) A: load to the address specified by nn, data from the 8-bit register A
 */
 static const instruction_t LD_nn_A = {
-    .cycles = { cpu_read_memory_PC_Z, cpu_read_memory_PC_W, cpu_write_memory_WZ_A, nop },
+    .cycles = { memory_read_PC_Z, memory_read_PC_W, memory_write_WZ_A, nop },
     .cycle_count = 4
 };
 
@@ -181,7 +281,7 @@ Load accumulator (indirect 0xFF00 + C)
 LDH A (C): load to the 8-bit register A, data from the address 0xFF00 + C
 */
 static const instruction_t LDH_A__C = {
-    .cycles = { cpu_read_memory__C_Z, LD_load_A_Z },
+    .cycles = { memory_read__C_Z, LD_load_A_Z },
     .cycle_count = 2
 };
 
@@ -190,7 +290,7 @@ Load from accumulator (indirect 0xFF00 + C)
 LDH (C) A: load to the address 0xFF00 + C, data from the 8-bit register A
 */
 static const instruction_t LDH__C_A = {
-    .cycles = { cpu_write_memory__C_A, nop },
+    .cycles = { memory_write__C_A, nop },
     .cycle_count = 2
 };
 
@@ -199,7 +299,7 @@ Load accumulator (direct 0xFF00 + n)
 LDH A (n): load to the 8-bit register A, data from the address 0xFF00 + n
 */
 static const instruction_t LDH_A__n = {
-    .cycles = { cpu_read_memory_PC_Z, cpu_read_memory__Z_Z, LD_load_A_Z },
+    .cycles = { memory_read_PC_Z, memory_read__Z_Z, LD_load_A_Z },
     .cycle_count = 3
 };
 
@@ -208,7 +308,7 @@ Load from accumulator (direct 0xFF00 + n)
 LDH (n) A: load to the address 0xFF00 + n, data from the 8-bit register A
 */
 static const instruction_t LDH__n_A = {
-    .cycles = { cpu_read_memory_PC_Z, cpu_write_memory__Z_A, nop },
+    .cycles = { memory_read_PC_Z, memory_write__Z_A, nop },
     .cycle_count = 3
 };
 
@@ -217,7 +317,7 @@ Load accumulator (indirect HL, decrement)
 LD A (HL-): load to the 8-bit register A, data from address specified by HL, decrement HL after
 */
 static const instruction_t LD_A_HLd = {
-    .cycles = { cpu_read_memory_HLdZ, LD_load_A_Z },
+    .cycles = { memory_read_HLdZ, LD_load_A_Z },
     .cycle_count = 2
 };
 
@@ -226,7 +326,7 @@ Load from accumulator (indirect HL, decrement)
 LD (HL-) A: load to the address HL, data from the 8-bit register A, decrement HL after
 */
 static const instruction_t LD_HLd_A = {
-    .cycles = { cpu_write_memory_HLdA, nop },
+    .cycles = { memory_write_HLdA, nop },
     .cycle_count = 2
 };
 
@@ -235,7 +335,7 @@ Load accumulator (indirect HL, increment)
 LD A (HL+): load to the 8-bit register A, data from address specified by HL, increment HL after
 */
 static const instruction_t LD_A_HLi = {
-    .cycles = { cpu_read_memory_HLiZ, LD_load_A_Z },
+    .cycles = { memory_read_HLiZ, LD_load_A_Z },
     .cycle_count = 2
 };
 
@@ -244,8 +344,63 @@ Load from accumulator (indirect HL, increment)
 LD (HL+) A: load to the address HL, data from the 8-bit register A, increment HL after
 */
 static const instruction_t LD_HLi_A = {
-    .cycles = { cpu_write_memory_HLiA, nop },
+    .cycles = { memory_write_HLiA, nop },
     .cycle_count = 2
+};
+
+/*
+Load 16-bit register / register pair
+LD rr nn: Load to the 16-bit register rr, the immediate 16-bit data nn
+*/
+static const instruction_t LD_rr_nn = {
+    .cycles = { memory_read_PC_Z, memory_read_PC_W, memory_write_rr_nn },
+    .cycle_count = 3
+};
+
+/*
+Load from stack pointer, direct
+LD (nn) SP: Load to the 16-bit address specified by the 16-bit value nn, data from the 16-bit register SP
+*/
+static const instruction_t LD_nn_SP = {
+    .cycles = { memory_read_PC_Z, memory_read_PC_W, memory_write_WZ_SPl, memory_write_WZ_SPh, nop },
+    .cycle_count = 5
+};
+
+/*
+Load stack pointer from HL
+LD SP HL: Load to the 16-bit register SP, data from the 16-bit register HL
+*/
+static const instruction_t LD_SP_HL = {
+    .cycles = { LD_load_SP_HL, nop },
+    .cycle_count = 2
+};
+
+/*
+Push to stack
+PUSH rr: Push to the stack memory, data from the 16-bit register rr
+*/
+static const instruction_t PUSH_rr = {
+    .cycles = { SP_dec, memory_write_SP_rrh, memory_write_SP_rrl, nop},
+    .cycle_count = 4
+};
+
+/*
+Pop from stack
+POP rr: Pops to the 16-bit register rr, data from the stack memory
+*/
+static const instruction_t POP_rr = {
+    .cycles = { memory_read_SP_Z, memory_read_SP_W, LD_load_rr_WZ },
+    .cycle_count = 3
+};
+
+/*
+Load HL from adjusted stack pointer
+LD HL SP+e: Load to the HL register, 16 bit data calculated by adding the signed 8-bit operand e to the 16-bit
+value of the SP register
+*/
+static const instruction_t LD_HL_SPe = {
+    .cycles = { memory_read_PC_Z, LD_load_HL_SPel, LD_load_HL_SPel },
+    .cycle_count = 3
 };
 
 void
@@ -262,14 +417,14 @@ main(void)
 
 instruction_t OPCODE_TABLE[256] = {
     [0x00] = ,
-    [0x01] = ,
+    [0x01] = LD_rr_nn,
     [0x02] = LD_BC_A,
     [0x03] = ,
     [0x04] = ,
     [0x05] = ,
     [0x06] = LD_r_n,
     [0x07] = ,
-    [0x08] = ,
+    [0x08] = LD_nn_SP,
     [0x09] = ,
     [0x0A] = LD_A_BC,
     [0x0B] = ,
@@ -279,7 +434,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x0F] = ,
 
     [0x10] = ,
-    [0x11] = ,
+    [0x11] = LD_rr_nn,
     [0x12] = LD_DE_A,
     [0x13] = ,
     [0x14] = ,
@@ -296,7 +451,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x1F] = ,
 
     [0x20] = ,
-    [0x21] = ,
+    [0x21] = LD_rr_nn,
     [0x22] = LD_HLi_A,
     [0x23] = ,
     [0x24] = ,
@@ -313,7 +468,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x2F] = ,
 
     [0x30] = ,
-    [0x31] = ,
+    [0x31] = LD_rr_nn,
     [0x32] = LD_HLd_A,
     [0x33] = ,
     [0x34] = ,
@@ -466,11 +621,11 @@ instruction_t OPCODE_TABLE[256] = {
     [0xBF] = ,
 
     [0xC0] = ,
-    [0xC1] = ,
+    [0xC1] = POP_rr,
     [0xC2] = ,
     [0xC3] = ,
     [0xC4] = ,
-    [0xC5] = ,
+    [0xC5] = PUSH_rr,
     [0xC6] = ,
     [0xC7] = ,
     [0xC8] = ,
@@ -483,11 +638,11 @@ instruction_t OPCODE_TABLE[256] = {
     [0xCF] = ,
 
     [0xD0] = ,
-    [0xD1] = ,
+    [0xD1] = POP_rr,
     [0xD2] = ,
     [0xD3] = ,
     [0xD4] = ,
-    [0xD5] = ,
+    [0xD5] = PUSH_rr,
     [0xD6] = ,
     [0xD7] = ,
     [0xD8] = ,
@@ -500,11 +655,11 @@ instruction_t OPCODE_TABLE[256] = {
     [0xDF] = ,
 
     [0xE0] = LDH__n_A,
-    [0xE1] = ,
+    [0xE1] = POP_rr,
     [0xE2] = LDH__C_A,
     [0xE3] = ,
     [0xE4] = ,
-    [0xE5] = ,
+    [0xE5] = PUSH_rr,
     [0xE6] = ,
     [0xE7] = ,
     [0xE8] = ,
@@ -517,15 +672,15 @@ instruction_t OPCODE_TABLE[256] = {
     [0xEF] = ,
 
     [0xF0] = LDH_A__n,
-    [0xF1] = ,
+    [0xF1] = POP_rr,
     [0xF2] = LDH_A__C,
     [0xF3] = ,
     [0xF4] = ,
-    [0xF5] = ,
+    [0xF5] = PUSH_rr,
     [0xF6] = ,
     [0xF7] = ,
-    [0xF8] = ,
-    [0xF9] = ,
+    [0xF8] = LD_HL_SPe,
+    [0xF9] = LD_SP_HL,
     [0xFA] = LD_A_nn,
     [0xFB] = ,
     [0xFC] = ,

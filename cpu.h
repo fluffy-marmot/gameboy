@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 
+// TODO probably get rid of the endianness-dependant unions
 typedef struct {
     union {
         uint8_t reg[8];
