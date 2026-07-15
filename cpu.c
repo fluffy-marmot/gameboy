@@ -111,42 +111,52 @@ memory_write_rr_nn (void)
     }
 }
 
+/*
+Helper for adding two 8-bit values and setting both carry registers
+*/
+static uint8_t 
+add_and_set_carry_flags(uint8_t val1, uint8_t val2)
+{
+    uint8_t  nibble = (val1 & MASK_NIBBLE_L) + (val2 & MASK_NIBBLE_L);
+    if (nibble > MASK_NIBBLE_L) SET_H; else CLR_H;
+
+    uint16_t result = val1 + val2;
+    if (result > MASK_BYTE) SET_C; else CLR_C;
+
+    return (uint8_t) result;
+}
+
 static void
-LD_load_HL_SPel(void)
+load_HL_SPel(void)
 {
     CLR_N; CLR_Z;
-    uint8_t  nib_add = (cpu.SP & MASK_NIBBLE_L) + (cpu.Z & MASK_NIBBLE_L);
-    if (nib_add > MASK_NIBBLE_L) SET_H; else CLR_H;
-
-    uint16_t low_add = (cpu.SP & MASK_BYTE) + cpu.Z;
-    if (low_add > MASK_BYTE) SET_C; else CLR_C;
-
+    add_and_set_carry_flags((uint8_t) cpu.SP, cpu.Z);
     cpu.L = cpu.SP + (int8_t) cpu.Z;
 }
 
 static void
-LD_load_HL_SPeh(void)
+load_HL_SPeh(void)
 {
     cpu.H = (cpu.SP + *(int8_t *) &cpu.Z) >> 8; 
 }
 
 // Load 8-bit value of Z to register A
 static void
-LD_load_A_Z(void)
+load_A_Z(void)
 {
     cpu.A = cpu.Z;
 }
 
 // Load 16-bit value of HL to register SP
 static void
-LD_load_SP_HL(void)
+load_SP_HL(void)
 {
     cpu.SP = HL;
 }
 
 // Load 16-bit value of WZ latches to register rr
 static void
-LD_load_rr_WZ(void)
+load_rr_WZ(void)
 {
     uint8_t reg16 = IR_REG_16;
     if (reg16 == MASK_REG_SPorAF) {
@@ -158,15 +168,12 @@ LD_load_rr_WZ(void)
     }
 }
 
-
-
-
 /*
 Helper to load data to the 8-bit register r from latch Z
 Used by LD r n, LD r (HL)
 */
 static void
-LD_load_register_Z(void)
+load_register_Z(void)
 {
     cpu.reg[IR_REG_R] = cpu.Z;
 }
@@ -176,13 +183,25 @@ Load register (register)
 LD r r' : load to the 8-bit register r, data from 8-bit register r'
 */
 static void
-LD_load_register_register(void)
+load_register_register(void)
 {
     cpu.reg[IR_REG_L] = cpu.reg[IR_REG_R];
 }
 
+static void
+add_r_to_A(void)
+{
+    CLR_N;
+    cpu.A = add_and_set_carry_flags(cpu.A, cpu.reg[IR_REG_R]);
+    if (cpu.A) CLR_Z; else SET_Z;
+}
+
+
+
+
+
 static const instruction_t LD_r_r = {
-    .cycles = { LD_load_register_register },
+    .cycles = { load_register_register },
     .cycle_count = 1
 };
 
@@ -191,7 +210,7 @@ Load register (immediate)
 LD r n : load to the 8-bit register r, the immediate data n
 */
 static const instruction_t LD_r_n = {
-    .cycles = { memory_read_PC_Z, LD_load_register_Z },
+    .cycles = { memory_read_PC_Z, load_register_Z },
     .cycle_count = 2
 };
 
@@ -200,7 +219,7 @@ Load register (indirect HL)
 LD r (HL): load to the 8-bit register r, data from address specified by HL
 */
 static const instruction_t LD_r_HL = {
-    .cycles = { memory_read_HL_Z, LD_load_register_Z },
+    .cycles = { memory_read_HL_Z, load_register_Z },
     .cycle_count = 2
 };
 
@@ -227,7 +246,7 @@ Load accumulator (indirect BC)
 LD A (BC): load to the 8-bit register A, data from address specified by BC
 */
 static const instruction_t LD_A_BC = {
-    .cycles = { memory_read_BC_Z, LD_load_A_Z },
+    .cycles = { memory_read_BC_Z, load_A_Z },
     .cycle_count = 2
 };
 
@@ -236,7 +255,7 @@ Load accumulator (indirect DE)
 LD A (DE): load to the 8-bit register A, data from address specified by DE
 */
 static const instruction_t LD_A_DE = {
-    .cycles = { memory_read_DE_Z, LD_load_A_Z },
+    .cycles = { memory_read_DE_Z, load_A_Z },
     .cycle_count = 2
 };
 
@@ -263,7 +282,7 @@ Load accumulator (direct)
 LD A (nn): load to the 8-bit register A, data from the address specified by nn
 */
 static const instruction_t LD_A_nn = {
-    .cycles = { memory_read_PC_Z, memory_read_PC_W, memory_read_WZ_Z, LD_load_A_Z },
+    .cycles = { memory_read_PC_Z, memory_read_PC_W, memory_read_WZ_Z, load_A_Z },
     .cycle_count = 4
 };
 
@@ -281,7 +300,7 @@ Load accumulator (indirect 0xFF00 + C)
 LDH A (C): load to the 8-bit register A, data from the address 0xFF00 + C
 */
 static const instruction_t LDH_A__C = {
-    .cycles = { memory_read__C_Z, LD_load_A_Z },
+    .cycles = { memory_read__C_Z, load_A_Z },
     .cycle_count = 2
 };
 
@@ -299,7 +318,7 @@ Load accumulator (direct 0xFF00 + n)
 LDH A (n): load to the 8-bit register A, data from the address 0xFF00 + n
 */
 static const instruction_t LDH_A__n = {
-    .cycles = { memory_read_PC_Z, memory_read__Z_Z, LD_load_A_Z },
+    .cycles = { memory_read_PC_Z, memory_read__Z_Z, load_A_Z },
     .cycle_count = 3
 };
 
@@ -317,7 +336,7 @@ Load accumulator (indirect HL, decrement)
 LD A (HL-): load to the 8-bit register A, data from address specified by HL, decrement HL after
 */
 static const instruction_t LD_A_HLd = {
-    .cycles = { memory_read_HLdZ, LD_load_A_Z },
+    .cycles = { memory_read_HLdZ, load_A_Z },
     .cycle_count = 2
 };
 
@@ -335,7 +354,7 @@ Load accumulator (indirect HL, increment)
 LD A (HL+): load to the 8-bit register A, data from address specified by HL, increment HL after
 */
 static const instruction_t LD_A_HLi = {
-    .cycles = { memory_read_HLiZ, LD_load_A_Z },
+    .cycles = { memory_read_HLiZ, load_A_Z },
     .cycle_count = 2
 };
 
@@ -371,7 +390,7 @@ Load stack pointer from HL
 LD SP HL: Load to the 16-bit register SP, data from the 16-bit register HL
 */
 static const instruction_t LD_SP_HL = {
-    .cycles = { LD_load_SP_HL, nop },
+    .cycles = { load_SP_HL, nop },
     .cycle_count = 2
 };
 
@@ -389,7 +408,7 @@ Pop from stack
 POP rr: Pops to the 16-bit register rr, data from the stack memory
 */
 static const instruction_t POP_rr = {
-    .cycles = { memory_read_SP_Z, memory_read_SP_W, LD_load_rr_WZ },
+    .cycles = { memory_read_SP_Z, memory_read_SP_W, load_rr_WZ },
     .cycle_count = 3
 };
 
@@ -399,8 +418,17 @@ LD HL SP+e: Load to the HL register, 16 bit data calculated by adding the signed
 value of the SP register
 */
 static const instruction_t LD_HL_SPe = {
-    .cycles = { memory_read_PC_Z, LD_load_HL_SPel, LD_load_HL_SPel },
+    .cycles = { memory_read_PC_Z, load_HL_SPel, load_HL_SPel },
     .cycle_count = 3
+};
+
+/*
+Add (register)
+ADD r: Adds to the 8-bit A register, the 8-bit r register, and stores the result back into the A register
+*/
+static const instruction_t ADD_r = {
+        .cycles = { add_r_to_A },
+        .cycle_count = 1
 };
 
 void
@@ -552,14 +580,14 @@ instruction_t OPCODE_TABLE[256] = {
     [0x7E] = LD_r_HL,
     [0x7F] = LD_r_r,
 
-    [0x80] = ,
-    [0x81] = ,
-    [0x82] = ,
-    [0x83] = ,
-    [0x84] = ,
-    [0x85] = ,
+    [0x80] = ADD_r,
+    [0x81] = ADD_r,
+    [0x82] = ADD_r,
+    [0x83] = ADD_r,
+    [0x84] = ADD_r,
+    [0x85] = ADD_r,
     [0x86] = ,
-    [0x87] = ,
+    [0x87] = ADD_r,
     [0x88] = ,
     [0x89] = ,
     [0x8A] = ,
