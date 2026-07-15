@@ -189,16 +189,14 @@ load_register_register(void)
 }
 
 static void
-add_r_to_A(void)
+add_to_A(uint8_t val)
 {
     CLR_N;
-    cpu.A = add_and_set_carry_flags(cpu.A, cpu.reg[IR_REG_R]);
+    cpu.A = add_and_set_carry_flags(cpu.A, val);
     if (cpu.A) CLR_Z; else SET_Z;
 }
-
-
-
-
+static void add_r_to_A() { add_to_A(cpu.reg[IR_REG_R]); }
+static void add_Z_to_A() { add_to_A(cpu.Z);             }
 
 static const instruction_t LD_r_r = {
     .cycles = { load_register_register },
@@ -431,6 +429,25 @@ static const instruction_t ADD_r = {
         .cycle_count = 1
 };
 
+/*
+Add (indirect HL)
+ADD (HL): Adds to the 8-bit A register, data from the address specified by the 16-bit register HL, and stores
+the result back into the A register
+*/
+static const instruction_t ADD_HL = {
+        .cycles = { memory_read_HL_Z, add_Z_to_A },
+        .cycle_count = 2
+};
+
+/*
+Add (immediate)
+ADD n: Adds to the 8-bit register A, the immediate data n, and stores the result back into the A register
+*/
+static const instruction_t ADD_n = {
+        .cycles = { memory_read_PC_Z, add_Z_to_A },
+        .cycle_count = 2
+};
+
 void
 do_machine_cycle(void)
 {
@@ -586,7 +603,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x83] = ADD_r,
     [0x84] = ADD_r,
     [0x85] = ADD_r,
-    [0x86] = ,
+    [0x86] = ADD_HL,
     [0x87] = ADD_r,
     [0x88] = ,
     [0x89] = ,
@@ -654,7 +671,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xC3] = ,
     [0xC4] = ,
     [0xC5] = PUSH_rr,
-    [0xC6] = ,
+    [0xC6] = ADD_n,
     [0xC7] = ,
     [0xC8] = ,
     [0xC9] = ,
