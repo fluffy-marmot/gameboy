@@ -15,6 +15,11 @@
 #define MASK_REG_16b    0b00110000
 #define MASK_REG_SPorAF 0b00000011
 
+#define FLAG_Z (cpu.F & MASK_FLAG_Z)
+#define FLAG_N (cpu.F & MASK_FLAG_N)
+#define FLAG_H (cpu.F & MASK_FLAG_H)
+#define FLAG_C (cpu.F & MASK_FLAG_C)
+
 #define SET_Z (cpu.F |=  MASK_FLAG_Z              )
 #define SET_N (cpu.F |=  MASK_FLAG_N              )
 #define SET_H (cpu.F |=  MASK_FLAG_H              )
@@ -37,6 +42,8 @@ typedef struct {
     uint8_t cycle_count;
 } instruction_t;
 
+static uint8_t add_and_set_carry_flags(uint8_t, uint8_t);
+
 gb_cpu_t cpu;
 
 // TODO: can I inline other stuff here? I'm unclear
@@ -46,6 +53,12 @@ static void nop(void) {};
 static inline void SP_dec()         { cpu.SP--;                                          }
 static inline void HL_dec()         { uint16_t hl = HL - 1; cpu.H = hl >> 8; cpu.L = hl; }
 static inline void HL_inc()         { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu.L = hl; }
+
+/* ############################################################################
+
+        Memory reads and writes            
+
+############################################################################ */
 
 /*
 Helper functions to load to temporary 8-bit latch Z or W from various 16-bit memory locations
@@ -79,6 +92,9 @@ static void memory_write__C_A  () { cpu.bus->write(0xFF00 + cpu.C, cpu.A);      
 static void memory_write__Z_A  () { cpu.bus->write(0xFF00 + cpu.Z, cpu.A);      }
 
 
+/*
+Helper functions that need to decide between the different 16-bit registers
+*/
 static void
 memory_write_SP_rrh(void)
 {
@@ -111,20 +127,11 @@ memory_write_rr_nn (void)
     }
 }
 
-/*
-Helper for adding two 8-bit values and setting both carry registers
-*/
-static uint8_t 
-add_and_set_carry_flags(uint8_t val1, uint8_t val2)
-{
-    uint8_t  nibble = (val1 & MASK_NIBBLE_L) + (val2 & MASK_NIBBLE_L);
-    if (nibble > MASK_NIBBLE_L) SET_H; else CLR_H;
+/* ############################################################################
 
-    uint16_t result = val1 + val2;
-    if (result > MASK_BYTE) SET_C; else CLR_C;
+        Load helpers and instructions                  
 
-    return (uint8_t) result;
-}
+############################################################################ */
 
 static void
 load_HL_SPel(void)
@@ -188,6 +195,27 @@ load_register_register(void)
     cpu.reg[IR_REG_L] = cpu.reg[IR_REG_R];
 }
 
+/* ############################################################################
+
+        Add and add with carry helpers and instructions                  
+
+############################################################################ */
+
+/*
+Helper for adding two 8-bit values and setting both carry registers
+*/
+static uint8_t 
+add_and_set_carry_flags(uint8_t val1, uint8_t val2)
+{
+    uint8_t  nibble = (val1 & MASK_NIBBLE_L) + (val2 & MASK_NIBBLE_L);
+    if (nibble > MASK_NIBBLE_L) SET_H; else CLR_H;
+
+    uint16_t result = val1 + val2;
+    if (result > MASK_BYTE) SET_C; else CLR_C;
+
+    return (uint8_t) result;
+}
+
 static void
 add_to_A(uint8_t val)
 {
@@ -195,8 +223,10 @@ add_to_A(uint8_t val)
     cpu.A = add_and_set_carry_flags(cpu.A, val);
     if (cpu.A) CLR_Z; else SET_Z;
 }
-static void add_r_to_A() { add_to_A(cpu.reg[IR_REG_R]); }
-static void add_Z_to_A() { add_to_A(cpu.Z);             }
+static void add_r_to_A() { add_to_A(cpu.reg[IR_REG_R]);          }
+static void adc_r_to_A() { add_to_A(cpu.reg[IR_REG_R] + FLAG_C); }
+static void add_Z_to_A() { add_to_A(cpu.Z);                      }
+static void adc_Z_to_A() { add_to_A(cpu.Z + FLAG_C);             }
 
 static const instruction_t LD_r_r = {
     .cycles = { load_register_register },
@@ -425,8 +455,18 @@ Add (register)
 ADD r: Adds to the 8-bit A register, the 8-bit r register, and stores the result back into the A register
 */
 static const instruction_t ADD_r = {
-        .cycles = { add_r_to_A },
-        .cycle_count = 1
+    .cycles = { add_r_to_A },
+    .cycle_count = 1
+};
+
+/*
+Add with carry (register) 
+ADC r: Adds to the 8-bit A register, the carry flag and the 8-bit r register, and
+stores the result back into the A register
+*/
+static const instruction_t ADC_r = {
+    .cycles = { adc_r_to_A },
+     .cycle_count = 1
 };
 
 /*
@@ -435,8 +475,18 @@ ADD (HL): Adds to the 8-bit A register, data from the address specified by the 1
 the result back into the A register
 */
 static const instruction_t ADD_HL = {
-        .cycles = { memory_read_HL_Z, add_Z_to_A },
-        .cycle_count = 2
+    .cycles = { memory_read_HL_Z, add_Z_to_A },
+    .cycle_count = 2
+};
+
+/*
+Add with carry (indirect HL)
+ADC (HL): Adds to the 8-bit A register,the carry flag and data from the address specified by the 16-bit
+register HL, and stores the result back into the A register
+*/
+static const instruction_t ADC_HL = {
+    .cycles = { memory_read_HL_Z, adc_Z_to_A },
+    .cycle_count = 2
 };
 
 /*
@@ -444,8 +494,18 @@ Add (immediate)
 ADD n: Adds to the 8-bit register A, the immediate data n, and stores the result back into the A register
 */
 static const instruction_t ADD_n = {
-        .cycles = { memory_read_PC_Z, add_Z_to_A },
-        .cycle_count = 2
+    .cycles = { memory_read_PC_Z, add_Z_to_A },
+    .cycle_count = 2
+};
+
+/*
+Add with carry (immediate)
+ADC n: Adds to the 8-bit register A, the carry flag and the immediate data n, and stores the result back into
+the A register
+*/
+static const instruction_t ADC_n = {
+    .cycles = { memory_read_PC_Z, adc_Z_to_A },
+    .cycle_count = 2
 };
 
 void
@@ -605,14 +665,14 @@ instruction_t OPCODE_TABLE[256] = {
     [0x85] = ADD_r,
     [0x86] = ADD_HL,
     [0x87] = ADD_r,
-    [0x88] = ,
-    [0x89] = ,
-    [0x8A] = ,
-    [0x8B] = ,
-    [0x8C] = ,
-    [0x8D] = ,
-    [0x8E] = ,
-    [0x8F] = ,
+    [0x88] = ADC_r,
+    [0x89] = ADC_r,
+    [0x8A] = ADC_r,
+    [0x8B] = ADC_r,
+    [0x8C] = ADC_r,
+    [0x8D] = ADC_r,
+    [0x8E] = ADC_HL,
+    [0x8F] = ADC_r,
 
     [0x90] = ,
     [0x91] = ,
@@ -679,7 +739,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xCB] = ,
     [0xCC] = ,
     [0xCD] = ,
-    [0xCE] = ,
+    [0xCE] = ADC_n,
     [0xCF] = ,
 
     [0xD0] = ,
