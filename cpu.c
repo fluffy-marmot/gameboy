@@ -42,6 +42,7 @@ typedef struct {
     uint8_t cycle_count;
 } instruction_t;
 
+// Needed declarations - function is defined below one that uses it
 static uint8_t add_and_set_carry_flags(uint8_t, uint8_t);
 
 gb_cpu_t cpu;
@@ -55,9 +56,11 @@ static inline void HL_dec()         { uint16_t hl = HL - 1; cpu.H = hl >> 8; cpu
 static inline void HL_inc()         { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu.L = hl; }
 
 /* ############################################################################
+###############################################################################
 
         Memory reads and writes            
 
+###############################################################################
 ############################################################################ */
 
 /*
@@ -128,9 +131,11 @@ memory_write_rr_nn (void)
 }
 
 /* ############################################################################
+###############################################################################
 
         Load helpers and instructions                  
 
+###############################################################################
 ############################################################################ */
 
 static void
@@ -195,39 +200,12 @@ load_register_register(void)
     cpu.reg[IR_REG_L] = cpu.reg[IR_REG_R];
 }
 
-/* ############################################################################
-
-        Add and add with carry helpers and instructions                  
-
-############################################################################ */
+// INSTRUCTIONS ###############################################################
 
 /*
-Helper for adding two 8-bit values and setting both carry registers
+Load register (register)
+LD r r': Load to the 8-bit register r, data from the 8-bit register r'
 */
-static uint8_t 
-add_and_set_carry_flags(uint8_t val1, uint8_t val2)
-{
-    uint8_t  nibble = (val1 & MASK_NIBBLE_L) + (val2 & MASK_NIBBLE_L);
-    if (nibble > MASK_NIBBLE_L) SET_H; else CLR_H;
-
-    uint16_t result = val1 + val2;
-    if (result > MASK_BYTE) SET_C; else CLR_C;
-
-    return (uint8_t) result;
-}
-
-static void
-add_to_A(uint8_t val)
-{
-    CLR_N;
-    cpu.A = add_and_set_carry_flags(cpu.A, val);
-    if (cpu.A) CLR_Z; else SET_Z;
-}
-static void add_r_to_A() { add_to_A(cpu.reg[IR_REG_R]);          }
-static void adc_r_to_A() { add_to_A(cpu.reg[IR_REG_R] + FLAG_C); }
-static void add_Z_to_A() { add_to_A(cpu.Z);                      }
-static void adc_Z_to_A() { add_to_A(cpu.Z + FLAG_C);             }
-
 static const instruction_t LD_r_r = {
     .cycles = { load_register_register },
     .cycle_count = 1
@@ -450,6 +428,44 @@ static const instruction_t LD_HL_SPe = {
     .cycle_count = 3
 };
 
+/* ############################################################################
+###############################################################################
+
+        Add and add with carry helpers and instructions                  
+
+###############################################################################
+############################################################################ */
+
+/*
+Helper for adding two 8-bit values and setting both carry registers
+*/
+static uint8_t 
+add_and_set_carry_flags(uint8_t val1, uint8_t val2)
+{
+    uint8_t  nibble = (val1 & MASK_NIBBLE_L) + (val2 & MASK_NIBBLE_L);
+    if (nibble > MASK_NIBBLE_L) SET_H; else CLR_H;
+
+    uint16_t result = val1 + val2;
+    if (result > MASK_BYTE) SET_C; else CLR_C;
+
+    return (uint8_t) result;
+}
+
+static void
+add_to_A(uint8_t val)
+{
+    CLR_N;
+    cpu.A = add_and_set_carry_flags(cpu.A, val);
+    if (cpu.A) CLR_Z; else SET_Z;
+}
+static void add_r_to_A() { add_to_A(cpu.reg[IR_REG_R]);          }
+static void adc_r_to_A() { add_to_A(cpu.reg[IR_REG_R] + FLAG_C); }
+static void add_Z_to_A() { add_to_A(cpu.Z);                      }
+static void adc_Z_to_A() { add_to_A(cpu.Z + FLAG_C);             }
+
+
+// INSTRUCTIONS ###############################################################
+
 /*
 Add (register)
 ADD r: Adds to the 8-bit A register, the 8-bit r register, and stores the result back into the A register
@@ -466,7 +482,7 @@ stores the result back into the A register
 */
 static const instruction_t ADC_r = {
     .cycles = { adc_r_to_A },
-     .cycle_count = 1
+    .cycle_count = 1
 };
 
 /*
@@ -504,6 +520,99 @@ ADC n: Adds to the 8-bit register A, the carry flag and the immediate data n, an
 the A register
 */
 static const instruction_t ADC_n = {
+    .cycles = { memory_read_PC_Z, adc_Z_to_A },
+    .cycle_count = 2
+};
+
+/* ############################################################################
+###############################################################################
+
+        Subtract and subtract with carry helpers and instructions                  
+
+###############################################################################
+############################################################################ */
+
+/*
+Helper for subtracting two 8-bit values and setting both carry registers
+*/
+static uint8_t 
+sub_and_set_carry_flags(uint8_t val1, uint16_t val2)
+{
+    if ((val1 & MASK_NIBBLE_L) < (val2 & MASK_NIBBLE_L)) SET_H; else CLR_H;
+    if (val1 < val2) SET_C; else CLR_C;
+
+    return (uint8_t) (val1 - val2);
+}
+
+static void
+sub_from_A(uint16_t val)
+{
+    SET_N;
+    cpu.A = sub_and_set_carry_flags(cpu.A, val);
+    if (cpu.A) CLR_Z; else SET_Z;
+}
+static void sub_r_from_A() { sub_from_A(cpu.reg[IR_REG_R]);          }
+static void sbc_r_from_A() { sub_from_A(cpu.reg[IR_REG_R] + FLAG_C); }
+static void sub_Z_from_A() { sub_from_A(cpu.Z);                      }
+static void sbc_Z_from_A() { sub_from_A(cpu.Z + FLAG_C);             }
+
+
+// INSTRUCTIONS ###############################################################
+
+/*
+Subtract (register)
+SUB r: Subtracts from the 8-bit A register, the 8-bit r register, and stores the result back into the A register
+*/
+static const instruction_t SUB_r = {
+    .cycles = { sub_r_from_A },
+    .cycle_count = 1
+};
+
+/*
+Subtract with carry (register) 
+SBC r: Subtracts from the 8-bit A register, the carry flag and the 8-bit r register, and stores the result back
+into the A register
+*/
+static const instruction_t SBC_r = {
+    .cycles = { sbc_r_from_A },
+    .cycle_count = 1
+};
+
+/*
+Subtract (indirect HL)
+SUB (HL): Subtracts from the 8-bit A register, data from the address specified by the 16-bit register HL, and
+stores the result back into the A register
+*/
+static const instruction_t SUB_HL = {
+    .cycles = { memory_read_HL_Z, sub_Z_from_A },
+    .cycle_count = 2
+};
+
+/*
+Subtract with carry (indirect HL)
+SBC (HL): Subtracts from the 8-bit A register,the carry flag and data from the address specified by the 16-bit
+register HL, and stores the result back into the A register
+*/
+static const instruction_t SBC_HL = {
+    .cycles = { memory_read_HL_Z, sbc_Z_from_A },
+    .cycle_count = 2
+};
+
+/*
+Subtract (immediate)
+SUB n: Subtracts from the 8-bit register A, the immediate data n, and stores the result back into the A register
+*/
+static const instruction_t SUB_n = {
+    .cycles = { memory_read_PC_Z, sub_Z_from_A },
+    .cycle_count = 2
+};
+
+/*
+Subtract with carry (immediate)
+SBC n: Subtracts from the 8-bit register A, the carry flag and the immediate data n, and stores the result back
+into the A register
+*/
+static const instruction_t SBC_n = {
     .cycles = { memory_read_PC_Z, adc_Z_to_A },
     .cycle_count = 2
 };
@@ -674,22 +783,22 @@ instruction_t OPCODE_TABLE[256] = {
     [0x8E] = ADC_HL,
     [0x8F] = ADC_r,
 
-    [0x90] = ,
-    [0x91] = ,
-    [0x92] = ,
-    [0x93] = ,
-    [0x94] = ,
-    [0x95] = ,
-    [0x96] = ,
-    [0x97] = ,
-    [0x98] = ,
-    [0x99] = ,
-    [0x9A] = ,
-    [0x9B] = ,
-    [0x9C] = ,
-    [0x9D] = ,
-    [0x9E] = ,
-    [0x9F] = ,
+    [0x90] = SUB_r,
+    [0x91] = SUB_r,
+    [0x92] = SUB_r,
+    [0x93] = SUB_r,
+    [0x94] = SUB_r,
+    [0x95] = SUB_r,
+    [0x96] = SUB_HL,
+    [0x97] = SUB_r,
+    [0x98] = SBC_r,
+    [0x99] = SBC_r,
+    [0x9A] = SBC_r,
+    [0x9B] = SBC_r,
+    [0x9C] = SBC_r,
+    [0x9D] = SBC_r,
+    [0x9E] = SBC_HL,
+    [0x9F] = SBC_r,
 
     [0xA0] = ,
     [0xA1] = ,
@@ -748,7 +857,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xD3] = ,
     [0xD4] = ,
     [0xD5] = PUSH_rr,
-    [0xD6] = ,
+    [0xD6] = SUB_n,
     [0xD7] = ,
     [0xD8] = ,
     [0xD9] = ,
@@ -756,7 +865,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xDB] = ,
     [0xDC] = ,
     [0xDD] = ,
-    [0xDE] = ,
+    [0xDE] = SBC_n,
     [0xDF] = ,
 
     [0xE0] = LDH__n_A,
