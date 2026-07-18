@@ -103,9 +103,8 @@ Helper functions that need to decide between the different 16-bit registers
 static void
 memory_write_SP_rrh(void)
 {
-    uint8_t reg16 = IR_REG_16;
-    if (reg16 == MASK_REG_SPorAF)
-        cpu.bus->write(cpu.SP--, cpu.reg[reg16 * 2]);
+    if (IR_REG_16 == MASK_REG_SPorAF)
+        cpu.bus->write(cpu.SP--, cpu.reg[IR_REG_16 * 2]);
     else
         cpu.bus->write(cpu.SP--, cpu.A);
 }
@@ -113,9 +112,8 @@ memory_write_SP_rrh(void)
 static void
 memory_write_SP_rrl(void)
 {
-    uint8_t reg16 = IR_REG_16;
-    if (reg16 == MASK_REG_SPorAF)
-        cpu.bus->write(cpu.SP, cpu.reg[reg16 * 2 + 1]);
+    if (IR_REG_16 == MASK_REG_SPorAF)
+        cpu.bus->write(cpu.SP, cpu.reg[IR_REG_16 * 2 + 1]);
     else
         cpu.bus->write(cpu.SP, cpu.F & MASK_NIBBLE_H);
 }
@@ -123,12 +121,12 @@ memory_write_SP_rrl(void)
 static void
 memory_write_rr_nn (void)
 {
-    uint8_t reg16 = IR_REG_16;
-    if (reg16 == MASK_REG_SPorAF)
+
+    if (IR_REG_16 == MASK_REG_SPorAF)
         cpu.SP = (cpu.W << 8) |  cpu.Z;
     else {
-        cpu.reg[reg16 * 2]     = cpu.W;
-        cpu.reg[reg16 * 2 + 1] = cpu.Z;
+        cpu.reg[IR_REG_16 * 2]     = cpu.W;
+        cpu.reg[IR_REG_16 * 2 + 1] = cpu.Z;
     }
 }
 
@@ -468,17 +466,19 @@ add_to_A(uint8_t val)
     if (cpu.A) CLR_Z; else SET_Z;
 }
 
+static void add_r_to_A  () { add_to_A(cpu.reg[IR_REG_R]);                    }
+static void adc_r_to_A  () { add_to_A(cpu.reg[IR_REG_R] + FLAG_C);           }
+static void add_Z_to_A  () { add_to_A(cpu.Z);                                }
+static void adc_Z_to_A  () { add_to_A(cpu.Z + FLAG_C);                       }
+static void add_e_to_SPl() { add_and_set_carry_flags(cpu.SP, cpu.Z);         }  // Cheating a 'lil with Z latch
+static void add_e_to_SPh() { cpu.WZ = cpu.SP + (int8_t) cpu.Z; CLR_N; CLR_Z; }
+
 static void
 add_to_reg(uint8_t *reg_addr, uint8_t val)
 {
     CLR_N;
     *reg_addr = add_and_set_carry_flags(*reg_addr, val);
 }
-
-static void add_r_to_A() { add_to_A(cpu.reg[IR_REG_R]);          }
-static void adc_r_to_A() { add_to_A(cpu.reg[IR_REG_R] + FLAG_C); }
-static void add_Z_to_A() { add_to_A(cpu.Z);                      }
-static void adc_Z_to_A() { add_to_A(cpu.Z + FLAG_C);             }
 
 static void
 add_rr_to_HLl()
@@ -565,6 +565,16 @@ ADD HL rr: Adds to the 16-bit HL register, the 16-bit rr register, and stores th
 static const instruction_t ADD_HL_rr = {
     .cycles = { add_rr_to_HLl, add_rr_to_HLh },
     .cycle_count = 2
+};
+
+/*
+Add to stack pointer (relative)
+ADD SP e: Loads to the 16-bit SP register, data calculated by adding the signed 8-bit operand e to the 16-bit
+value of the SP register
+*/
+static const instruction_t ADD_SP_e = {
+    .cycles = { memory_read_PC_Z, add_e_to_SPl, add_e_to_SPh, load_SP_WZ },
+    .cycle_count = 4
 };
 
 /* ############################################################################
@@ -944,8 +954,8 @@ static const instruction_t XOR_n = {
 ###############################################################################
 ############################################################################ */
 
-static void complement_carry_flag () {CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C; }
 static void        set_carry_flag () {CLR_N; CLR_H; SET_C;                }
+static void complement_carry_flag () {CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C; }
 static void complement_accumulator() {SET_N; SET_H; cpu.A ^= MASK_BYTE;   }
 
 // INSTRUCTIONS ###############################################################
@@ -1238,7 +1248,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xE5] = PUSH_rr,
     [0xE6] = AND_n,
     [0xE7] = ,
-    [0xE8] = ,
+    [0xE8] = ADD_SP_e,
     [0xE9] = ,
     [0xEA] = LD_nn_A,
     [0xEB] = ,
