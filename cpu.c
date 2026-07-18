@@ -527,7 +527,7 @@ static const instruction_t ADC_n = {
 /* ############################################################################
 ###############################################################################
 
-        Subtract and subtract with carry helpers and instructions                  
+        Subtract, subtract with carry, and compare helpers and instructions                  
 
 ###############################################################################
 ############################################################################ */
@@ -556,6 +556,19 @@ static void sbc_r_from_A() { sub_from_A(cpu.reg[IR_REG_R] + FLAG_C); }
 static void sub_Z_from_A() { sub_from_A(cpu.Z);                      }
 static void sbc_Z_from_A() { sub_from_A(cpu.Z + FLAG_C);             }
 
+/*
+Helper for compare instructions, similar to subtraction but without updating the A register
+*/
+static void
+cp_with_A(uint16_t val)
+{
+    SET_N;
+    uint8_t result = sub_and_set_carry_flags(cpu.A, val);
+    if (result) CLR_Z; else SET_Z;
+}
+
+static void cp_r_with_A()  { cp_with_A(cpu.reg[IR_REG_R]);           }
+static void cp_Z_with_A()  { cp_with_A(cpu.Z);                       }
 
 // INSTRUCTIONS ###############################################################
 
@@ -614,6 +627,37 @@ into the A register
 */
 static const instruction_t SBC_n = {
     .cycles = { memory_read_PC_Z, adc_Z_to_A },
+    .cycle_count = 2
+};
+
+/*
+Compare (register)
+CP r: Subtracts from the 8-bit A register, the 8-bit register r, and updates flags based on the result; This
+instruction is basically identical to SUB r, but doesn't update the A register
+*/
+static const instruction_t CP_r = {
+    .cycles = { cp_r_with_A },
+    .cycle_count = 1
+};
+
+/*
+Compare (indirect HL)
+CP (HL): Subtracts from the 8-bit A register, data from the address specified by the 16-bit register HL, and
+updates flags based on the result; This instruction is basically identical to SUB (HL) , but doesn't update the
+A register
+*/
+static const instruction_t CP_HL = {
+    .cycles = { memory_read_HL_Z, cp_Z_with_A },
+    .cycle_count = 2
+};
+
+/* 
+Compare (immediate)
+CP n: Subtracts from the 8-bit register A, the immediate data n, and updates flags based on the result; This
+instruction is basically identical to SUB n, but doesn't update the A register
+*/
+static const instruction_t CP_n = {
+    .cycles = { memory_read_PC_Z, cp_Z_with_A },
     .cycle_count = 2
 };
 
@@ -825,14 +869,14 @@ instruction_t OPCODE_TABLE[256] = {
     [0xB5] = ,
     [0xB6] = ,
     [0xB7] = ,
-    [0xB8] = ,
-    [0xB9] = ,
-    [0xBA] = ,
-    [0xBB] = ,
-    [0xBC] = ,
-    [0xBD] = ,
-    [0xBE] = ,
-    [0xBF] = ,
+    [0xB8] = CP_r,
+    [0xB9] = CP_r,
+    [0xBA] = CP_r,
+    [0xBB] = CP_r,
+    [0xBC] = CP_r,
+    [0xBD] = CP_r,
+    [0xBE] = CP_HL,
+    [0xBF] = CP_r,
 
     [0xC0] = ,
     [0xC1] = POP_rr,
@@ -899,6 +943,6 @@ instruction_t OPCODE_TABLE[256] = {
     [0xFB] = ,
     [0xFC] = ,
     [0xFD] = ,
-    [0xFE] = ,
+    [0xFE] = CP_n,
     [0xFF] = ,
 };
