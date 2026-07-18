@@ -168,6 +168,13 @@ load_SP_HL(void)
     cpu.SP = HL;
 }
 
+// Load 16-bit value of WZ latches to register SP
+static void
+load_SP_WZ(void)
+{
+    cpu.SP = cpu.WZ;
+}
+
 // Load 16-bit value of WZ latches to register rr
 static void
 load_rr_WZ(void)
@@ -460,10 +467,36 @@ add_to_A(uint8_t val)
     cpu.A = add_and_set_carry_flags(cpu.A, val);
     if (cpu.A) CLR_Z; else SET_Z;
 }
+
+static void
+add_to_reg(uint8_t *reg_addr, uint8_t val)
+{
+    CLR_N;
+    *reg_addr = add_and_set_carry_flags(*reg_addr, val);
+}
+
 static void add_r_to_A() { add_to_A(cpu.reg[IR_REG_R]);          }
 static void adc_r_to_A() { add_to_A(cpu.reg[IR_REG_R] + FLAG_C); }
 static void add_Z_to_A() { add_to_A(cpu.Z);                      }
 static void adc_Z_to_A() { add_to_A(cpu.Z + FLAG_C);             }
+
+static void
+add_rr_to_HLl()
+{ 
+    if (IR_REG_16 == MASK_REG_SPorAF)
+        add_to_reg(&cpu.L, cpu.SP);
+    else
+        add_to_reg(&cpu.L, cpu.reg[IR_REG_16 * 2 + 1]);
+}
+
+static void
+add_rr_to_HLh()
+{ 
+    if (IR_REG_16 == MASK_REG_SPorAF)
+        add_to_reg(&cpu.H, cpu.SP >> 8);
+    else
+        add_to_reg(&cpu.H, cpu.reg[IR_REG_16 * 2]);
+}
 
 // INSTRUCTIONS ###############################################################
 
@@ -522,6 +555,15 @@ the A register
 */
 static const instruction_t ADC_n = {
     .cycles = { memory_read_PC_Z, adc_Z_to_A },
+    .cycle_count = 2
+};
+
+/*
+Add (16-bit register)
+ADD HL rr: Adds to the 16-bit HL register, the 16-bit rr register, and stores the result back into HL
+*/
+static const instruction_t ADD_HL_rr = {
+    .cycles = { add_rr_to_HLl, add_rr_to_HLh },
     .cycle_count = 2
 };
 
@@ -959,7 +1001,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x06] = LD_r_n,
     [0x07] = ,
     [0x08] = LD_nn_SP,
-    [0x09] = ,
+    [0x09] = ADD_HL_rr,
     [0x0A] = LD_A_BC,
     [0x0B] = DEC_rr
     [0x0C] = INC_r,
@@ -976,7 +1018,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x16] = LD_r_n,
     [0x17] = ,
     [0x18] = ,
-    [0x19] = ,
+    [0x19] = ADD_HL_rr,
     [0x1A] = LD_A_DE,
     [0x1B] = DEC_rr,
     [0x1C] = INC_r,
@@ -993,7 +1035,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x26] = LD_r_n,
     [0x27] = ,
     [0x28] = ,
-    [0x29] = ,
+    [0x29] = ADD_HL_rr,
     [0x2A] = LD_A_HLi,
     [0x2B] = DEC_rr,
     [0x2C] = INC_r,
@@ -1010,7 +1052,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x36] = LD_HL_n,
     [0x37] = SCF,
     [0x38] = ,
-    [0x39] = ,
+    [0x39] = ADD_HL_rr,
     [0x3A] = LD_A_HLd,
     [0x3B] = DEC_rr,
     [0x3C] = INC_r,
