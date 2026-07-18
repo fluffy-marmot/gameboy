@@ -30,9 +30,9 @@
 #define CLR_H (cpu.F &= (MASK_FLAG_H ^ MASK_FLAGS))
 #define CLR_C (cpu.F &= (MASK_FLAG_C ^ MASK_FLAGS))
 
-#define IR_REG_L ((cpu.IR >> 3) & MASK_REG_8b )
-#define IR_REG_R  (cpu.IR       & MASK_REG_8b )
-#define IR_REG_16 (cpu.IR >> 4  & MASK_REG_16b)
+#define IR_REG_L  ((cpu.IR >> 3) & MASK_REG_8b       )
+#define IR_REG_R   (cpu.IR       & MASK_REG_8b       )
+#define IR_REG_16 ((cpu.IR       & MASK_REG_16b) >> 4)
 
 // TODO probably define others here too instead of relying on endianness
 #define BC ((uint16_t) ((cpu.B << 8) | cpu.C))
@@ -687,6 +687,20 @@ dec_data(uint8_t *data)
     SET_N;
 }
 
+static void
+inc_16bit()
+{
+    uint16_t val =
+    uint8_t reg16 = IR_REG_16;
+    if (reg16 == MASK_REG_SPorAF) {
+        cpu.A = cpu.W;
+        cpu.F = cpu.Z & MASK_NIBBLE_H;
+    } else {
+        cpu.reg[reg16 * 2] = cpu.W;
+        cpu.reg[reg16 * 2 + 1] = cpu.Z;
+    }
+}
+
 static void inc_r()              { inc_data(&cpu.reg[IR_REG_L]);          }
 static void inc_Z_mem_write_HL() { inc_data(&cpu.Z); memory_write_HL_Z(); }
 static void dec_r()              { dec_data(&cpu.reg[IR_REG_L]);          }
@@ -862,6 +876,47 @@ static const instruction_t XOR_n = {
     .cycle_count = 2
 };
 
+/* ############################################################################
+###############################################################################
+
+        Misc. Flag and complement instructions
+
+###############################################################################
+############################################################################ */
+
+static void complement_carry_flag () {CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C; }
+static void        set_carry_flag () {CLR_N; CLR_H; SET_C;                }
+static void complement_accumulator() {SET_N; SET_H; cpu.A ^= MASK_BYTE;   }
+
+// INSTRUCTIONS ###############################################################
+
+/*
+Complement carry flag
+CCF: Flips the carry flag, and clears and N and H flags
+*/
+static const instruction_t CCF = {
+    .cycles = { complement_carry_flag },
+    .cycle_count = 1
+};
+
+/*
+Set carry flag
+SCF: Sets the carry flag, and clears and N and H flags
+*/
+static const instruction_t SCF = {
+    .cycles = { set_carry_flag },
+    .cycle_count = 1
+};
+
+/*
+Complement accumulator
+CPL: Flips all the bits in the 8-bit A register, and sets the N and H flags
+*/
+static const instruction_t CPL = {
+    .cycles = { complement_accumulator },
+    .cycle_count = 1
+};
+
 
 
 void
@@ -924,9 +979,9 @@ instruction_t OPCODE_TABLE[256] = {
     [0x2A] = LD_A_HLi,
     [0x2B] = ,
     [0x2C] = INC_r,
-    [0x2D] = dec_r,
+    [0x2D] = DEC_r,
     [0x2E] = LD_r_n,
-    [0x2F] = ,
+    [0x2F] = CPL,
 
     [0x30] = ,
     [0x31] = LD_rr_nn,
@@ -935,7 +990,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x34] = INC_HL,
     [0x35] = DEC_HL,
     [0x36] = LD_HL_n,
-    [0x37] = ,
+    [0x37] = SCF,
     [0x38] = ,
     [0x39] = ,
     [0x3A] = LD_A_HLd,
@@ -943,7 +998,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x3C] = INC_r,
     [0x3D] = DEC_r,
     [0x3E] = LD_r_n,
-    [0x3F] = ,
+    [0x3F] = CCF,
 
     [0x40] = LD_r_r,
     [0x41] = LD_r_r,
