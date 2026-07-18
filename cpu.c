@@ -692,6 +692,8 @@ static void inc_Z_mem_write_HL() { inc_data(&cpu.Z); memory_write_HL_Z(); }
 static void dec_r()              { dec_data(&cpu.reg[IR_REG_L]);          }
 static void dec_Z_mem_write_HL() { dec_data(&cpu.Z); memory_write_HL_Z(); }
 
+// INSTRUCTIONS ###############################################################
+
 /*
 Increment (register)
 INC r: increments data in the 8-bit register r
@@ -726,6 +728,138 @@ DEC (HL) decrements data at the address specified by the 16-bit register HL
 static const instruction_t DEC_HL = {
     .cycles = { memory_read_HL_Z, dec_Z_mem_write_HL, nop },
     .cycle_count = 3
+};
+
+/* ############################################################################
+###############################################################################
+
+        logical AND, OR, XOR helpers and instructions
+
+###############################################################################
+############################################################################ */
+
+static void
+and_val_with_A(uint8_t val)
+{
+    CLR_N; SET_H; CLR_C;
+    cpu.A = cpu.A & val;
+    if (cpu.A) CLR_Z; else SET_Z;
+}
+
+static void
+or_val_with_A(uint8_t val)
+{
+    CLR_N; CLR_H; CLR_C;
+    cpu.A = cpu.A | val;
+    if (cpu.A) CLR_Z; else SET_Z;
+}
+
+static void
+xor_val_with_A(uint8_t val)
+{
+    CLR_N; CLR_H; CLR_C;
+    cpu.A = cpu.A ^ val;
+    if (cpu.A) CLR_Z; else SET_Z;
+}
+
+static void and_r_with_A() { and_val_with_A(cpu.reg[IR_REG_R]); }
+static void and_Z_with_A() { and_val_with_A(cpu.Z);             }
+static void  or_r_with_A() {  or_val_with_A(cpu.reg[IR_REG_R]); }
+static void  or_Z_with_A() {  or_val_with_A(cpu.Z);             }
+static void xor_r_with_A() { xor_val_with_A(cpu.reg[IR_REG_R]); }
+static void xor_Z_with_A() { xor_val_with_A(cpu.Z);             }
+
+
+// INSTRUCTIONS ###############################################################
+
+/*
+Bitwise AND (register)
+AND r: Performs a bitwise AND operation between the 8-bit A register and the 8-bit r register, and stores the
+result back into the A register
+*/
+static const instruction_t AND_r = {
+    .cycles = { and_r_with_A },
+    .cycle_count = 1
+};
+
+/*
+Bitwise AND (indirect HL)
+AND (HL): Performs a bitwise AND operation between the 8-bit A register and data at the address specified by the
+16-bit register HL, and stores the result back into the A register
+*/
+static const instruction_t AND_HL = {
+    .cycles = { memory_read_HL_Z, and_Z_with_A },
+    .cycle_count = 2
+};
+
+/*
+Bitwise AND (immediate)
+AND n: Performs a bitwise AND operation between the 8-bit A register and immediate data n, and stores the result
+back into the A register
+*/
+static const instruction_t AND_n = {
+    .cycles = { memory_read_PC_Z, and_Z_with_A },
+    .cycle_count = 2
+};
+
+/*
+Bitwise OR (register)
+OR r: Performs a bitwise OR operation between the 8-bit A register and the 8-bit r register, and stores the
+result back into the A register
+*/
+static const instruction_t OR_r = {
+    .cycles = { or_r_with_A },
+    .cycle_count = 1
+};
+
+/*
+Bitwise OR (indirect HL)
+OR (HL): Performs a bitwise OR operation between the 8-bit A register and data at the address specified by the
+16-bit register HL, and stores the result back into the A register
+*/
+static const instruction_t OR_HL = {
+    .cycles = { memory_read_HL_Z, or_Z_with_A },
+    .cycle_count = 2
+};
+
+/*
+Bitwise OR (immediate)
+OR n: Performs a bitwise OR operation between the 8-bit A register and immediate data n, and stores the result
+back into the A register
+*/
+static const instruction_t OR_n = {
+    .cycles = { memory_read_PC_Z, or_Z_with_A },
+    .cycle_count = 2
+};
+
+/*
+Bitwise XOR (register)
+XOR r: Performs a bitwise XOR operation between the 8-bit A register and the 8-bit r register, and stores the
+result back into the A register
+*/
+static const instruction_t XOR_r = {
+    .cycles = { xor_r_with_A },
+    .cycle_count = 1
+};
+
+/*
+Bitwise XOR (indirect HL)
+XOR (HL): Performs a bitwise XOR operation between the 8-bit A register and data at the address specified by the
+16-bit register HL, and stores the result back into the A register
+*/
+static const instruction_t XOR_HL = {
+    .cycles = { memory_read_HL_Z, xor_Z_with_A },
+    .cycle_count = 2
+};
+
+/*
+Bitwise XOR (immediate)
+XOR n: Performs a bitwise XOR operation between the 8-bit A register and immediate data n, and stores the result
+back into the A register
+*/
+static const instruction_t XOR_n = {
+    .cycles = { memory_read_PC_Z, xor_Z_with_A },
+    .cycle_count = 2
 };
 
 
@@ -913,31 +1047,31 @@ instruction_t OPCODE_TABLE[256] = {
     [0x9E] = SBC_HL,
     [0x9F] = SBC_r,
 
-    [0xA0] = ,
-    [0xA1] = ,
-    [0xA2] = ,
-    [0xA3] = ,
-    [0xA4] = ,
-    [0xA5] = ,
-    [0xA6] = ,
-    [0xA7] = ,
-    [0xA8] = ,
-    [0xA9] = ,
-    [0xAA] = ,
-    [0xAB] = ,
-    [0xAC] = ,
-    [0xAD] = ,
-    [0xAE] = ,
-    [0xAF] = ,
+    [0xA0] = AND_r,
+    [0xA1] = AND_r,
+    [0xA2] = AND_r,
+    [0xA3] = AND_r,
+    [0xA4] = AND_r,
+    [0xA5] = AND_r,
+    [0xA6] = AND_HL,
+    [0xA7] = AND_r,
+    [0xA8] = XOR_r,
+    [0xA9] = XOR_r,
+    [0xAA] = XOR_r,
+    [0xAB] = XOR_r,
+    [0xAC] = XOR_r,
+    [0xAD] = XOR_r,
+    [0xAE] = XOR_HL,
+    [0xAF] = XOR_r,
 
-    [0xB0] = ,
-    [0xB1] = ,
-    [0xB2] = ,
-    [0xB3] = ,
-    [0xB4] = ,
-    [0xB5] = ,
-    [0xB6] = ,
-    [0xB7] = ,
+    [0xB0] = OR_r,
+    [0xB1] = OR_r,
+    [0xB2] = OR_r,
+    [0xB3] = OR_r,
+    [0xB4] = OR_r,
+    [0xB5] = OR_r,
+    [0xB6] = OR_HL,
+    [0xB7] = OR_r,
     [0xB8] = CP_r,
     [0xB9] = CP_r,
     [0xBA] = CP_r,
@@ -987,7 +1121,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xE3] = ,
     [0xE4] = ,
     [0xE5] = PUSH_rr,
-    [0xE6] = ,
+    [0xE6] = AND_n,
     [0xE7] = ,
     [0xE8] = ,
     [0xE9] = ,
@@ -995,7 +1129,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xEB] = ,
     [0xEC] = ,
     [0xED] = ,
-    [0xEE] = ,
+    [0xEE] = XOR_n,
     [0xEF] = ,
 
     [0xF0] = LDH_A__n,
@@ -1004,7 +1138,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0xF3] = ,
     [0xF4] = ,
     [0xF5] = PUSH_rr,
-    [0xF6] = ,
+    [0xF6] = OR_n,
     [0xF7] = ,
     [0xF8] = LD_HL_SPe,
     [0xF9] = LD_SP_HL,
