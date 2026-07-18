@@ -4,6 +4,7 @@
 #define MAX_MCYCLE_INSTRUCTION 5
 
 #define MASK_BYTE       0b11111111
+#define MASK_ZERO       0b00000000
 #define MASK_NIBBLE_L   0b00001111
 #define MASK_NIBBLE_H   0b11110000
 #define MASK_FLAGS      0b11110000
@@ -15,10 +16,10 @@
 #define MASK_REG_16b    0b00110000
 #define MASK_REG_SPorAF 0b00000011
 
-#define FLAG_Z (cpu.F & MASK_FLAG_Z)
-#define FLAG_N (cpu.F & MASK_FLAG_N)
-#define FLAG_H (cpu.F & MASK_FLAG_H)
-#define FLAG_C (cpu.F & MASK_FLAG_C)
+#define FLAG_Z ((cpu.F & MASK_FLAG_Z) >> 7)
+#define FLAG_N ((cpu.F & MASK_FLAG_N) >> 6)
+#define FLAG_H ((cpu.F & MASK_FLAG_H) >> 5)
+#define FLAG_C ((cpu.F & MASK_FLAG_C) >> 4)
 
 #define SET_Z (cpu.F |=  MASK_FLAG_Z              )
 #define SET_N (cpu.F |=  MASK_FLAG_N              )
@@ -33,6 +34,7 @@
 #define IR_REG_R  (cpu.IR       & MASK_REG_8b )
 #define IR_REG_16 (cpu.IR >> 4  & MASK_REG_16b)
 
+// TODO probably define others here too instead of relying on endianness
 #define BC ((uint16_t) ((cpu.B << 8) | cpu.C))
 #define DE ((uint16_t) ((cpu.D << 8) | cpu.E))
 #define HL ((uint16_t) ((cpu.H << 8) | cpu.L))
@@ -661,6 +663,73 @@ static const instruction_t CP_n = {
     .cycle_count = 2
 };
 
+/* ############################################################################
+###############################################################################
+
+        Increment and decrement helpers and instructions                  
+
+###############################################################################
+############################################################################ */
+
+static void
+inc_data(uint8_t *data)
+{
+    if ((*data & MASK_NIBBLE_L) == MASK_NIBBLE_L) SET_H; else CLR_H;
+    if (++(*data)) CLR_Z; else SET_Z;
+    CLR_N;
+}
+
+static void
+dec_data(uint8_t *data)
+{
+    if ((*data & MASK_NIBBLE_L) == MASK_ZERO) SET_H; else CLR_H;
+    if (--(*data)) CLR_Z; else SET_Z;
+    SET_N;
+}
+
+static void inc_r()              { inc_data(&cpu.reg[IR_REG_L]);          }
+static void inc_Z_mem_write_HL() { inc_data(&cpu.Z); memory_write_HL_Z(); }
+static void dec_r()              { dec_data(&cpu.reg[IR_REG_L]);          }
+static void dec_Z_mem_write_HL() { dec_data(&cpu.Z); memory_write_HL_Z(); }
+
+/*
+Increment (register)
+INC r: increments data in the 8-bit register r
+*/
+static const instruction_t INC_r = {
+    .cycles = { inc_r },
+    .cycle_count = 1
+};
+
+/*
+Increment (indirect HL)
+INC (HL) increments data at the address specified by the 16-bit register HL
+*/
+static const instruction_t INC_HL = {
+    .cycles = { memory_read_HL_Z, inc_Z_mem_write_HL, nop },
+    .cycle_count = 3
+};
+
+/*
+Decrement (register)
+DEC r: decrements data in the 8-bit register r
+*/
+static const instruction_t DEC_r = {
+    .cycles = { dec_r },
+    .cycle_count = 1
+};
+
+/*
+Decrement (indirect HL)
+DEC (HL) decrements data at the address specified by the 16-bit register HL
+*/
+static const instruction_t DEC_HL = {
+    .cycles = { memory_read_HL_Z, dec_Z_mem_write_HL, nop },
+    .cycle_count = 3
+};
+
+
+
 void
 do_machine_cycle(void)
 {
@@ -678,16 +747,16 @@ instruction_t OPCODE_TABLE[256] = {
     [0x01] = LD_rr_nn,
     [0x02] = LD_BC_A,
     [0x03] = ,
-    [0x04] = ,
-    [0x05] = ,
+    [0x04] = INC_r,
+    [0x05] = DEC_r,
     [0x06] = LD_r_n,
     [0x07] = ,
     [0x08] = LD_nn_SP,
     [0x09] = ,
     [0x0A] = LD_A_BC,
     [0x0B] = ,
-    [0x0C] = ,
-    [0x0D] = ,
+    [0x0C] = INC_r,
+    [0x0D] = DEC_r,
     [0x0E] = LD_r_n,
     [0x0F] = ,
 
@@ -695,16 +764,16 @@ instruction_t OPCODE_TABLE[256] = {
     [0x11] = LD_rr_nn,
     [0x12] = LD_DE_A,
     [0x13] = ,
-    [0x14] = ,
-    [0x15] = ,
+    [0x14] = INC_r,
+    [0x15] = DEC_r,
     [0x16] = LD_r_n,
     [0x17] = ,
     [0x18] = ,
     [0x19] = ,
     [0x1A] = LD_A_DE,
     [0x1B] = ,
-    [0x1C] = ,
-    [0x1D] = ,
+    [0x1C] = INC_r,
+    [0x1D] = DEC_r,
     [0x1E] = LD_r_n,
     [0x1F] = ,
 
@@ -712,16 +781,16 @@ instruction_t OPCODE_TABLE[256] = {
     [0x21] = LD_rr_nn,
     [0x22] = LD_HLi_A,
     [0x23] = ,
-    [0x24] = ,
-    [0x25] = ,
+    [0x24] = INC_r,
+    [0x25] = DEC_r,
     [0x26] = LD_r_n,
     [0x27] = ,
     [0x28] = ,
     [0x29] = ,
     [0x2A] = LD_A_HLi,
     [0x2B] = ,
-    [0x2C] = ,
-    [0x2D] = ,
+    [0x2C] = INC_r,
+    [0x2D] = dec_r,
     [0x2E] = LD_r_n,
     [0x2F] = ,
 
@@ -729,16 +798,16 @@ instruction_t OPCODE_TABLE[256] = {
     [0x31] = LD_rr_nn,
     [0x32] = LD_HLd_A,
     [0x33] = ,
-    [0x34] = ,
-    [0x35] = ,
+    [0x34] = INC_HL,
+    [0x35] = DEC_HL,
     [0x36] = LD_HL_n,
     [0x37] = ,
     [0x38] = ,
     [0x39] = ,
     [0x3A] = LD_A_HLd,
     [0x3B] = ,
-    [0x3C] = ,
-    [0x3D] = ,
+    [0x3C] = INC_r,
+    [0x3D] = DEC_r,
     [0x3E] = LD_r_n,
     [0x3F] = ,
 
