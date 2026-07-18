@@ -465,7 +465,6 @@ static void adc_r_to_A() { add_to_A(cpu.reg[IR_REG_R] + FLAG_C); }
 static void add_Z_to_A() { add_to_A(cpu.Z);                      }
 static void adc_Z_to_A() { add_to_A(cpu.Z + FLAG_C);             }
 
-
 // INSTRUCTIONS ###############################################################
 
 /*
@@ -672,7 +671,7 @@ static const instruction_t CP_n = {
 ############################################################################ */
 
 static void
-inc_data(uint8_t *data)
+inc_8bit(uint8_t *data)
 {
     if ((*data & MASK_NIBBLE_L) == MASK_NIBBLE_L) SET_H; else CLR_H;
     if (++(*data)) CLR_Z; else SET_Z;
@@ -680,7 +679,7 @@ inc_data(uint8_t *data)
 }
 
 static void
-dec_data(uint8_t *data)
+dec_8bit(uint8_t *data)
 {
     if ((*data & MASK_NIBBLE_L) == MASK_ZERO) SET_H; else CLR_H;
     if (--(*data)) CLR_Z; else SET_Z;
@@ -688,23 +687,24 @@ dec_data(uint8_t *data)
 }
 
 static void
-inc_16bit()
+inc_or_dec_16bit(int8_t change)
 {
-    uint16_t val =
     uint8_t reg16 = IR_REG_16;
     if (reg16 == MASK_REG_SPorAF) {
-        cpu.A = cpu.W;
-        cpu.F = cpu.Z & MASK_NIBBLE_H;
+        cpu.SP += change;
     } else {
-        cpu.reg[reg16 * 2] = cpu.W;
-        cpu.reg[reg16 * 2 + 1] = cpu.Z;
+        uint16_t result = (cpu.reg[reg16 * 2] << 8) + cpu.reg[reg16 * 2 + 1] + change;
+        cpu.reg[reg16 * 2    ] = (uint8_t) (result >> 8);
+        cpu.reg[reg16 * 2 + 1] = (uint8_t)  result;
     }
 }
 
-static void inc_r()              { inc_data(&cpu.reg[IR_REG_L]);          }
-static void inc_Z_mem_write_HL() { inc_data(&cpu.Z); memory_write_HL_Z(); }
-static void dec_r()              { dec_data(&cpu.reg[IR_REG_L]);          }
-static void dec_Z_mem_write_HL() { dec_data(&cpu.Z); memory_write_HL_Z(); }
+static void inc_r()              { inc_8bit(&cpu.reg[IR_REG_L]);          }
+static void dec_r()              { dec_8bit(&cpu.reg[IR_REG_L]);          }
+static void inc_Z_mem_write_HL() { inc_8bit(&cpu.Z); memory_write_HL_Z(); }
+static void dec_Z_mem_write_HL() { dec_8bit(&cpu.Z); memory_write_HL_Z(); }
+static void inc_rr()             { inc_or_dec_16bit(+1);                  }
+static void dec_rr()             { inc_or_dec_16bit(-1);                  }
 
 // INSTRUCTIONS ###############################################################
 
@@ -742,6 +742,24 @@ DEC (HL) decrements data at the address specified by the 16-bit register HL
 static const instruction_t DEC_HL = {
     .cycles = { memory_read_HL_Z, dec_Z_mem_write_HL, nop },
     .cycle_count = 3
+};
+
+/*
+Increment 16-bit register
+INC rr: increments data in the 16-bit register rr
+*/
+static const instruction_t INC_rr = {
+    .cycles = { inc_rr, nop },
+    .cycle_count = 2
+};
+
+/*
+Decrement 16-bit register
+DEC rr: decrements data in the 16-bit register rr
+*/
+static const instruction_t DEC_rr = {
+    .cycles = { dec_rr, nop },
+    .cycle_count = 2
 };
 
 /* ############################################################################
@@ -935,7 +953,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x00] = ,
     [0x01] = LD_rr_nn,
     [0x02] = LD_BC_A,
-    [0x03] = ,
+    [0x03] = INC_rr,
     [0x04] = INC_r,
     [0x05] = DEC_r,
     [0x06] = LD_r_n,
@@ -943,7 +961,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x08] = LD_nn_SP,
     [0x09] = ,
     [0x0A] = LD_A_BC,
-    [0x0B] = ,
+    [0x0B] = DEC_rr
     [0x0C] = INC_r,
     [0x0D] = DEC_r,
     [0x0E] = LD_r_n,
@@ -952,7 +970,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x10] = ,
     [0x11] = LD_rr_nn,
     [0x12] = LD_DE_A,
-    [0x13] = ,
+    [0x13] = INC_rr,
     [0x14] = INC_r,
     [0x15] = DEC_r,
     [0x16] = LD_r_n,
@@ -960,7 +978,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x18] = ,
     [0x19] = ,
     [0x1A] = LD_A_DE,
-    [0x1B] = ,
+    [0x1B] = DEC_rr,
     [0x1C] = INC_r,
     [0x1D] = DEC_r,
     [0x1E] = LD_r_n,
@@ -969,7 +987,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x20] = ,
     [0x21] = LD_rr_nn,
     [0x22] = LD_HLi_A,
-    [0x23] = ,
+    [0x23] = INC_rr,
     [0x24] = INC_r,
     [0x25] = DEC_r,
     [0x26] = LD_r_n,
@@ -977,7 +995,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x28] = ,
     [0x29] = ,
     [0x2A] = LD_A_HLi,
-    [0x2B] = ,
+    [0x2B] = DEC_rr,
     [0x2C] = INC_r,
     [0x2D] = DEC_r,
     [0x2E] = LD_r_n,
@@ -986,7 +1004,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x30] = ,
     [0x31] = LD_rr_nn,
     [0x32] = LD_HLd_A,
-    [0x33] = ,
+    [0x33] = INC_rr,
     [0x34] = INC_HL,
     [0x35] = DEC_HL,
     [0x36] = LD_HL_n,
@@ -994,7 +1012,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x38] = ,
     [0x39] = ,
     [0x3A] = LD_A_HLd,
-    [0x3B] = ,
+    [0x3B] = DEC_rr,
     [0x3C] = INC_r,
     [0x3D] = DEC_r,
     [0x3E] = LD_r_n,
