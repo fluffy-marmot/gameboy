@@ -5,6 +5,7 @@
 
 #define MASK_BYTE       0b11111111
 #define MASK_ZERO       0b00000000
+#define MASK_BIT        0b00000001
 #define MASK_NIBBLE_L   0b00001111
 #define MASK_NIBBLE_H   0b11110000
 #define MASK_FLAGS      0b11110000
@@ -987,7 +988,93 @@ static const instruction_t CPL = {
     .cycle_count = 1
 };
 
+/* ############################################################################
+###############################################################################
 
+        Rotate, shift, and bit operation instructions
+
+###############################################################################
+############################################################################ */
+
+static void
+rlca()
+{ 
+    CLR_Z; CLR_N; CLR_H;
+    if (cpu.A >> 7) SET_C; else CLR_C;
+    cpu.A = (cpu.A << 1) | FLAG_C;
+}
+
+static void
+rrca()
+{
+    CLR_Z; CLR_N; CLR_H;
+    if (cpu.A & MASK_BIT) SET_C; else CLR_C;
+    cpu.A = (cpu.A >> 1) | (FLAG_C << 7);
+}
+
+static void
+rla()
+{
+    CLR_Z; CLR_N; CLR_H;
+    uint8_t temp = (cpu.A >> 7);
+    cpu.A = (cpu.A << 1) | FLAG_C;
+    if (temp) SET_C; else CLR_C;
+}
+
+static void
+rra()
+{
+    CLR_Z; CLR_N; CLR_H;
+    uint8_t temp = (cpu.A & MASK_BIT);
+    cpu.A = (cpu.A >> 1) | (FLAG_C << 7);
+    if (temp) SET_C; else CLR_C;
+}
+
+// INSTRUCTIONS ###############################################################
+
+/*
+Rotate left circular (accumulator)
+RLCA: Rotates the 8-bit A register value left in a circular manner
+*/
+static const instruction_t RLCA = {
+    .cycles = { rlca },
+    .cycle_count = 1
+};
+
+/*
+Rotate right circular (accumulator)
+RRCA: Rotates the 8-bit A register value right in a circular manner
+*/
+static const instruction_t RRCA = {
+    .cycles = { rrca },
+    .cycle_count = 1
+};
+
+/*
+Rotate left (accumulator)
+RLA: Rotates the 8-bit A register value left through the carry flag
+*/
+static const instruction_t RLA = {
+    .cycles = { rla },
+    .cycle_count = 1
+};
+
+/*
+Rotate right (accumulator)
+RRA: Rotates the 8-bit A register value right through the carry flag
+*/
+static const instruction_t RRA = {
+    .cycles = { rra },
+    .cycle_count = 1
+};
+
+/* ############################################################################
+###############################################################################
+
+        STUFF
+
+###############################################################################
+############################################################################ */
 
 void
 do_machine_cycle(void)
@@ -1001,7 +1088,7 @@ main(void)
 
 }
 
-instruction_t OPCODE_TABLE[256] = {
+static const instruction_t OPCODE_TABLE[256] = {
     [0x00] = ,
     [0x01] = LD_rr_nn,
     [0x02] = LD_BC_A,
@@ -1009,15 +1096,15 @@ instruction_t OPCODE_TABLE[256] = {
     [0x04] = INC_r,
     [0x05] = DEC_r,
     [0x06] = LD_r_n,
-    [0x07] = ,
+    [0x07] = RLCA,
     [0x08] = LD_nn_SP,
     [0x09] = ADD_HL_rr,
     [0x0A] = LD_A_BC,
-    [0x0B] = DEC_rr
+    [0x0B] = DEC_rr,
     [0x0C] = INC_r,
     [0x0D] = DEC_r,
     [0x0E] = LD_r_n,
-    [0x0F] = ,
+    [0x0F] = RRCA,
 
     [0x10] = ,
     [0x11] = LD_rr_nn,
@@ -1026,7 +1113,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x14] = INC_r,
     [0x15] = DEC_r,
     [0x16] = LD_r_n,
-    [0x17] = ,
+    [0x17] = RLA,
     [0x18] = ,
     [0x19] = ADD_HL_rr,
     [0x1A] = LD_A_DE,
@@ -1034,7 +1121,7 @@ instruction_t OPCODE_TABLE[256] = {
     [0x1C] = INC_r,
     [0x1D] = DEC_r,
     [0x1E] = LD_r_n,
-    [0x1F] = ,
+    [0x1F] = RRA,
 
     [0x20] = ,
     [0x21] = LD_rr_nn,
