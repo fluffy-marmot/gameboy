@@ -1236,9 +1236,18 @@ static const instruction_t SRA_HL = {
 Swap nibbles (register)
 SWAP r: Swap the high and low nibbles of the 8-bit register r
 */
-static void instruction_t SWAP_r = {
+static const instruction_t SWAP_r = {
     .cycles = { cb_prefix, swap_r },
     .cycle_count = 2
+};
+
+/*
+Swap nibbles (indirect HL)
+SWAP (HL): Swap the high and low nibbles of the data at the address specified by the 16-bit register HL
+*/
+static const instruction_t SWAP_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, swap_z, nop },
+    .cycle_count = 4
 };
 
 /* ############################################################################
@@ -1597,14 +1606,14 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
     [0x2E] = SRA_HL,
     [0x2F] = SRA_r,
 
-    [0x30] = ,
-    [0x31] = ,
-    [0x32] = ,
-    [0x33] = ,
-    [0x34] = ,
-    [0x35] = ,
-    [0x36] = ,
-    [0x37] = ,
+    [0x30] = SWAP_r,
+    [0x31] = SWAP_r,
+    [0x32] = SWAP_r,
+    [0x33] = SWAP_r,
+    [0x34] = SWAP_r,
+    [0x35] = SWAP_r,
+    [0x36] = SWAP_HL,
+    [0x37] = SWAP_r,
     [0x38] = ,
     [0x39] = ,
     [0x3A] = ,
