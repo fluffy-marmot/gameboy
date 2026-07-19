@@ -998,38 +998,52 @@ static const instruction_t CPL = {
 ############################################################################ */
 
 static void
-rlca()
-{ 
+rotate_l_circ_carry(uint8_t *val)
+{
     CLR_Z; CLR_N; CLR_H;
-    if (cpu.A >> 7) SET_C; else CLR_C;
-    cpu.A = (cpu.A << 1) | FLAG_C;
+    if (*val >> 7) SET_C; else CLR_C;
+    *val = (*val << 1) | FLAG_C;
 }
 
 static void
-rrca()
+rotate_r_circ_carry(uint8_t *val)
 {
     CLR_Z; CLR_N; CLR_H;
-    if (cpu.A & MASK_BIT) SET_C; else CLR_C;
-    cpu.A = (cpu.A >> 1) | (FLAG_C << 7);
+    if (*val & MASK_BIT) SET_C; else CLR_C;
+    *val = (*val >> 1) | (FLAG_C << 7);
 }
 
 static void
-rla()
+rotate_l_thru_carry(uint8_t *val)
 {
     CLR_Z; CLR_N; CLR_H;
-    uint8_t temp = (cpu.A >> 7);
-    cpu.A = (cpu.A << 1) | FLAG_C;
+    uint8_t temp = (*val >> 7);
+    *val = (*val << 1) | FLAG_C;
     if (temp) SET_C; else CLR_C;
 }
 
 static void
-rra()
+rotate_r_thru_carry(uint8_t *val)
 {
     CLR_Z; CLR_N; CLR_H;
-    uint8_t temp = (cpu.A & MASK_BIT);
-    cpu.A = (cpu.A >> 1) | (FLAG_C << 7);
+    uint8_t temp = (*val & MASK_BIT);
+    *val = (*val >> 1) | (FLAG_C << 7);
     if (temp) SET_C; else CLR_C;
 }
+
+static void rlc_a() { rotate_l_circ_carry(&cpu.A);                                                       }
+static void rrc_a() { rotate_r_circ_carry(&cpu.A);                                                       }
+static void rlc_r() { rotate_l_circ_carry(&cpu.reg[IR_REG_R]); if (cpu.reg[IR_REG_R]) CLR_Z; else SET_Z; }
+static void rrc_r() { rotate_r_circ_carry(&cpu.reg[IR_REG_R]); if (cpu.reg[IR_REG_R]) CLR_Z; else SET_Z; }
+static void rlc_z() { rotate_l_circ_carry(&cpu.Z); if (cpu.Z) CLR_Z; else SET_Z; memory_write_HL_Z();    }
+static void rrc_z() { rotate_r_circ_carry(&cpu.Z); if (cpu.Z) CLR_Z; else SET_Z; memory_write_HL_Z();    }
+
+static void rl_a () { rotate_l_thru_carry(&cpu.A);                                                       }
+static void rr_a () { rotate_r_thru_carry(&cpu.A);                                                       }
+static void rl_r () { rotate_l_thru_carry(&cpu.reg[IR_REG_R]); if (cpu.reg[IR_REG_R]) CLR_Z; else SET_Z; }
+static void rr_r () { rotate_r_thru_carry(&cpu.reg[IR_REG_R]); if (cpu.reg[IR_REG_R]) CLR_Z; else SET_Z; }
+static void rl_z () { rotate_l_thru_carry(&cpu.Z); if (cpu.Z) CLR_Z; else SET_Z; memory_write_HL_Z();    }
+static void rr_z () { rotate_r_thru_carry(&cpu.Z); if (cpu.Z) CLR_Z; else SET_Z; memory_write_HL_Z();    }
 
 // INSTRUCTIONS ###############################################################
 
@@ -1038,7 +1052,7 @@ Rotate left circular (accumulator)
 RLCA: Rotates the 8-bit A register value left in a circular manner
 */
 static const instruction_t RLCA = {
-    .cycles = { rlca },
+    .cycles = { rlc_a },
     .cycle_count = 1
 };
 
@@ -1047,7 +1061,7 @@ Rotate right circular (accumulator)
 RRCA: Rotates the 8-bit A register value right in a circular manner
 */
 static const instruction_t RRCA = {
-    .cycles = { rrca },
+    .cycles = { rrc_a },
     .cycle_count = 1
 };
 
@@ -1056,7 +1070,7 @@ Rotate left (accumulator)
 RLA: Rotates the 8-bit A register value left through the carry flag
 */
 static const instruction_t RLA = {
-    .cycles = { rla },
+    .cycles = { rl_a },
     .cycle_count = 1
 };
 
@@ -1065,8 +1079,80 @@ Rotate right (accumulator)
 RRA: Rotates the 8-bit A register value right through the carry flag
 */
 static const instruction_t RRA = {
-    .cycles = { rra },
+    .cycles = { rr_a },
     .cycle_count = 1
+};
+
+/*
+Rotate left circular (register)
+RLC r: Rotates the 8-bit register r value left in a circular manner
+*/
+static const instruction_t RLC_r = {
+    .cycles = { cb_prefix, rlc_r },
+    .cycle_count = 2
+};
+
+/*
+Rotate right circular (register)
+RRC r: Rotates the 8-bit register r value right in a circular manner
+*/
+static const instruction_t RRC_r = {
+    .cycles = { cb_prefix, rrc_r },
+    .cycle_count = 2
+};
+
+/*
+Rotate left circular (indirect HL)
+RLC (HL): Rotates the 8-bit data at the address specified by the 16-bit register HL left in a circular manner
+*/
+static const instruction_t RLC_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, rlc_z, nop },
+    .cycle_count = 4
+};
+
+/*
+Rotate right circular (indirect HL)
+RRC (HL): Rotates the 8-bit data at the address specified by the 16-bit register HL right in a circular manner
+*/
+static const instruction_t RRC_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, rrc_z, nop },
+    .cycle_count = 4
+};
+
+/*
+Rotate left (register)
+RL r: Rotates the 8-bit register r value left through the carry flag
+*/
+static const instruction_t RL_r = {
+    .cycles = { cb_prefix, rl_r },
+    .cycle_count = 2
+};
+
+/*
+Rotate right (register)
+RR r: Rotates the 8-bit register r value right through the carry flag
+*/
+static const instruction_t RR_r = {
+    .cycles = { cb_prefix, rr_r },
+    .cycle_count = 2
+};
+
+/*
+Rotate left (indirect HL)
+RL (HL): Rotates the 8-bit data at the address specified by the 16-bit register HL left through the carry flag
+*/
+static const instruction_t RL_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, rl_z, nop },
+    .cycle_count = 4
+};
+
+/*
+Rotate right (indirect HL)
+RR (HL): Rotates the 8-bit data at the address specified by the 16-bit register HL right through the carry flag
+*/
+static const instruction_t RR_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, rr_z, nop },
+    .cycle_count = 4
 };
 
 /* ############################################################################
@@ -1374,39 +1460,39 @@ static const instruction_t OPCODE_TABLE[256] = {
 
 
 static const instruction_t CB_OPCODE_TABLE[256] = {
-    [0x00] = ,
-    [0x01] = ,
-    [0x02] = ,
-    [0x03] = ,
-    [0x04] = ,
-    [0x05] = ,
-    [0x06] = ,
-    [0x07] = ,
-    [0x08] = ,
-    [0x09] = ,
-    [0x0A] = ,
-    [0x0B] = ,
-    [0x0C] = ,
-    [0x0D] = ,
-    [0x0E] = ,
-    [0x0F] = ,
+    [0x00] = RLC_r,
+    [0x01] = RLC_r,
+    [0x02] = RLC_r,
+    [0x03] = RLC_r,
+    [0x04] = RLC_r,
+    [0x05] = RLC_r,
+    [0x06] = RLC_HL,
+    [0x07] = RLC_r,
+    [0x08] = RRC_r,
+    [0x09] = RRC_r,
+    [0x0A] = RRC_r,
+    [0x0B] = RRC_r,
+    [0x0C] = RRC_r,
+    [0x0D] = RRC_r,
+    [0x0E] = RRC_HL,
+    [0x0F] = RRC_r,
 
-    [0x10] = ,
-    [0x11] = ,
-    [0x12] = ,
-    [0x13] = ,
-    [0x14] = ,
-    [0x15] = ,
-    [0x16] = ,
-    [0x17] = ,
-    [0x18] = ,
-    [0x19] = ,
-    [0x1A] = ,
-    [0x1B] = ,
-    [0x1C] = ,
-    [0x1D] = ,
-    [0x1E] = ,
-    [0x1F] = ,
+    [0x10] = RL_r,
+    [0x11] = RL_r,
+    [0x12] = RL_r,
+    [0x13] = RL_r,
+    [0x14] = RL_r,
+    [0x15] = RL_r,
+    [0x16] = RL_HL,
+    [0x17] = RL_r,
+    [0x18] = RR_r,
+    [0x19] = RR_r,
+    [0x1A] = RR_r,
+    [0x1B] = RR_r,
+    [0x1C] = RR_r,
+    [0x1D] = RR_r,
+    [0x1E] = RR_HL,
+    [0x1F] = RR_r,
 
     [0x20] = ,
     [0x21] = ,
