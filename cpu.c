@@ -1,6 +1,8 @@
 #include "bus.h"
 #include "cpu.h"
 
+#include <stdbool.h>
+
 #define MAX_MCYCLE_INSTRUCTION 5
 
 #define MASK_BYTE       0b11111111
@@ -1037,20 +1039,22 @@ rotate_r_thru_carry(uint8_t *val)
 }
 
 static void
-shift_l_arithmetic(uint8_t *val)
+shift_l(uint8_t *val)
 {
     CLR_N; CLR_H;
     if (*val >> 7) SET_C; else CLR_C;
-    *val = (*val << 1);
+    *val <<= 1;
     if (*val) CLR_Z; else SET_Z;
 }
 
 static void
-shift_r_arithmetic(uint8_t *val)
+shift_r(uint8_t *val, bool arithmetic_shift)
 {
     CLR_N; CLR_H;
     if (*val & MASK_BIT_L) SET_C; else CLR_C;
-    *val = (*val >> 1) | (*val & MASK_BIT_H);
+    *val >>= 1;
+    if (arithmetic_shift)
+        *val |= (*val & MASK_BIT_H);
     if (*val) CLR_Z; else SET_Z;
 }
 
@@ -1076,10 +1080,13 @@ static void rr_r  () { rotate_r_thru_carry(&cpu.reg[IR_REG_R]);          }
 static void rl_z  () { rotate_l_thru_carry(&cpu.Z); memory_write_HL_Z(); }
 static void rr_z  () { rotate_r_thru_carry(&cpu.Z); memory_write_HL_Z(); }
 
-static void sla_r () { shift_l_arithmetic (&cpu.reg[IR_REG_R]);          }
-static void sra_r () { shift_r_arithmetic (&cpu.reg[IR_REG_R]);          }
-static void sla_z () { shift_l_arithmetic (&cpu.Z); memory_write_HL_Z(); }
-static void sra_z () { shift_r_arithmetic (&cpu.Z); memory_write_HL_Z(); }
+static void sla_r () { shift_l (&cpu.reg[IR_REG_R]);                     }
+static void sra_r () { shift_r (&cpu.reg[IR_REG_R], true);               }
+static void srl_r () { shift_r (&cpu.reg[IR_REG_R], false);              }
+static void sla_z () { shift_l (&cpu.Z); memory_write_HL_Z();            }
+static void sra_z () { shift_r (&cpu.Z, true); memory_write_HL_Z();      }
+static void srl_z () { shift_r (&cpu.Z, false); memory_write_HL_Z();     }
+
 
 static void swap_r() { swap_nibbles       (&cpu.reg[IR_REG_R]);          }
 static void swap_z() { swap_nibbles       (&cpu.Z); memory_write_HL_Z(); }
@@ -1229,6 +1236,25 @@ arithmetic shift (bit 7 retains its value)
 */
 static const instruction_t SRA_HL = {
     .cycles = { cb_prefix, memory_read_HL_Z, sra_z, nop },
+    .cycle_count = 4
+};
+
+/*
+Shift right logical (register)
+SRL r: Shifts the 8-bit register r value right by 1 bit using a logical shift
+*/
+static const instruction_t SRL_r = {
+    .cycles = { cb_prefix, srl_r },
+    .cycle_count = 2
+};
+
+/*
+Shift right logical (indirect HL)
+SRL (HL): Shifts the 8-bit data at the address specified by the 16-bit register HL right by 1 bit using a
+logical shift
+*/
+static const instruction_t SRL_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, srl_z, nop },
     .cycle_count = 4
 };
 
@@ -1614,14 +1640,14 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
     [0x35] = SWAP_r,
     [0x36] = SWAP_HL,
     [0x37] = SWAP_r,
-    [0x38] = ,
-    [0x39] = ,
-    [0x3A] = ,
-    [0x3B] = ,
-    [0x3C] = ,
-    [0x3D] = ,
-    [0x3E] = ,
-    [0x3F] = ,
+    [0x38] = SRL_r,
+    [0x39] = SRL_r,
+    [0x3A] = SRL_r,
+    [0x3B] = SRL_r,
+    [0x3C] = SRL_r,
+    [0x3D] = SRL_r,
+    [0x3E] = SRL_HL,
+    [0x3F] = SRL_r,
 
     [0x40] = ,
     [0x41] = ,
