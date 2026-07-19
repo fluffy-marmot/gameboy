@@ -4,10 +4,11 @@
 #define MAX_MCYCLE_INSTRUCTION 5
 
 #define MASK_BYTE       0b11111111
-#define MASK_ZERO       0b00000000
-#define MASK_BIT        0b00000001
 #define MASK_NIBBLE_L   0b00001111
 #define MASK_NIBBLE_H   0b11110000
+#define MASK_BIT_L      0b00000001
+#define MASK_BIT_H      0b10000000
+#define MASK_ZERO       0b00000000
 #define MASK_FLAGS      0b11110000
 #define MASK_FLAG_Z     0b10000000
 #define MASK_FLAG_N     0b01000000
@@ -1000,50 +1001,88 @@ static const instruction_t CPL = {
 static void
 rotate_l_circ_carry(uint8_t *val)
 {
-    CLR_Z; CLR_N; CLR_H;
+    CLR_N; CLR_H;
     if (*val >> 7) SET_C; else CLR_C;
     *val = (*val << 1) | FLAG_C;
+    if (*val) CLR_Z; else SET_Z;
 }
 
 static void
 rotate_r_circ_carry(uint8_t *val)
 {
-    CLR_Z; CLR_N; CLR_H;
-    if (*val & MASK_BIT) SET_C; else CLR_C;
+    CLR_N; CLR_H;
+    if (*val & MASK_BIT_L) SET_C; else CLR_C;
     *val = (*val >> 1) | (FLAG_C << 7);
+    if (*val) CLR_Z; else SET_Z;
 }
 
 static void
 rotate_l_thru_carry(uint8_t *val)
 {
-    CLR_Z; CLR_N; CLR_H;
+    CLR_N; CLR_H;
     uint8_t temp = (*val >> 7);
     *val = (*val << 1) | FLAG_C;
     if (temp) SET_C; else CLR_C;
+    if (*val) CLR_Z; else SET_Z;
 }
 
 static void
 rotate_r_thru_carry(uint8_t *val)
 {
-    CLR_Z; CLR_N; CLR_H;
-    uint8_t temp = (*val & MASK_BIT);
+    CLR_N; CLR_H;
+    uint8_t temp = (*val & MASK_BIT_L);
     *val = (*val >> 1) | (FLAG_C << 7);
     if (temp) SET_C; else CLR_C;
+    if (*val) CLR_Z; else SET_Z;
 }
 
-static void rlc_a() { rotate_l_circ_carry(&cpu.A);                                                       }
-static void rrc_a() { rotate_r_circ_carry(&cpu.A);                                                       }
-static void rlc_r() { rotate_l_circ_carry(&cpu.reg[IR_REG_R]); if (cpu.reg[IR_REG_R]) CLR_Z; else SET_Z; }
-static void rrc_r() { rotate_r_circ_carry(&cpu.reg[IR_REG_R]); if (cpu.reg[IR_REG_R]) CLR_Z; else SET_Z; }
-static void rlc_z() { rotate_l_circ_carry(&cpu.Z); if (cpu.Z) CLR_Z; else SET_Z; memory_write_HL_Z();    }
-static void rrc_z() { rotate_r_circ_carry(&cpu.Z); if (cpu.Z) CLR_Z; else SET_Z; memory_write_HL_Z();    }
+static void
+shift_l_arithmetic(uint8_t *val)
+{
+    CLR_N; CLR_H;
+    if (*val >> 7) SET_C; else CLR_C;
+    *val = (*val << 1);
+    if (*val) CLR_Z; else SET_Z;
+}
 
-static void rl_a () { rotate_l_thru_carry(&cpu.A);                                                       }
-static void rr_a () { rotate_r_thru_carry(&cpu.A);                                                       }
-static void rl_r () { rotate_l_thru_carry(&cpu.reg[IR_REG_R]); if (cpu.reg[IR_REG_R]) CLR_Z; else SET_Z; }
-static void rr_r () { rotate_r_thru_carry(&cpu.reg[IR_REG_R]); if (cpu.reg[IR_REG_R]) CLR_Z; else SET_Z; }
-static void rl_z () { rotate_l_thru_carry(&cpu.Z); if (cpu.Z) CLR_Z; else SET_Z; memory_write_HL_Z();    }
-static void rr_z () { rotate_r_thru_carry(&cpu.Z); if (cpu.Z) CLR_Z; else SET_Z; memory_write_HL_Z();    }
+static void
+shift_r_arithmetic(uint8_t *val)
+{
+    CLR_N; CLR_H;
+    if (*val & MASK_BIT_L) SET_C; else CLR_C;
+    *val = (*val >> 1) | (*val & MASK_BIT_H);
+    if (*val) CLR_Z; else SET_Z;
+}
+
+static void
+swap_nibbles(uint8_t *val)
+{
+    CLR_N; CLR_H; CLR_C;
+    *val = (*val << 4) | (*val >> 4);
+    if (*val) CLR_Z; else SET_Z;
+}
+
+static void rlc_a () { rotate_l_circ_carry(&cpu.A); CLR_Z;               }
+static void rrc_a () { rotate_r_circ_carry(&cpu.A); CLR_Z;               }
+static void rlc_r () { rotate_l_circ_carry(&cpu.reg[IR_REG_R]);          }
+static void rrc_r () { rotate_r_circ_carry(&cpu.reg[IR_REG_R]);          }
+static void rlc_z () { rotate_l_circ_carry(&cpu.Z); memory_write_HL_Z(); }
+static void rrc_z () { rotate_r_circ_carry(&cpu.Z); memory_write_HL_Z(); }
+
+static void rl_a  () { rotate_l_thru_carry(&cpu.A); CLR_Z;               }
+static void rr_a  () { rotate_r_thru_carry(&cpu.A); CLR_Z;               }
+static void rl_r  () { rotate_l_thru_carry(&cpu.reg[IR_REG_R]);          }
+static void rr_r  () { rotate_r_thru_carry(&cpu.reg[IR_REG_R]);          }
+static void rl_z  () { rotate_l_thru_carry(&cpu.Z); memory_write_HL_Z(); }
+static void rr_z  () { rotate_r_thru_carry(&cpu.Z); memory_write_HL_Z(); }
+
+static void sla_r () { shift_l_arithmetic (&cpu.reg[IR_REG_R]);          }
+static void sra_r () { shift_r_arithmetic (&cpu.reg[IR_REG_R]);          }
+static void sla_z () { shift_l_arithmetic (&cpu.Z); memory_write_HL_Z(); }
+static void sra_z () { shift_r_arithmetic (&cpu.Z); memory_write_HL_Z(); }
+
+static void swap_r() { swap_nibbles       (&cpu.reg[IR_REG_R]);          }
+static void swap_z() { swap_nibbles       (&cpu.Z); memory_write_HL_Z(); }
 
 // INSTRUCTIONS ###############################################################
 
@@ -1153,6 +1192,53 @@ RR (HL): Rotates the 8-bit data at the address specified by the 16-bit register 
 static const instruction_t RR_HL = {
     .cycles = { cb_prefix, memory_read_HL_Z, rr_z, nop },
     .cycle_count = 4
+};
+
+/*
+Shift left arithmetic (register)
+SLA r: Shifts the 8-bit register r value left by 1 bit using an arithmetic shift
+*/
+static const instruction_t SLA_r = {
+    .cycles = { cb_prefix, sla_r },
+    .cycle_count = 2
+};
+
+/*
+Shift left arithmetic (indirect HL)
+SLA (HL): Shifts the 8-bit data at the address specified by the 16-bit register HL left by 1 bit using an
+arithmetic shift
+*/
+static const instruction_t SLA_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, sla_z, nop },
+    .cycle_count = 4
+};
+
+/*
+Shift right arithmetic (register)
+SRA r: Shifts the 8-bit register r value right by 1 bit using an arithmetic shift (bit 7 retains its value)
+*/
+static const instruction_t SRA_r = {
+    .cycles = { cb_prefix, sra_r },
+    .cycle_count = 2
+};
+
+/*
+Shift right arithmetic (indirect HL)
+SRA (HL): Shifts the 8-bit data at the address specified by the 16-bit register HL right by 1 bit using an
+arithmetic shift (bit 7 retains its value)
+*/
+static const instruction_t SRA_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, sra_z, nop },
+    .cycle_count = 4
+};
+
+/*
+Swap nibbles (register)
+SWAP r: Swap the high and low nibbles of the 8-bit register r
+*/
+static void instruction_t SWAP_r = {
+    .cycles = { cb_prefix, swap_r },
+    .cycle_count = 2
 };
 
 /* ############################################################################
@@ -1494,22 +1580,22 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
     [0x1E] = RR_HL,
     [0x1F] = RR_r,
 
-    [0x20] = ,
-    [0x21] = ,
-    [0x22] = ,
-    [0x23] = ,
-    [0x24] = ,
-    [0x25] = ,
-    [0x26] = ,
-    [0x27] = ,
-    [0x28] = ,
-    [0x29] = ,
-    [0x2A] = ,
-    [0x2B] = ,
-    [0x2C] = ,
-    [0x2D] = ,
-    [0x2E] = ,
-    [0x2F] = ,
+    [0x20] = SLA_r,
+    [0x21] = SLA_r,
+    [0x22] = SLA_r,
+    [0x23] = SLA_r,
+    [0x24] = SLA_r,
+    [0x25] = SLA_r,
+    [0x26] = SLA_HL,
+    [0x27] = SLA_r,
+    [0x28] = SRA_r,
+    [0x29] = SRA_r,
+    [0x2A] = SRA_r,
+    [0x2B] = SRA_r,
+    [0x2C] = SRA_r,
+    [0x2D] = SRA_r,
+    [0x2E] = SRA_HL,
+    [0x2F] = SRA_r,
 
     [0x30] = ,
     [0x31] = ,
