@@ -16,6 +16,7 @@
 #define MASK_FLAG_N     0b01000000
 #define MASK_FLAG_H     0b00100000
 #define MASK_FLAG_C     0b00010000
+#define MASK_BIT_NUMBER 0b00111000
 #define MASK_REG_8b     0b00000111
 #define MASK_REG_16b    0b00110000
 #define MASK_REG_SPorAF 0b00000011
@@ -34,9 +35,10 @@
 #define CLR_H (cpu.F &= (MASK_FLAG_H ^ MASK_FLAGS))
 #define CLR_C (cpu.F &= (MASK_FLAG_C ^ MASK_FLAGS))
 
-#define IR_REG_L  ((cpu.IR >> 3) & MASK_REG_8b       )
-#define IR_REG_R   (cpu.IR       & MASK_REG_8b       )
-#define IR_REG_16 ((cpu.IR       & MASK_REG_16b) >> 4)
+#define IR_REG_L   ((cpu.IR >> 3) & MASK_REG_8b          )
+#define IR_REG_R   ((cpu.IR)      & MASK_REG_8b          )
+#define IR_REG_16  ((cpu.IR       & MASK_REG_16b)    >> 4)
+#define IR_BIT_NUM ((cpu.IR       & MASK_BIT_NUMBER) >> 3)
 
 // TODO probably define others here too instead of relying on endianness
 #define BC ((uint16_t) ((cpu.B << 8) | cpu.C))
@@ -1066,6 +1068,16 @@ swap_nibbles(uint8_t *val)
     if (*val) CLR_Z; else SET_Z;
 }
 
+static void
+test_bit(uint8_t *val)
+{
+    CLR_N; CLR_H;
+    if (((*val) >> IR_BIT_NUM) & MASK_BIT_L)
+        CLR_Z;
+    else
+        SET_Z;
+}
+
 static void rlc_a () { rotate_l_circ_carry(&cpu.A); CLR_Z;               }
 static void rrc_a () { rotate_r_circ_carry(&cpu.A); CLR_Z;               }
 static void rlc_r () { rotate_l_circ_carry(&cpu.reg[IR_REG_R]);          }
@@ -1080,16 +1092,18 @@ static void rr_r  () { rotate_r_thru_carry(&cpu.reg[IR_REG_R]);          }
 static void rl_z  () { rotate_l_thru_carry(&cpu.Z); memory_write_HL_Z(); }
 static void rr_z  () { rotate_r_thru_carry(&cpu.Z); memory_write_HL_Z(); }
 
-static void sla_r () { shift_l (&cpu.reg[IR_REG_R]);                     }
-static void sra_r () { shift_r (&cpu.reg[IR_REG_R], true);               }
-static void srl_r () { shift_r (&cpu.reg[IR_REG_R], false);              }
-static void sla_z () { shift_l (&cpu.Z); memory_write_HL_Z();            }
-static void sra_z () { shift_r (&cpu.Z, true); memory_write_HL_Z();      }
-static void srl_z () { shift_r (&cpu.Z, false); memory_write_HL_Z();     }
+static void sla_r () { shift_l(&cpu.reg[IR_REG_R]);                      }
+static void sra_r () { shift_r(&cpu.reg[IR_REG_R], true);                }
+static void srl_r () { shift_r(&cpu.reg[IR_REG_R], false);               }
+static void sla_z () { shift_l(&cpu.Z);             memory_write_HL_Z(); }
+static void sra_z () { shift_r(&cpu.Z, true );      memory_write_HL_Z(); }
+static void srl_z () { shift_r(&cpu.Z, false);      memory_write_HL_Z(); }
 
 
-static void swap_r() { swap_nibbles       (&cpu.reg[IR_REG_R]);          }
-static void swap_z() { swap_nibbles       (&cpu.Z); memory_write_HL_Z(); }
+static void swap_r() { swap_nibbles(&cpu.reg[IR_REG_R]);                 }
+static void bit_r () { test_bit    (&cpu.reg[IR_REG_R]);                 }
+static void swap_z() { swap_nibbles(&cpu.Z);        memory_write_HL_Z(); }
+static void bit_z () { test_bit    (&cpu.Z);        memory_write_HL_Z(); }
 
 // INSTRUCTIONS ###############################################################
 
@@ -1274,6 +1288,25 @@ SWAP (HL): Swap the high and low nibbles of the data at the address specified by
 static const instruction_t SWAP_HL = {
     .cycles = { cb_prefix, memory_read_HL_Z, swap_z, nop },
     .cycle_count = 4
+};
+
+/*
+Test bit (register)
+BIT b r: Tests the bit b of the 8-bit register r, the Z flag is set to 1 if the chosen bit is 0, 0 otherwise
+*/
+static const instruction_t BIT_b_r = {
+    .cycles = { cb_prefix, bit_r },
+    .cycle_count = 2
+};
+
+/*
+Test bit (indirect HL)
+BIT b (HL): Tests the bit b of the 8-bit data at the address specified by the 16-bit register HL, the Z flag is
+set to 1 if the chosen bit is 0, 0 otherwise
+*/
+static const instruction_t BIT_b_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, bit_z },
+    .cycle_count = 3
 };
 
 /* ############################################################################
@@ -1649,73 +1682,73 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
     [0x3E] = SRL_HL,
     [0x3F] = SRL_r,
 
-    [0x40] = ,
-    [0x41] = ,
-    [0x42] = ,
-    [0x43] = ,
-    [0x44] = ,
-    [0x45] = ,
-    [0x46] = ,
-    [0x47] = ,
-    [0x48] = ,
-    [0x49] = ,
-    [0x4A] = ,
-    [0x4B] = ,
-    [0x4C] = ,
-    [0x4D] = ,
-    [0x4E] = ,
-    [0x4F] = ,
+    [0x40] = BIT_b_r,
+    [0x41] = BIT_b_r,
+    [0x42] = BIT_b_r,
+    [0x43] = BIT_b_r,
+    [0x44] = BIT_b_r,
+    [0x45] = BIT_b_r,
+    [0x46] = BIT_b_HL,
+    [0x47] = BIT_b_r,
+    [0x48] = BIT_b_r,
+    [0x49] = BIT_b_r,
+    [0x4A] = BIT_b_r,
+    [0x4B] = BIT_b_r,
+    [0x4C] = BIT_b_r,
+    [0x4D] = BIT_b_r,
+    [0x4E] = BIT_b_HL,
+    [0x4F] = BIT_b_r,
 
-    [0x50] = ,
-    [0x51] = ,
-    [0x52] = ,
-    [0x53] = ,
-    [0x54] = ,
-    [0x55] = ,
-    [0x56] = ,
-    [0x57] = ,
-    [0x58] = ,
-    [0x59] = ,
-    [0x5A] = ,
-    [0x5B] = ,
-    [0x5C] = ,
-    [0x5D] = ,
-    [0x5E] = ,
-    [0x5F] = ,
+    [0x50] = BIT_b_r,
+    [0x51] = BIT_b_r,
+    [0x52] = BIT_b_r,
+    [0x53] = BIT_b_r,
+    [0x54] = BIT_b_r,
+    [0x55] = BIT_b_r,
+    [0x56] = BIT_b_HL,
+    [0x57] = BIT_b_r,
+    [0x58] = BIT_b_r,
+    [0x59] = BIT_b_r,
+    [0x5A] = BIT_b_r,
+    [0x5B] = BIT_b_r,
+    [0x5C] = BIT_b_r,
+    [0x5D] = BIT_b_r,
+    [0x5E] = BIT_b_HL,
+    [0x5F] = BIT_b_r,
 
-    [0x60] = ,
-    [0x61] = ,
-    [0x62] = ,
-    [0x63] = ,
-    [0x64] = ,
-    [0x65] = ,
-    [0x66] = ,
-    [0x67] = ,
-    [0x68] = ,
-    [0x69] = ,
-    [0x6A] = ,
-    [0x6B] = ,
-    [0x6C] = ,
-    [0x6D] = ,
-    [0x6E] = ,
-    [0x6F] = ,
+    [0x60] = BIT_b_r,
+    [0x61] = BIT_b_r,
+    [0x62] = BIT_b_r,
+    [0x63] = BIT_b_r,
+    [0x64] = BIT_b_r,
+    [0x65] = BIT_b_r,
+    [0x66] = BIT_b_HL,
+    [0x67] = BIT_b_r,
+    [0x68] = BIT_b_r,
+    [0x69] = BIT_b_r,
+    [0x6A] = BIT_b_r,
+    [0x6B] = BIT_b_r,
+    [0x6C] = BIT_b_r,
+    [0x6D] = BIT_b_r,
+    [0x6E] = BIT_b_HL,
+    [0x6F] = BIT_b_r,
 
-    [0x70] = ,
-    [0x71] = ,
-    [0x72] = ,
-    [0x73] = ,
-    [0x74] = ,
-    [0x75] = ,
-    [0x76] = ,
-    [0x77] = ,
-    [0x78] = ,
-    [0x79] = ,
-    [0x7A] = ,
-    [0x7B] = ,
-    [0x7C] = ,
-    [0x7D] = ,
-    [0x7E] = ,
-    [0x7F] = ,
+    [0x70] = BIT_b_r,
+    [0x71] = BIT_b_r,
+    [0x72] = BIT_b_r,
+    [0x73] = BIT_b_r,
+    [0x74] = BIT_b_r,
+    [0x75] = BIT_b_r,
+    [0x76] = BIT_b_HL,
+    [0x77] = BIT_b_r,
+    [0x78] = BIT_b_r,
+    [0x79] = BIT_b_r,
+    [0x7A] = BIT_b_r,
+    [0x7B] = BIT_b_r,
+    [0x7C] = BIT_b_r,
+    [0x7D] = BIT_b_r,
+    [0x7E] = BIT_b_HL,
+    [0x7F] = BIT_b_r,
 
     [0x80] = ,
     [0x81] = ,
