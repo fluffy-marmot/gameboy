@@ -37,6 +37,7 @@ typedef struct {
         };
     };
 
+    uint8_t cycle_num;
     gb_bus_t *bus;                  // access to memory read/write
 } sm83_cpu_t;
 

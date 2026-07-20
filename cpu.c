@@ -5,21 +5,26 @@
 
 #define MAX_MCYCLE_INSTRUCTION 5
 
-#define MASK_BYTE       0b11111111
-#define MASK_NIBBLE_L   0b00001111
-#define MASK_NIBBLE_H   0b11110000
-#define MASK_BIT_L      0b00000001
-#define MASK_BIT_H      0b10000000
-#define MASK_ZERO       0b00000000
-#define MASK_FLAGS      0b11110000
-#define MASK_FLAG_Z     0b10000000
-#define MASK_FLAG_N     0b01000000
-#define MASK_FLAG_H     0b00100000
-#define MASK_FLAG_C     0b00010000
-#define MASK_BIT_NUMBER 0b00111000
-#define MASK_REG_8b     0b00000111
-#define MASK_REG_16b    0b00110000
-#define MASK_REG_SPorAF 0b00000011
+#define MASK_BYTE            0b11111111
+#define MASK_NIBBLE_L        0b00001111
+#define MASK_NIBBLE_H        0b11110000
+#define MASK_BIT_L           0b00000001
+#define MASK_BIT_H           0b10000000
+#define MASK_ZERO            0b00000000
+#define MASK_FLAGS           0b11110000
+#define MASK_FLAG_Z          0b10000000
+#define MASK_FLAG_N          0b01000000
+#define MASK_FLAG_H          0b00100000
+#define MASK_FLAG_C          0b00010000
+#define MASK_BIT_NUMBER      0b00111000
+#define MASK_REG_8b          0b00000111
+#define MASK_REG_16b         0b00110000
+#define MASK_REG_SPorAF      0b00000011
+#define MASK_CONDITION       0b00011000
+#define MASK_CONDITION_NZ    0b00000000
+#define MASK_CONDITION_NC    0b00010000
+#define MASK_CONDITION__Z    0b00001000
+#define MASK_CONDITION__C    0b00011000
 
 #define FLAG_Z ((cpu.F & MASK_FLAG_Z) >> 7)
 #define FLAG_N ((cpu.F & MASK_FLAG_N) >> 6)
@@ -39,6 +44,7 @@
 #define IR_REG_R   ((cpu.IR)      & MASK_REG_8b          )
 #define IR_REG_16  ((cpu.IR       & MASK_REG_16b)    >> 4)
 #define IR_BIT_NUM ((cpu.IR       & MASK_BIT_NUMBER) >> 3)
+#define IR_COND    ((cpu.IR)      & MASK_CONDITION       )
 
 // TODO probably define others here too instead of relying on endianness
 #define BC ((uint16_t) ((cpu.B << 8) | cpu.C))
@@ -1361,6 +1367,59 @@ static const instruction_t SET_b_HL = {
 /* ############################################################################
 ###############################################################################
 
+        Control Flow Instructions
+
+###############################################################################
+############################################################################ */
+
+static bool
+condition()
+{
+    switch (IR_COND) {
+    case MASK_CONDITION_NZ: return !FLAG_Z;
+    case MASK_CONDITION_NC: return !FLAG_C;
+    case MASK_CONDITION__Z: return  FLAG_Z;
+    case MASK_CONDITION__C: return  FLAG_C;
+    }
+}
+
+static void      jump_PC_HL() { cpu.PC = HL;                                            }
+static void      jump_PC_WZ() { cpu.PC = cpu.WZ;                                        }
+static void cond_jump_PC_WZ() { if (condition()) cpu.PC = cpu.WZ; else cpu.cycle_num++; }
+
+// INSTRUCTIONS ###############################################################
+
+/*
+Jump
+JP nn: unconditional jump to the address specified by the 16-bit immediate operand nn
+*/
+static const instruction_t JP_nn = {
+    .cycles = { memory_read_PC_Z, memory_read_PC_W, jump_PC_WZ, nop },
+    .cycle_count = 4
+};
+
+/*
+Jump to HL
+JP HL: unconditional jump to the address specified by the 16-bit register HL
+*/
+static const instruction_t JP_HL = {
+    .cycles = { jump_PC_HL },
+    .cycle_count = 1
+};
+
+/*
+Jump (conditional)
+JP cc nn: conditional jump to the address specified by the 16-bit immediate operand nn, depending on cc
+*/
+static const instruction_t JP_cc_nn = {
+    .cycles = { memory_read_PC_Z, memory_read_PC_W, cond_jump_PC_WZ, nop },
+    .cycle_count = 4
+};
+
+
+/* ############################################################################
+###############################################################################
+
         STUFF
 
 ###############################################################################
@@ -1369,7 +1428,7 @@ static const instruction_t SET_b_HL = {
 /*
 PREFIX
 */
-static const instruction_t PREFIX = {
+static const instruction_t ____PREFIX = {
     .cycles = { cb_prefix },
     .cycle_count = 1
 };
@@ -1593,16 +1652,16 @@ static const instruction_t OPCODE_TABLE[256] = {
 
     [0xC0] = ,
     [0xC1] = POP_rr,
-    [0xC2] = ,
-    [0xC3] = ,
+    [0xC2] = JP_cc_nn,
+    [0xC3] = JP_nn,
     [0xC4] = ,
     [0xC5] = PUSH_rr,
     [0xC6] = ADD_n,
     [0xC7] = ,
     [0xC8] = ,
     [0xC9] = ,
-    [0xCA] = ,
-    [0xCB] = PREFIX,
+    [0xCA] = JP_cc_nn,
+    [0xCB] = ____PREFIX,
     [0xCC] = ,
     [0xCD] = ,
     [0xCE] = ADC_n,
@@ -1610,7 +1669,7 @@ static const instruction_t OPCODE_TABLE[256] = {
 
     [0xD0] = ,
     [0xD1] = POP_rr,
-    [0xD2] = ,
+    [0xD2] = JP_cc_nn,
     [0xD3] = ,
     [0xD4] = ,
     [0xD5] = PUSH_rr,
@@ -1618,7 +1677,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0xD7] = ,
     [0xD8] = ,
     [0xD9] = ,
-    [0xDA] = ,
+    [0xDA] = JP_cc_nn,
     [0xDB] = ,
     [0xDC] = ,
     [0xDD] = ,
@@ -1634,7 +1693,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0xE6] = AND_n,
     [0xE7] = ,
     [0xE8] = ADD_SP_e,
-    [0xE9] = ,
+    [0xE9] = JP_nn,
     [0xEA] = LD_nn_A,
     [0xEB] = ,
     [0xEC] = ,
