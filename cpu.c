@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#define MAX_MCYCLE_INSTRUCTION 5
+#define MAX_MCYCLE_INSTRUCTION 6
 
 #define MASK_BYTE            0b11111111
 #define MASK_NIBBLE_L        0b00001111
@@ -51,6 +51,7 @@
 #define DE ((uint16_t) ((cpu.D << 8) | cpu.E))
 #define HL ((uint16_t) ((cpu.H << 8) | cpu.L))
 
+
 typedef struct {
     void (*cycles[MAX_MCYCLE_INSTRUCTION])(void);
     uint8_t cycle_count;
@@ -64,6 +65,7 @@ gb_cpu_t cpu;
 // TODO: can I inline other stuff here? I'm unclear
 // TODO: get rid of nop, leave blank?
 static void nop      (void) {};
+static void invalid  (void) {};
 static void cb_prefix(void) {};
 
 static inline void SP_dec()         { cpu.SP--;                                          }
@@ -108,7 +110,8 @@ static void memory_write_WZ_SPl() { cpu.bus->write(cpu.WZ, cpu.SP); cpu.WZ++;   
 static void memory_write_WZ_SPh() { cpu.bus->write(cpu.WZ, cpu.SP >> 8);        }
 static void memory_write__C_A  () { cpu.bus->write(0xFF00 + cpu.C, cpu.A);      }
 static void memory_write__Z_A  () { cpu.bus->write(0xFF00 + cpu.Z, cpu.A);      }
-
+static void memory_write_SP_PCh() { cpu.bus->write(cpu.SP, cpu.PC >> 8);        }
+static void memory_write_SP_PCl() { cpu.bus->write(cpu.SP, cpu.PC);             }
 
 /*
 Helper functions that need to decide between the different 16-bit registers
@@ -1116,11 +1119,11 @@ static void srl_z () { shift_r(&cpu.Z, false);      memory_write_HL_Z(); }
 
 
 static void swap_r() { swap_nibbles(&cpu.reg[IR_REG_R]);                 }
-static void bit_r () { test_bit    (&cpu.reg[IR_REG_R]);                 }
+static void bit_r () {  test_bit   (&cpu.reg[IR_REG_R]);                 }
 static void res_r () { reset_bit   (&cpu.reg[IR_REG_R]);                 }
 static void set_r () {   set_bit   (&cpu.reg[IR_REG_R]);                 }
 static void swap_z() { swap_nibbles(&cpu.Z);        memory_write_HL_Z(); }
-static void bit_z () { test_bit    (&cpu.Z);        memory_write_HL_Z(); }
+static void bit_z () {  test_bit   (&cpu.Z);        memory_write_HL_Z(); }
 static void res_z () { reset_bit   (&cpu.Z);        memory_write_HL_Z(); }
 static void set_z () {   set_bit   (&cpu.Z);        memory_write_HL_Z(); }
 
@@ -1383,9 +1386,15 @@ condition()
     }
 }
 
-static void      jump_PC_HL() { cpu.PC = HL;                                            }
-static void      jump_PC_WZ() { cpu.PC = cpu.WZ;                                        }
-static void cond_jump_PC_WZ() { if (condition()) cpu.PC = cpu.WZ; else cpu.cycle_num++; }
+static void         jump_PC_HL() { cpu.PC = HL;                                               }
+static void         jump_PC_WZ() { cpu.PC = cpu.WZ;                                           }
+static void     rel_jump_PC_e () { cpu.PC += (int8_t) cpu.Z;                                  } // Cheating 'lil
+static void     con_jump_PC_WZ() { if (condition()) jump_PC_WZ();    else cpu.cycle_num++;    }
+static void rel_con_jump_PC_e () { if (condition()) rel_jump_PC_e(); else cpu.cycle_num++;    }
+static void   stack_push_PC_h () { memory_write_SP_PCh(); cpu.SP--;                           }
+static void   stack_push_PC_l () { memory_write_SP_PCl(); cpu.PC = cpu.WZ;                    }
+static void     con_call_func () { if (condition()) SP_dec();        else cpu.cycle_num += 3; }
+static void     con__ret_func () { if (condition())    nop();        else cpu.cycle_num += 3; }
 
 // INSTRUCTIONS ###############################################################
 
@@ -1412,10 +1421,63 @@ Jump (conditional)
 JP cc nn: conditional jump to the address specified by the 16-bit immediate operand nn, depending on cc
 */
 static const instruction_t JP_cc_nn = {
-    .cycles = { memory_read_PC_Z, memory_read_PC_W, cond_jump_PC_WZ, nop },
+    .cycles = { memory_read_PC_Z, memory_read_PC_W, con_jump_PC_WZ, nop },
     .cycle_count = 4
 };
 
+/*
+Relative jump
+JR e: unconditional jump to the relative address specified by the signed 8-bit operand e
+*/
+static const instruction_t JR_e = {
+    .cycles = { memory_read_PC_Z, rel_jump_PC_e, nop },
+    .cycle_count = 3
+};
+
+/*
+Relative jump (conditional)
+JR cc e: conditional jump to the relative address specified by the signed 8-bit operand e, depending on cc
+*/
+static const instruction_t JR_cc_e = {
+    .cycles = { memory_read_PC_Z, rel_jump_PC_e, nop },
+    .cycle_count = 3
+};
+
+/*
+Call function
+CALL nn: unconditional function call to the address specified by the 16-bit immediate operand nn
+*/
+static const instruction_t CALL_nn = {
+    .cycles = { memory_read_PC_Z, memory_read_PC_W, SP_dec, stack_push_PC_h, stack_push_PC_l, nop },
+    .cycle_count = 6
+};
+
+/*
+Call function (conditional)
+CALL cc nn: conditional function call to the address given by the 16-bit immediate operand nn, depending on cc
+*/
+static const instruction_t CALL_cc_nn = {
+    .cycles = { memory_read_PC_Z, memory_read_PC_W, con_call_func, stack_push_PC_h, stack_push_PC_l, nop },
+    .cycle_count = 6
+};
+
+/*
+Return from function
+RET: unconditional return from a function
+*/
+static const instruction_t RET = {
+    .cycles = { memory_read_SP_Z, memory_read_SP_W, jump_PC_WZ, nop },
+    .cycle_count = 4
+};
+
+/*
+Return from function (conditional)
+RET cc: conditional return from a function, depending on cc
+*/
+static const instruction_t RET_cc = {
+    .cycles = { con__ret_func, memory_read_SP_Z, memory_read_SP_W, jump_PC_WZ, nop },
+    .cycle_count = 5
+};
 
 /* ############################################################################
 ###############################################################################
@@ -1425,11 +1487,16 @@ static const instruction_t JP_cc_nn = {
 ###############################################################################
 ############################################################################ */
 
-/*
-PREFIX
-*/
+
+// PREFIX
 static const instruction_t ____PREFIX = {
     .cycles = { cb_prefix },
+    .cycle_count = 1
+};
+
+// INVALID
+static const instruction_t ____INVALID = {
+    .cycles = { invalid },
     .cycle_count = 1
 };
 
@@ -1471,7 +1538,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0x15] = DEC_r,
     [0x16] = LD_r_n,
     [0x17] = RLA,
-    [0x18] = ,
+    [0x18] = JR_e,
     [0x19] = ADD_HL_rr,
     [0x1A] = LD_A_DE,
     [0x1B] = DEC_rr,
@@ -1480,7 +1547,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0x1E] = LD_r_n,
     [0x1F] = RRA,
 
-    [0x20] = ,
+    [0x20] = JR_cc_e,
     [0x21] = LD_rr_nn,
     [0x22] = LD_HLi_A,
     [0x23] = INC_rr,
@@ -1488,7 +1555,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0x25] = DEC_r,
     [0x26] = LD_r_n,
     [0x27] = ,
-    [0x28] = ,
+    [0x28] = JR_cc_e,
     [0x29] = ADD_HL_rr,
     [0x2A] = LD_A_HLi,
     [0x2B] = DEC_rr,
@@ -1497,7 +1564,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0x2E] = LD_r_n,
     [0x2F] = CPL,
 
-    [0x30] = ,
+    [0x30] = JR_cc_e,
     [0x31] = LD_rr_nn,
     [0x32] = LD_HLd_A,
     [0x33] = INC_rr,
@@ -1505,7 +1572,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0x35] = DEC_HL,
     [0x36] = LD_HL_n,
     [0x37] = SCF,
-    [0x38] = ,
+    [0x38] = JR_cc_e,
     [0x39] = ADD_HL_rr,
     [0x3A] = LD_A_HLd,
     [0x3B] = DEC_rr,
@@ -1650,54 +1717,54 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0xBE] = CP_HL,
     [0xBF] = CP_r,
 
-    [0xC0] = ,
+    [0xC0] = RET_cc,
     [0xC1] = POP_rr,
     [0xC2] = JP_cc_nn,
     [0xC3] = JP_nn,
-    [0xC4] = ,
+    [0xC4] = CALL_cc_nn,
     [0xC5] = PUSH_rr,
     [0xC6] = ADD_n,
     [0xC7] = ,
-    [0xC8] = ,
-    [0xC9] = ,
+    [0xC8] = RET_cc,
+    [0xC9] = RET,
     [0xCA] = JP_cc_nn,
     [0xCB] = ____PREFIX,
-    [0xCC] = ,
-    [0xCD] = ,
+    [0xCC] = CALL_cc_nn,
+    [0xCD] = CALL_nn,
     [0xCE] = ADC_n,
     [0xCF] = ,
 
-    [0xD0] = ,
+    [0xD0] = RET_cc,
     [0xD1] = POP_rr,
     [0xD2] = JP_cc_nn,
-    [0xD3] = ,
-    [0xD4] = ,
+    [0xD3] = ____INVALID,
+    [0xD4] = CALL_cc_nn,
     [0xD5] = PUSH_rr,
     [0xD6] = SUB_n,
     [0xD7] = ,
-    [0xD8] = ,
+    [0xD8] = RET_cc,
     [0xD9] = ,
     [0xDA] = JP_cc_nn,
-    [0xDB] = ,
-    [0xDC] = ,
-    [0xDD] = ,
+    [0xDB] = ____INVALID,
+    [0xDC] = CALL_cc_nn,
+    [0xDD] = ____INVALID,
     [0xDE] = SBC_n,
     [0xDF] = ,
 
     [0xE0] = LDH__n_A,
     [0xE1] = POP_rr,
     [0xE2] = LDH__C_A,
-    [0xE3] = ,
-    [0xE4] = ,
+    [0xE3] = ____INVALID,
+    [0xE4] = ____INVALID,
     [0xE5] = PUSH_rr,
     [0xE6] = AND_n,
     [0xE7] = ,
     [0xE8] = ADD_SP_e,
-    [0xE9] = JP_nn,
+    [0xE9] = JP_HL,
     [0xEA] = LD_nn_A,
-    [0xEB] = ,
-    [0xEC] = ,
-    [0xED] = ,
+    [0xEB] = ____INVALID,
+    [0xEC] = ____INVALID,
+    [0xED] = ____INVALID,
     [0xEE] = XOR_n,
     [0xEF] = ,
 
@@ -1705,7 +1772,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0xF1] = POP_rr,
     [0xF2] = LDH_A__C,
     [0xF3] = ,
-    [0xF4] = ,
+    [0xF4] = ____INVALID,
     [0xF5] = PUSH_rr,
     [0xF6] = OR_n,
     [0xF7] = ,
@@ -1713,8 +1780,8 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0xF9] = LD_SP_HL,
     [0xFA] = LD_A_nn,
     [0xFB] = ,
-    [0xFC] = ,
-    [0xFD] = ,
+    [0xFC] = ____INVALID,
+    [0xFD] = ____INVALID,
     [0xFE] = CP_n,
     [0xFF] = ,
 };
