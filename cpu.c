@@ -1072,10 +1072,19 @@ static void
 test_bit(uint8_t *val)
 {
     CLR_N; CLR_H;
-    if (((*val) >> IR_BIT_NUM) & MASK_BIT_L)
-        CLR_Z;
-    else
-        SET_Z;
+    if (((*val) >> IR_BIT_NUM) & MASK_BIT_L) CLR_Z; else SET_Z;
+}
+
+static void
+reset_bit(uint8_t *val)
+{
+    *val &= ((MASK_BIT_L << IR_BIT_NUM) ^ MASK_BYTE);
+}
+
+static void
+set_bit(uint8_t *val)
+{
+    *val |= (MASK_BIT_L << IR_BIT_NUM);
 }
 
 static void rlc_a () { rotate_l_circ_carry(&cpu.A); CLR_Z;               }
@@ -1102,8 +1111,12 @@ static void srl_z () { shift_r(&cpu.Z, false);      memory_write_HL_Z(); }
 
 static void swap_r() { swap_nibbles(&cpu.reg[IR_REG_R]);                 }
 static void bit_r () { test_bit    (&cpu.reg[IR_REG_R]);                 }
+static void res_r () { reset_bit   (&cpu.reg[IR_REG_R]);                 }
+static void set_r () {   set_bit   (&cpu.reg[IR_REG_R]);                 }
 static void swap_z() { swap_nibbles(&cpu.Z);        memory_write_HL_Z(); }
 static void bit_z () { test_bit    (&cpu.Z);        memory_write_HL_Z(); }
+static void res_z () { reset_bit   (&cpu.Z);        memory_write_HL_Z(); }
+static void set_z () {   set_bit   (&cpu.Z);        memory_write_HL_Z(); }
 
 // INSTRUCTIONS ###############################################################
 
@@ -1307,6 +1320,42 @@ set to 1 if the chosen bit is 0, 0 otherwise
 static const instruction_t BIT_b_HL = {
     .cycles = { cb_prefix, memory_read_HL_Z, bit_z },
     .cycle_count = 3
+};
+
+/*
+Reset bit (register)
+RES b r: Resets the bit b of the 8-bit register r to 0
+*/
+static const instruction_t RES_b_r = {
+    .cycles = { cb_prefix, res_r },
+    .cycle_count = 2
+};
+
+/*
+Reset bit (indirect HL)
+RES b (HL): Resets the bit b, of the 8-bit data at the address specified by the 16-bit register HL, to 0
+*/
+static const instruction_t RES_b_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, res_z, nop },
+    .cycle_count = 4
+};
+
+/*
+Set bit (register)
+SET b r: Sets the bit b of the 8-bit register r to 1
+*/
+static const instruction_t SET_b_r = {
+    .cycles = { cb_prefix, set_r },
+    .cycle_count = 2
+};
+
+/*
+Set bit (indirect HL)
+SET b (HL): Sets the bit b, of the 8-bit data at the address specified by the 16-bit register HL, to 1
+*/
+static const instruction_t SET_b_HL = {
+    .cycles = { cb_prefix, memory_read_HL_Z, set_z, nop },
+    .cycle_count = 4
 };
 
 /* ############################################################################
@@ -1750,139 +1799,139 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
     [0x7E] = BIT_b_HL,
     [0x7F] = BIT_b_r,
 
-    [0x80] = ,
-    [0x81] = ,
-    [0x82] = ,
-    [0x83] = ,
-    [0x84] = ,
-    [0x85] = ,
-    [0x86] = ,
-    [0x87] = ,
-    [0x88] = ,
-    [0x89] = ,
-    [0x8A] = ,
-    [0x8B] = ,
-    [0x8C] = ,
-    [0x8D] = ,
-    [0x8E] = ,
-    [0x8F] = ,
+    [0x80] = RES_b_r,
+    [0x81] = RES_b_r,
+    [0x82] = RES_b_r,
+    [0x83] = RES_b_r,
+    [0x84] = RES_b_r,
+    [0x85] = RES_b_r,
+    [0x86] = RES_b_HL,
+    [0x87] = RES_b_r,
+    [0x88] = RES_b_r,
+    [0x89] = RES_b_r,
+    [0x8A] = RES_b_r,
+    [0x8B] = RES_b_r,
+    [0x8C] = RES_b_r,
+    [0x8D] = RES_b_r,
+    [0x8E] = RES_b_HL,
+    [0x8F] = RES_b_r,
 
-    [0x90] = ,
-    [0x91] = ,
-    [0x92] = ,
-    [0x93] = ,
-    [0x94] = ,
-    [0x95] = ,
-    [0x96] = ,
-    [0x97] = ,
-    [0x98] = ,
-    [0x99] = ,
-    [0x9A] = ,
-    [0x9B] = ,
-    [0x9C] = ,
-    [0x9D] = ,
-    [0x9E] = ,
-    [0x9F] = ,
+    [0x90] = RES_b_r,
+    [0x91] = RES_b_r,
+    [0x92] = RES_b_r,
+    [0x93] = RES_b_r,
+    [0x94] = RES_b_r,
+    [0x95] = RES_b_r,
+    [0x96] = RES_b_HL,
+    [0x97] = RES_b_r,
+    [0x98] = RES_b_r,
+    [0x99] = RES_b_r,
+    [0x9A] = RES_b_r,
+    [0x9B] = RES_b_r,
+    [0x9C] = RES_b_r,
+    [0x9D] = RES_b_r,
+    [0x9E] = RES_b_HL,
+    [0x9F] = RES_b_r,
 
-    [0xA0] = ,
-    [0xA1] = ,
-    [0xA2] = ,
-    [0xA3] = ,
-    [0xA4] = ,
-    [0xA5] = ,
-    [0xA6] = ,
-    [0xA7] = ,
-    [0xA8] = ,
-    [0xA9] = ,
-    [0xAA] = ,
-    [0xAB] = ,
-    [0xAC] = ,
-    [0xAD] = ,
-    [0xAE] = ,
-    [0xAF] = ,
+    [0xA0] = RES_b_r,
+    [0xA1] = RES_b_r,
+    [0xA2] = RES_b_r,
+    [0xA3] = RES_b_r,
+    [0xA4] = RES_b_r,
+    [0xA5] = RES_b_r,
+    [0xA6] = RES_b_HL,
+    [0xA7] = RES_b_r,
+    [0xA8] = RES_b_r,
+    [0xA9] = RES_b_r,
+    [0xAA] = RES_b_r,
+    [0xAB] = RES_b_r,
+    [0xAC] = RES_b_r,
+    [0xAD] = RES_b_r,
+    [0xAE] = RES_b_HL,
+    [0xAF] = RES_b_r,
 
-    [0xB0] = ,
-    [0xB1] = ,
-    [0xB2] = ,
-    [0xB3] = ,
-    [0xB4] = ,
-    [0xB5] = ,
-    [0xB6] = ,
-    [0xB7] = ,
-    [0xB8] = ,
-    [0xB9] = ,
-    [0xBA] = ,
-    [0xBB] = ,
-    [0xBC] = ,
-    [0xBD] = ,
-    [0xBE] = ,
-    [0xBF] = ,
+    [0xB0] = RES_b_r,
+    [0xB1] = RES_b_r,
+    [0xB2] = RES_b_r,
+    [0xB3] = RES_b_r,
+    [0xB4] = RES_b_r,
+    [0xB5] = RES_b_r,
+    [0xB6] = RES_b_HL,
+    [0xB7] = RES_b_r,
+    [0xB8] = RES_b_r,
+    [0xB9] = RES_b_r,
+    [0xBA] = RES_b_r,
+    [0xBB] = RES_b_r,
+    [0xBC] = RES_b_r,
+    [0xBD] = RES_b_r,
+    [0xBE] = RES_b_HL,
+    [0xBF] = RES_b_r,
 
-    [0xC0] = ,
-    [0xC1] = ,
-    [0xC2] = ,
-    [0xC3] = ,
-    [0xC4] = ,
-    [0xC5] = ,
-    [0xC6] = ,
-    [0xC7] = ,
-    [0xC8] = ,
-    [0xC9] = ,
-    [0xCA] = ,
-    [0xCB] = ,
-    [0xCC] = ,
-    [0xCD] = ,
-    [0xCE] = ,
-    [0xCF] = ,
+    [0xC0] = SET_b_r,
+    [0xC1] = SET_b_r,
+    [0xC2] = SET_b_r,
+    [0xC3] = SET_b_r,
+    [0xC4] = SET_b_r,
+    [0xC5] = SET_b_r,
+    [0xC6] = SET_b_HL,
+    [0xC7] = SET_b_r,
+    [0xC8] = SET_b_r,
+    [0xC9] = SET_b_r,
+    [0xCA] = SET_b_r,
+    [0xCB] = SET_b_r,
+    [0xCC] = SET_b_r,
+    [0xCD] = SET_b_r,
+    [0xCE] = SET_b_HL,
+    [0xCF] = SET_b_r,
 
-    [0xD0] = ,
-    [0xD1] = ,
-    [0xD2] = ,
-    [0xD3] = ,
-    [0xD4] = ,
-    [0xD5] = ,
-    [0xD6] = ,
-    [0xD7] = ,
-    [0xD8] = ,
-    [0xD9] = ,
-    [0xDA] = ,
-    [0xDB] = ,
-    [0xDC] = ,
-    [0xDD] = ,
-    [0xDE] = ,
-    [0xDF] = ,
+    [0xD0] = SET_b_r,
+    [0xD1] = SET_b_r,
+    [0xD2] = SET_b_r,
+    [0xD3] = SET_b_r,
+    [0xD4] = SET_b_r,
+    [0xD5] = SET_b_r,
+    [0xD6] = SET_b_HL,
+    [0xD7] = SET_b_r,
+    [0xD8] = SET_b_r,
+    [0xD9] = SET_b_r,
+    [0xDA] = SET_b_r,
+    [0xDB] = SET_b_r,
+    [0xDC] = SET_b_r,
+    [0xDD] = SET_b_r,
+    [0xDE] = SET_b_HL,
+    [0xDF] = SET_b_r,
 
-    [0xE0] = ,
-    [0xE1] = ,
-    [0xE2] = ,
-    [0xE3] = ,
-    [0xE4] = ,
-    [0xE5] = ,
-    [0xE6] = ,
-    [0xE7] = ,
-    [0xE8] = ,
-    [0xE9] = ,
-    [0xEA] = ,
-    [0xEB] = ,
-    [0xEC] = ,
-    [0xED] = ,
-    [0xEE] = ,
-    [0xEF] = ,
+    [0xE0] = SET_b_r,
+    [0xE1] = SET_b_r,
+    [0xE2] = SET_b_r,
+    [0xE3] = SET_b_r,
+    [0xE4] = SET_b_r,
+    [0xE5] = SET_b_r,
+    [0xE6] = SET_b_HL,
+    [0xE7] = SET_b_r,
+    [0xE8] = SET_b_r,
+    [0xE9] = SET_b_r,
+    [0xEA] = SET_b_r,
+    [0xEB] = SET_b_r,
+    [0xEC] = SET_b_r,
+    [0xED] = SET_b_r,
+    [0xEE] = SET_b_HL,
+    [0xEF] = SET_b_r,
 
-    [0xF0] = ,
-    [0xF1] = ,
-    [0xF2] = ,
-    [0xF3] = ,
-    [0xF4] = ,
-    [0xF5] = ,
-    [0xF6] = ,
-    [0xF7] = ,
-    [0xF8] = ,
-    [0xF9] = ,
-    [0xFA] = ,
-    [0xFB] = ,
-    [0xFC] = ,
-    [0xFD] = ,
-    [0xFE] = ,
-    [0xFF] = ,
+    [0xF0] = SET_b_r,
+    [0xF1] = SET_b_r,
+    [0xF2] = SET_b_r,
+    [0xF3] = SET_b_r,
+    [0xF4] = SET_b_r,
+    [0xF5] = SET_b_r,
+    [0xF6] = SET_b_HL,
+    [0xF7] = SET_b_r,
+    [0xF8] = SET_b_r,
+    [0xF9] = SET_b_r,
+    [0xFA] = SET_b_r,
+    [0xFB] = SET_b_r,
+    [0xFC] = SET_b_r,
+    [0xFD] = SET_b_r,
+    [0xFE] = SET_b_HL,
+    [0xFF] = SET_b_r,
 };
