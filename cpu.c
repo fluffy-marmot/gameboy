@@ -25,6 +25,7 @@
 #define MASK_CONDITION_NC    0b00010000
 #define MASK_CONDITION__Z    0b00001000
 #define MASK_CONDITION__C    0b00011000
+#define MASK_ADDRESS         0b00111000
 
 #define FLAG_Z ((cpu.F & MASK_FLAG_Z) >> 7)
 #define FLAG_N ((cpu.F & MASK_FLAG_N) >> 6)
@@ -45,6 +46,7 @@
 #define IR_REG_16  ((cpu.IR       & MASK_REG_16b)    >> 4)
 #define IR_BIT_NUM ((cpu.IR       & MASK_BIT_NUMBER) >> 3)
 #define IR_COND    ((cpu.IR)      & MASK_CONDITION       )
+#define IR_ADDRESS ((cpu.IR)      & MASK_ADDRESS         )
 
 // TODO probably define others here too instead of relying on endianness
 #define BC ((uint16_t) ((cpu.B << 8) | cpu.C))
@@ -75,7 +77,7 @@ static inline void HL_inc()         { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu
 /* ############################################################################
 ###############################################################################
 
-        Memory reads and writes            
+        Memory reads and writes helpers
 
 ###############################################################################
 ############################################################################ */
@@ -965,47 +967,6 @@ static const instruction_t XOR_n = {
 /* ############################################################################
 ###############################################################################
 
-        Misc. Flag and complement instructions
-
-###############################################################################
-############################################################################ */
-
-static void        set_carry_flag () {CLR_N; CLR_H; SET_C;                }
-static void complement_carry_flag () {CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C; }
-static void complement_accumulator() {SET_N; SET_H; cpu.A ^= MASK_BYTE;   }
-
-// INSTRUCTIONS ###############################################################
-
-/*
-Complement carry flag
-CCF: Flips the carry flag, and clears and N and H flags
-*/
-static const instruction_t CCF = {
-    .cycles = { complement_carry_flag },
-    .cycle_count = 1
-};
-
-/*
-Set carry flag
-SCF: Sets the carry flag, and clears and N and H flags
-*/
-static const instruction_t SCF = {
-    .cycles = { set_carry_flag },
-    .cycle_count = 1
-};
-
-/*
-Complement accumulator
-CPL: Flips all the bits in the 8-bit A register, and sets the N and H flags
-*/
-static const instruction_t CPL = {
-    .cycles = { complement_accumulator },
-    .cycle_count = 1
-};
-
-/* ############################################################################
-###############################################################################
-
         Rotate, shift, and bit operation instructions
 
 ###############################################################################
@@ -1388,13 +1349,15 @@ condition()
 
 static void         jump_PC_HL() { cpu.PC = HL;                                               }
 static void         jump_PC_WZ() { cpu.PC = cpu.WZ;                                           }
-static void     rel_jump_PC_e () { cpu.PC += (int8_t) cpu.Z;                                  } // Cheating 'lil
+static void     rel_jump_PC_e () { cpu.PC += (int8_t) cpu.Z;                                  } // Cheating !
 static void     con_jump_PC_WZ() { if (condition()) jump_PC_WZ();    else cpu.cycle_num++;    }
 static void rel_con_jump_PC_e () { if (condition()) rel_jump_PC_e(); else cpu.cycle_num++;    }
 static void   stack_push_PC_h () { memory_write_SP_PCh(); cpu.SP--;                           }
 static void   stack_push_PC_l () { memory_write_SP_PCl(); cpu.PC = cpu.WZ;                    }
 static void     con_call_func () { if (condition()) SP_dec();        else cpu.cycle_num += 3; }
 static void     con__ret_func () { if (condition())    nop();        else cpu.cycle_num += 3; }
+static void     ret_interrupt () { cpu.PC = cpu.WZ; cpu.IME = 1;                              }
+static void         jump_fixed() { cpu.PC =IR_ADDRESS;                                        } // Cheating !
 
 // INSTRUCTIONS ###############################################################
 
@@ -1479,14 +1442,105 @@ static const instruction_t RET_cc = {
     .cycle_count = 5
 };
 
+/*
+Return from interrupt handler
+RETI: unconditional return from a function, also enables interrupts by setting IME = 1
+*/
+static const instruction_t RETI = {
+    .cycles = { memory_read_SP_Z, memory_read_SP_W, ret_interrupt, nop },
+    .cycle_count = 4
+};
+
+/*
+Restart / call function (implied)
+Unconditional function call to the fixes address defined by the opcode
+*/
+static const instruction_t RST_n = {
+    .cycles = { SP_dec, stack_push_PC_h, stack_push_PC_l, jump_fixed },
+    .cycle_count = 4
+};
+
 /* ############################################################################
 ###############################################################################
 
-        STUFF
+        Flag, complement, and misc. instructions
 
 ###############################################################################
 ############################################################################ */
 
+static void        set_carry_flag () { CLR_N; CLR_H; SET_C;                }
+static void complement_carry_flag () { CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C; }
+static void complement_accumulator() { SET_N; SET_H; cpu.A ^= MASK_BYTE;   }
+static void     disable_interrupts() { cpu.IME = 0;                        }
+static void      enable_interrupts() { cpu.IME = 1;                        }
+
+// INSTRUCTIONS ###############################################################
+
+/*
+Complement carry flag
+CCF: Flips the carry flag, and clears and N and H flags
+*/
+static const instruction_t CCF = {
+    .cycles = { complement_carry_flag },
+    .cycle_count = 1
+};
+
+/*
+Set carry flag
+SCF: Sets the carry flag, and clears and N and H flags
+*/
+static const instruction_t SCF = {
+    .cycles = { set_carry_flag },
+    .cycle_count = 1
+};
+
+/*
+Complement accumulator
+CPL: Flips all the bits in the 8-bit A register, and sets the N and H flags
+*/
+static const instruction_t CPL = {
+    .cycles = { complement_accumulator },
+    .cycle_count = 1
+};
+
+/*
+Disable interrupts
+DI: Disables interrupt handling by setting IME = 0 and cancelling any scheduled effects of the EI instruction
+*/
+static const instruction_t DI = {
+    .cycles = { disable_interrupts },
+    .cycle_count = 1
+};
+
+/*
+Enable interrupts
+EI: Schedules interrupt handling to be enabled after the next machine cycle
+*/
+static const instruction_t EI = {
+    .cycles = { enable_interrupts },
+    .cycle_count = 1
+};
+
+/*
+No operation
+NOP: doesn't do anything, but can be used to add a delay of one machine cycle
+*/
+static const instruction_t NOP = {
+    .cycles = { nop },
+    .cycle_count = 1
+};
+
+// STOP
+static const instruction_t ____STOP = {
+    .cycles = { nop },
+    .cycle_count = 1
+};
+
+// HALT
+static const instruction_t ____HALT = {
+    .cycles = { nop },
+    .cycle_count = 1
+};
 
 // PREFIX
 static const instruction_t ____PREFIX = {
@@ -1499,6 +1553,15 @@ static const instruction_t ____INVALID = {
     .cycles = { invalid },
     .cycle_count = 1
 };
+
+/* ############################################################################
+###############################################################################
+
+        STUFF
+
+###############################################################################
+############################################################################ */
+
 
 void
 do_machine_cycle(void)
@@ -1513,7 +1576,7 @@ main(void)
 }
 
 static const instruction_t OPCODE_TABLE[256] = {
-    [0x00] = ,
+    [0x00] = NOP,
     [0x01] = LD_rr_nn,
     [0x02] = LD_BC_A,
     [0x03] = INC_rr,
@@ -1530,7 +1593,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0x0E] = LD_r_n,
     [0x0F] = RRCA,
 
-    [0x10] = ,
+    [0x10] = ____STOP,
     [0x11] = LD_rr_nn,
     [0x12] = LD_DE_A,
     [0x13] = INC_rr,
@@ -1638,7 +1701,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0x73] = LD_HL_r,
     [0x74] = LD_HL_r,
     [0x75] = LD_HL_r,
-    [0x76] = ,
+    [0x76] = ____HALT,
     [0x77] = LD_HL_r,
     [0x78] = LD_r_r,
     [0x79] = LD_r_r,
@@ -1724,7 +1787,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0xC4] = CALL_cc_nn,
     [0xC5] = PUSH_rr,
     [0xC6] = ADD_n,
-    [0xC7] = ,
+    [0xC7] = RST_n,
     [0xC8] = RET_cc,
     [0xC9] = RET,
     [0xCA] = JP_cc_nn,
@@ -1732,7 +1795,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0xCC] = CALL_cc_nn,
     [0xCD] = CALL_nn,
     [0xCE] = ADC_n,
-    [0xCF] = ,
+    [0xCF] = RST_n,
 
     [0xD0] = RET_cc,
     [0xD1] = POP_rr,
@@ -1741,15 +1804,15 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0xD4] = CALL_cc_nn,
     [0xD5] = PUSH_rr,
     [0xD6] = SUB_n,
-    [0xD7] = ,
+    [0xD7] = RST_n,
     [0xD8] = RET_cc,
-    [0xD9] = ,
+    [0xD9] = RETI,
     [0xDA] = JP_cc_nn,
     [0xDB] = ____INVALID,
     [0xDC] = CALL_cc_nn,
     [0xDD] = ____INVALID,
     [0xDE] = SBC_n,
-    [0xDF] = ,
+    [0xDF] = RST_n,
 
     [0xE0] = LDH__n_A,
     [0xE1] = POP_rr,
@@ -1758,7 +1821,7 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0xE4] = ____INVALID,
     [0xE5] = PUSH_rr,
     [0xE6] = AND_n,
-    [0xE7] = ,
+    [0xE7] = RST_n,
     [0xE8] = ADD_SP_e,
     [0xE9] = JP_HL,
     [0xEA] = LD_nn_A,
@@ -1766,24 +1829,24 @@ static const instruction_t OPCODE_TABLE[256] = {
     [0xEC] = ____INVALID,
     [0xED] = ____INVALID,
     [0xEE] = XOR_n,
-    [0xEF] = ,
+    [0xEF] = RST_n,
 
     [0xF0] = LDH_A__n,
     [0xF1] = POP_rr,
     [0xF2] = LDH_A__C,
-    [0xF3] = ,
+    [0xF3] = DI,
     [0xF4] = ____INVALID,
     [0xF5] = PUSH_rr,
     [0xF6] = OR_n,
-    [0xF7] = ,
+    [0xF7] = RST_n,
     [0xF8] = LD_HL_SPe,
     [0xF9] = LD_SP_HL,
     [0xFA] = LD_A_nn,
-    [0xFB] = ,
+    [0xFB] = EI,
     [0xFC] = ____INVALID,
     [0xFD] = ____INVALID,
     [0xFE] = CP_n,
-    [0xFF] = ,
+    [0xFF] = RST_n,
 };
 
 

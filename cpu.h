@@ -28,7 +28,7 @@ typedef struct {
     uint16_t PC;                    // program counter
     uint16_t SP;
     uint8_t IR;                     // instruction register
-    uint8_t IE;                     // interrupt enable
+    uint8_t IME;                    // interrupt master enable flag
     union {
         uint16_t WZ;
         struct {
