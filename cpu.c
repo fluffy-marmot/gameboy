@@ -2,8 +2,7 @@
 #include "cpu.h"
 
 #include <stdbool.h>
-
-#define MAX_MCYCLE_INSTRUCTION 6
+#include <stdio.h>
 
 #define MASK_BYTE            0b11111111
 #define MASK_NIBBLE_L        0b00001111
@@ -54,10 +53,7 @@
 #define HL ((uint16_t) ((cpu.H << 8) | cpu.L))
 
 
-typedef struct {
-    void (*cycles[MAX_MCYCLE_INSTRUCTION])(void);
-    uint8_t cycle_count;
-} instruction_t;
+
 
 // Needed declarations - function is defined below one that uses it
 static uint8_t add_and_set_carry_flags(uint8_t, uint8_t);
@@ -462,7 +458,7 @@ static const instruction_t LD_HL_SPe = {
 ############################################################################ */
 
 /*
-Helper for adding two 8-bit values and setting both carry registers
+Helper for adding two 8-bit values and setting both carry flags
 */
 static uint8_t 
 add_and_set_carry_flags(uint8_t val1, uint8_t val2)
@@ -604,7 +600,7 @@ static const instruction_t ADD_SP_e = {
 ############################################################################ */
 
 /*
-Helper for subtracting two 8-bit values and setting both carry registers
+Helper for subtracting two 8-bit values and setting both carry flags
 */
 static uint8_t 
 sub_and_set_carry_flags(uint8_t val1, uint16_t val2)
@@ -1490,6 +1486,7 @@ static void complement_carry_flag () { CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C; }
 static void complement_accumulator() { SET_N; SET_H; cpu.A ^= MASK_BYTE;   }
 static void     disable_interrupts() { cpu.IME = 0;                        }
 static void      enable_interrupts() { cpu.IME = 1;                        }
+static void                 prefix() { cpu.cb_instruction = 1;             }
 
 // INSTRUCTIONS ###############################################################
 
@@ -1570,7 +1567,7 @@ static const instruction_t ____HALT = {
 
 // PREFIX
 static const instruction_t ____PREFIX = {
-    .cycles = { cb_prefix },
+    .cycles = { prefix },
     .cycle_count = 1
 };
 
@@ -1755,3 +1752,33 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
 [0xFC] = SET_b_r,       [0xFD] = SET_b_r,       [0xFE] = SET_b_HL,      [0xFF] = SET_b_r,
 
 };
+
+static void
+fetch_instruction()
+{
+    cpu.IR = cpu.bus->read(cpu.PC++);
+    if (!cpu.cb_instruction) {
+        cpu.instruction = &OPCODE_TABLE[cpu.IR];
+        cpu.cycle_num = 0;
+    } else {
+        cpu.instruction = &CB_OPCODE_TABLE[cpu.IR];
+        cpu.cb_instruction = 0;
+        cpu.cycle_num = 1;
+    }
+}
+
+void 
+tick_machine_cycle()
+{
+    cpu.instruction->cycles[cpu.cycle_num]();
+    if (cpu.cycle_num == cpu.instruction->cycle_count) fetch_instruction();
+}
+
+void
+instruction_test()
+{
+    fetch_instruction();
+    while (cpu.cycle_num < cpu.instruction->cycle_count) {
+        cpu.instruction->cycles[cpu.cycle_num++]();
+    }
+}

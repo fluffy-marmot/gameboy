@@ -4,5 +4,10 @@ test
 test.c
 test.py
 
+# ignore sm83 tests for now until a better structure is decided
+sm83/
+
 # an example reference
-dispatch.c
+gdb-notes.md
+
+gameboy.so

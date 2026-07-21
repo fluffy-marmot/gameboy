@@ -5,6 +5,13 @@
 
 #include <stdint.h>
 
+#define MAX_MCYCLE_INSTRUCTION 6
+
+typedef struct {
+    void (*cycles[MAX_MCYCLE_INSTRUCTION])(void);
+    uint8_t cycle_count;
+} instruction_t;
+
 // TODO probably get rid of the endianness-dependant unions
 typedef struct {
     union {
@@ -29,6 +36,7 @@ typedef struct {
     uint16_t SP;
     uint8_t IR;                     // instruction register
     uint8_t IME;                    // interrupt master enable flag
+    uint8_t IE;
     union {
         uint16_t WZ;
         struct {
@@ -37,12 +45,15 @@ typedef struct {
         };
     };
 
-    uint8_t cycle_num;
     gb_bus_t *bus;                  // access to memory read/write
+    uint8_t cycle_num;              // current machine cycle within current instruction
+    uint8_t cb_instruction;         // 1 if next fetch should use CB table
+    instruction_t *instruction;     // current instruction
 } sm83_cpu_t;
 
 typedef sm83_cpu_t gb_cpu_t;
 
 extern gb_cpu_t cpu;
+void tick_machine_cycle(void);
 
 #endif

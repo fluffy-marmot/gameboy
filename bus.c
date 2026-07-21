@@ -1,5 +1,7 @@
 #include "bus.h"
 
+#include <string.h>
+
 #define KiB                         1024
 
 #define GB_DMG_WRAM             ( 8 * KiB)
@@ -15,12 +17,6 @@ memory_read(memaddr address)
     return mem[address];
 }
 
-void 
-memory_read_to(memaddr address, uint8_t *read_destination)
-{
-    *read_destination = mem[address];
-}
-
 void
 memory_write(memaddr address, uint8_t value)
 {
@@ -28,9 +24,14 @@ memory_write(memaddr address, uint8_t value)
 }
 
 void
+memory_wipe(void)
+{
+    memset(mem, 0, 64 * KiB);
+}
+
+void
 init_test_bus(gb_bus_t *bus)
 {
     bus->read = memory_read;
     bus->write = memory_write;
-    bus->read_to = memory_read_to;
 }
