@@ -82,7 +82,6 @@ for test_file in non_cb_tests:
     with open(test_file) as f:
         tests = json.load(f)
     for test in tests:
-        print(test["name"])
         cpu.load_test(test["initial"])
         gb.memory_wipe()
         for addr, val in test["initial"]["ram"]:
@@ -95,14 +94,16 @@ for test_file in non_cb_tests:
     print(f"{test_file.name}: {correct} / 1000")
     if correct == 1000:
         perfect += 1
+    else:
+        print(f"↑↑↑ {test["name"]}")
+        input()
     # input()
     results[test_file.stem] = correct
 
 print(results)
-print(f"Perfect instructions: {perfect} / {len(non_cb_tests)}")
 passed_total = sum(results.values())
 total = len(non_cb_tests) * 1000
-print(f"Total tests: {passed_total} / {total}, {passed_total / total * 100: .2f} %")
+print(f"Total tests: {passed_total} / {total}, {passed_total / total * 100: .2f} %, Instructions passing: {perfect} / {len(non_cb_tests)}")
 
 
     # print(tests[0])

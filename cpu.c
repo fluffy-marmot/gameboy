@@ -56,7 +56,7 @@
 
 
 // Needed declarations - function is defined below one that uses it
-static uint8_t add_and_set_carry_flags(uint8_t, uint8_t);
+static uint8_t add_and_set_carry_flags(uint8_t, uint8_t, uint8_t);
 
 gb_cpu_t cpu;
 
@@ -156,7 +156,7 @@ static void
 load_HL_SPel(void)
 {
     CLR_N; CLR_Z;
-    add_and_set_carry_flags((uint8_t) cpu.SP, cpu.Z);
+    add_and_set_carry_flags((uint8_t) cpu.SP, cpu.Z, 0);
     cpu.L = cpu.SP + (int8_t) cpu.Z;
 }
 
@@ -208,7 +208,7 @@ Used by LD r n, LD r (HL)
 static void
 load_register_Z(void)
 {
-    cpu.reg[IR_REG_R] = cpu.Z;
+    cpu.reg[IR_REG_L] = cpu.Z;
 }
 
 /*
@@ -460,13 +460,14 @@ static const instruction_t LD_HL_SPe = {
 /*
 Helper for adding two 8-bit values and setting both carry flags
 */
+// TODO kind of ugly having to add the carry here just for ADD HL rr
 static uint8_t 
-add_and_set_carry_flags(uint8_t val1, uint8_t val2)
+add_and_set_carry_flags(uint8_t val1, uint8_t val2, uint8_t carry)
 {
-    uint8_t  nibble = (val1 & MASK_NIBBLE_L) + (val2 & MASK_NIBBLE_L);
+    uint8_t  nibble = (val1 & MASK_NIBBLE_L) + (val2 & MASK_NIBBLE_L) + carry;
     if (nibble > MASK_NIBBLE_L) SET_H; else CLR_H;
 
-    uint16_t result = val1 + val2;
+    uint16_t result = val1 + val2 + carry;
     if (result > MASK_BYTE) SET_C; else CLR_C;
 
     return (uint8_t) result;
@@ -476,7 +477,7 @@ static void
 add_to_A(uint8_t val)
 {
     CLR_N;
-    cpu.A = add_and_set_carry_flags(cpu.A, val);
+    cpu.A = add_and_set_carry_flags(cpu.A, val, 0);
     if (cpu.A) CLR_Z; else SET_Z;
 }
 
@@ -484,32 +485,32 @@ static void add_r_to_A  () { add_to_A(cpu.reg[IR_REG_R]);                    }
 static void adc_r_to_A  () { add_to_A(cpu.reg[IR_REG_R] + FLAG_C);           }
 static void add_Z_to_A  () { add_to_A(cpu.Z);                                }
 static void adc_Z_to_A  () { add_to_A(cpu.Z + FLAG_C);                       }
-static void add_e_to_SPl() { add_and_set_carry_flags(cpu.SP, cpu.Z);         }  // Cheating a 'lil with Z latch
+static void add_e_to_SPl() { add_and_set_carry_flags(cpu.SP, cpu.Z, 0);      }  // Cheating a 'lil with Z latch
 static void add_e_to_SPh() { cpu.WZ = cpu.SP + (int8_t) cpu.Z; CLR_N; CLR_Z; }
 
 static void
-add_to_reg(uint8_t *reg_addr, uint8_t val)
+add_to_reg(uint8_t *reg_addr, uint8_t val, uint8_t carry)
 {
     CLR_N;
-    *reg_addr = add_and_set_carry_flags(*reg_addr, val);
+    *reg_addr = add_and_set_carry_flags(*reg_addr, val, carry);
 }
 
 static void
 add_rr_to_HLl()
-{ 
+{
     if (IR_REG_16 == MASK_REG_SPorAF)
-        add_to_reg(&cpu.L, cpu.SP);
+        add_to_reg(&cpu.L, cpu.SP, 0);
     else
-        add_to_reg(&cpu.L, cpu.reg[IR_REG_16 * 2 + 1]);
+        add_to_reg(&cpu.L, cpu.reg[IR_REG_16 * 2 + 1], 0);
 }
 
 static void
 add_rr_to_HLh()
 { 
     if (IR_REG_16 == MASK_REG_SPorAF)
-        add_to_reg(&cpu.H, cpu.SP >> 8);
+        add_to_reg(&cpu.H, cpu.SP >> 8, FLAG_C);
     else
-        add_to_reg(&cpu.H, cpu.reg[IR_REG_16 * 2]);
+        add_to_reg(&cpu.H, cpu.reg[IR_REG_16 * 2], FLAG_C);
 }
 
 // INSTRUCTIONS ###############################################################

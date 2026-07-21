@@ -1,0 +1,9 @@
+Total tests: 219045 / 244000,  89.77 %, Instructions passing: 198 / 244
+
+oops, wrong bit mask for LD r n
+
+Total tests: 233045 / 244000,  95.51 %, Instructions passing: 212 / 244
+
+half carry flag in ADD HL rr
+
+Total tests: 235002 / 244000,  96.31 %, Instructions passing: 216 / 244
