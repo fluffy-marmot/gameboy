@@ -117,30 +117,32 @@ Helper functions that need to decide between the different 16-bit registers
 static void
 memory_write_SP_rrh(void)
 {
-    if (IR_REG_16 == MASK_REG_SPorAF)
-        cpu.bus->write(cpu.SP--, cpu.reg[IR_REG_16 * 2]);
-    else
+    uint8_t reg16 = IR_REG_16;
+    if (reg16 == MASK_REG_SPorAF)
         cpu.bus->write(cpu.SP--, cpu.A);
+    else
+        cpu.bus->write(cpu.SP--, cpu.reg[reg16 * 2]);
 }
 
 static void
 memory_write_SP_rrl(void)
 {
-    if (IR_REG_16 == MASK_REG_SPorAF)
-        cpu.bus->write(cpu.SP, cpu.reg[IR_REG_16 * 2 + 1]);
-    else
+    uint8_t reg16 = IR_REG_16;
+    if (reg16 == MASK_REG_SPorAF)
         cpu.bus->write(cpu.SP, cpu.F & MASK_NIBBLE_H);
+    else
+        cpu.bus->write(cpu.SP, cpu.reg[reg16 * 2 + 1]);
 }
 
 static void
 memory_write_rr_nn (void)
 {
-
-    if (IR_REG_16 == MASK_REG_SPorAF)
+    uint8_t reg16 = IR_REG_16;
+    if (reg16 == MASK_REG_SPorAF)
         cpu.SP = (cpu.W << 8) |  cpu.Z;
     else {
-        cpu.reg[IR_REG_16 * 2]     = cpu.W;
-        cpu.reg[IR_REG_16 * 2 + 1] = cpu.Z;
+        cpu.reg[reg16 * 2]     = cpu.W;
+        cpu.reg[reg16 * 2 + 1] = cpu.Z;
     }
 }
 
@@ -445,7 +447,7 @@ LD HL SP+e: Load to the HL register, 16 bit data calculated by adding the signed
 value of the SP register
 */
 static const instruction_t LD_HL_SPe = {
-    .cycles = { memory_read_PC_Z, load_HL_SPel, load_HL_SPel },
+    .cycles = { memory_read_PC_Z, load_HL_SPel, load_HL_SPeh },
     .cycle_count = 3
 };
 
@@ -474,17 +476,17 @@ add_and_set_carry_flags(uint8_t val1, uint8_t val2, uint8_t carry)
 }
 
 static void
-add_to_A(uint8_t val)
+add_to_A(uint8_t val, uint8_t carry)
 {
     CLR_N;
-    cpu.A = add_and_set_carry_flags(cpu.A, val, 0);
+    cpu.A = add_and_set_carry_flags(cpu.A, val, carry);
     if (cpu.A) CLR_Z; else SET_Z;
 }
 
-static void add_r_to_A  () { add_to_A(cpu.reg[IR_REG_R]);                    }
-static void adc_r_to_A  () { add_to_A(cpu.reg[IR_REG_R] + FLAG_C);           }
-static void add_Z_to_A  () { add_to_A(cpu.Z);                                }
-static void adc_Z_to_A  () { add_to_A(cpu.Z + FLAG_C);                       }
+static void add_r_to_A  () { add_to_A(cpu.reg[IR_REG_R], 0);                    }
+static void adc_r_to_A  () { add_to_A(cpu.reg[IR_REG_R], FLAG_C);           }
+static void add_Z_to_A  () { add_to_A(cpu.Z, 0);                                }
+static void adc_Z_to_A  () { add_to_A(cpu.Z, FLAG_C);                       }
 static void add_e_to_SPl() { add_and_set_carry_flags(cpu.SP, cpu.Z, 0);      }  // Cheating a 'lil with Z latch
 static void add_e_to_SPh() { cpu.WZ = cpu.SP + (int8_t) cpu.Z; CLR_N; CLR_Z; }
 
@@ -498,19 +500,21 @@ add_to_reg(uint8_t *reg_addr, uint8_t val, uint8_t carry)
 static void
 add_rr_to_HLl()
 {
-    if (IR_REG_16 == MASK_REG_SPorAF)
+    uint8_t reg16 = IR_REG_16;
+    if (reg16 == MASK_REG_SPorAF)
         add_to_reg(&cpu.L, cpu.SP, 0);
     else
-        add_to_reg(&cpu.L, cpu.reg[IR_REG_16 * 2 + 1], 0);
+        add_to_reg(&cpu.L, cpu.reg[reg16 * 2 + 1], 0);
 }
 
 static void
 add_rr_to_HLh()
 { 
-    if (IR_REG_16 == MASK_REG_SPorAF)
+    uint8_t reg16 = IR_REG_16;
+    if (reg16 == MASK_REG_SPorAF)
         add_to_reg(&cpu.H, cpu.SP >> 8, FLAG_C);
     else
-        add_to_reg(&cpu.H, cpu.reg[IR_REG_16 * 2], FLAG_C);
+        add_to_reg(&cpu.H, cpu.reg[reg16 * 2], FLAG_C);
 }
 
 // INSTRUCTIONS ###############################################################
@@ -604,25 +608,25 @@ static const instruction_t ADD_SP_e = {
 Helper for subtracting two 8-bit values and setting both carry flags
 */
 static uint8_t 
-sub_and_set_carry_flags(uint8_t val1, uint16_t val2)
+sub_and_set_carry_flags(uint8_t val1, uint16_t val2, uint8_t carry)
 {
-    if ((val1 & MASK_NIBBLE_L) < (val2 & MASK_NIBBLE_L)) SET_H; else CLR_H;
-    if (val1 < val2) SET_C; else CLR_C;
+    if ((val1 & MASK_NIBBLE_L) < (val2 & MASK_NIBBLE_L) + carry) SET_H; else CLR_H;
+    if (val1 < val2 + carry) SET_C; else CLR_C;
 
-    return (uint8_t) (val1 - val2);
+    return (uint8_t) (val1 - (val2 + carry));
 }
 
 static void
-sub_from_A(uint16_t val)
+sub_from_A(uint16_t val, uint8_t carry)
 {
     SET_N;
-    cpu.A = sub_and_set_carry_flags(cpu.A, val);
+    cpu.A = sub_and_set_carry_flags(cpu.A, val, carry);
     if (cpu.A) CLR_Z; else SET_Z;
 }
-static void sub_r_from_A() { sub_from_A(cpu.reg[IR_REG_R]);          }
-static void sbc_r_from_A() { sub_from_A(cpu.reg[IR_REG_R] + FLAG_C); }
-static void sub_Z_from_A() { sub_from_A(cpu.Z);                      }
-static void sbc_Z_from_A() { sub_from_A(cpu.Z + FLAG_C);             }
+static void sub_r_from_A() { sub_from_A(cpu.reg[IR_REG_R], 0);          }
+static void sbc_r_from_A() { sub_from_A(cpu.reg[IR_REG_R], FLAG_C); }
+static void sub_Z_from_A() { sub_from_A(cpu.Z, 0);                      }
+static void sbc_Z_from_A() { sub_from_A(cpu.Z, FLAG_C);             }
 
 /*
 Helper for compare instructions, similar to subtraction but without updating the A register
@@ -631,7 +635,7 @@ static void
 cp_with_A(uint16_t val)
 {
     SET_N;
-    uint8_t result = sub_and_set_carry_flags(cpu.A, val);
+    uint8_t result = sub_and_set_carry_flags(cpu.A, val, 0);
     if (result) CLR_Z; else SET_Z;
 }
 
@@ -694,7 +698,7 @@ SBC n: Subtracts from the 8-bit register A, the carry flag and the immediate dat
 into the A register
 */
 static const instruction_t SBC_n = {
-    .cycles = { memory_read_PC_Z, adc_Z_to_A },
+    .cycles = { memory_read_PC_Z, sbc_Z_from_A },
     .cycle_count = 2
 };
 
@@ -1399,7 +1403,7 @@ Relative jump (conditional)
 JR cc e: conditional jump to the relative address specified by the signed 8-bit operand e, depending on cc
 */
 static const instruction_t JR_cc_e = {
-    .cycles = { memory_read_PC_Z, rel_jump_PC_e, nop },
+    .cycles = { memory_read_PC_Z, rel_con_jump_PC_e, nop },
     .cycle_count = 3
 };
 
@@ -1485,8 +1489,8 @@ daa_confusion()
 static void        set_carry_flag () { CLR_N; CLR_H; SET_C;                }
 static void complement_carry_flag () { CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C; }
 static void complement_accumulator() { SET_N; SET_H; cpu.A ^= MASK_BYTE;   }
-static void     disable_interrupts() { cpu.IME = 0;                        }
-static void      enable_interrupts() { cpu.IME = 1;                        }
+static void     disable_interrupts() { cpu.IME = 0;  cpu.IME_latch = 0;    }
+static void      enable_interrupts() { cpu.IME_latch = 2;                  }
 static void                 prefix() { cpu.cb_instruction = 1;             }
 
 // INSTRUCTIONS ###############################################################
@@ -1757,6 +1761,8 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
 static void
 fetch_instruction()
 {
+    if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
+        cpu.IME = 1;
     cpu.IR = cpu.bus->read(cpu.PC++);
     if (!cpu.cb_instruction) {
         cpu.instruction = &OPCODE_TABLE[cpu.IR];
@@ -1773,6 +1779,10 @@ tick_machine_cycle()
 {
     cpu.instruction->cycles[cpu.cycle_num]();
     if (cpu.cycle_num == cpu.instruction->cycle_count) fetch_instruction();
+
+    // Tick down the IME latch for delayed interrupt enable
+    if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
+        cpu.IME = 1;
 }
 
 void

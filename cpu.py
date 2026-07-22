@@ -20,6 +20,7 @@ class CPU(ctypes.Structure):
         ("SP", ctypes.c_uint16),
         ("IR", ctypes.c_uint8),
         ("IME", ctypes.c_uint8),
+        ("IME_latch", ctypes.c_uint8),
         ("Z", ctypes.c_uint8),
         ("W", ctypes.c_uint8),
         ("bus", ctypes.c_void_p),
@@ -35,6 +36,7 @@ class CPU(ctypes.Structure):
         self.IR = 0
         self.Z = 0
         self.W = 0
+        self.IME_latch = 0
 
     def test_final(self, test):
         ok = True
@@ -81,7 +83,7 @@ for test_file in non_cb_tests:
     correct, wrong = 0, 0
     with open(test_file) as f:
         tests = json.load(f)
-    for test in tests:
+    for i, test in enumerate(tests):
         cpu.load_test(test["initial"])
         gb.memory_wipe()
         for addr, val in test["initial"]["ram"]:
@@ -89,6 +91,8 @@ for test_file in non_cb_tests:
         gb.instruction_test()
 
         if not cpu.test_final(test["final"]) or not test_ram(test["final"]["ram"]):
+            print(f"\t↑↑↑ Test # {i}")
+            # print(test)
             wrong += 1
         else: correct += 1
     print(f"{test_file.name}: {correct} / 1000")
@@ -96,11 +100,11 @@ for test_file in non_cb_tests:
         perfect += 1
     else:
         print(f"↑↑↑ {test["name"]}")
-        input()
+        # input()
     # input()
     results[test_file.stem] = correct
 
-print(results)
+print({key: val for key, val in results.items() if val != 1000})
 passed_total = sum(results.values())
 total = len(non_cb_tests) * 1000
 print(f"Total tests: {passed_total} / {total}, {passed_total / total * 100: .2f} %, Instructions passing: {perfect} / {len(non_cb_tests)}")

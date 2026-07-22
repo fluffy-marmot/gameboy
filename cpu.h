@@ -36,6 +36,7 @@ typedef struct {
     uint16_t SP;
     uint8_t IR;                     // instruction register
     uint8_t IME;                    // interrupt master enable flag
+    uint8_t IME_latch;              // used to delay enabling the IME
     uint8_t IE;
     union {
         uint16_t WZ;
