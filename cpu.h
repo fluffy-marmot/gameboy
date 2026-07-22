@@ -49,12 +49,12 @@ typedef struct {
     gb_bus_t *bus;                  // access to memory read/write
     uint8_t cycle_num;              // current machine cycle within current instruction
     uint8_t cb_instruction;         // 1 if next fetch should use CB table
-    instruction_t *instruction;     // current instruction
+    const instruction_t *instruction;     // current instruction
 } sm83_cpu_t;
 
 typedef sm83_cpu_t gb_cpu_t;
 
 extern gb_cpu_t cpu;
-void tick_machine_cycle(void);
+uint16_t tick_machine_cycle(void);
 
 #endif

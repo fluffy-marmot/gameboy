@@ -43,7 +43,7 @@ class CPU(ctypes.Structure):
         for key in test:
             if key in ["ram", "ei"]: continue
             if getattr(self, key.upper()) != test[key]:
-                print(f"\t\t{key}, actual: {getattr(self, key.upper()):>3d}, expected: {test[key]:>3d}")
+                print(f"\t\t{key}, actual: {getattr(self, key.upper()):08b}, expected: {test[key]:08b}")
                 ok = False
         if not ok:
             print()
@@ -52,6 +52,12 @@ class CPU(ctypes.Structure):
 gb.main()
 
 cpu = CPU.in_dll(gb, "cpu")
+
+gb.fetch_instruction.restype = None
+gb.fetch_instruction.argtypes = []
+
+gb.tick_machine_cycle.restype = ctypes.c_uint16
+gb.tick_machine_cycle.argtypes = []
 
 gb.memory_read.restype = ctypes.c_uint8
 gb.memory_read.argtypes = [ctypes.c_uint16]
@@ -64,8 +70,9 @@ gb.memory_wipe.argtypes = []
 
 SM83_DIR = BASE_DIR / "sm83" / "v1"
 
-non_cb_tests = sorted(f for f in SM83_DIR.glob("*.json") if not f.name.startswith("cb "))
-cb_tests = sorted(f for f in SM83_DIR.glob("cb *.json"))
+# non_cb_tests = sorted(f for f in SM83_DIR.glob("*.json") if not f.name.startswith("cb "))
+# cb_tests = sorted(f for f in SM83_DIR.glob("cb *.json"))
+all_tests = sorted(f for f in SM83_DIR.glob("*.json"))
 
 def test_ram(ram):
     ok = True
@@ -79,7 +86,8 @@ def test_ram(ram):
 
 results = dict()
 perfect = 0
-for test_file in non_cb_tests:
+# for test_file in non_cb_tests:
+for test_file in all_tests:
     correct, wrong = 0, 0
     with open(test_file) as f:
         tests = json.load(f)
@@ -88,7 +96,17 @@ for test_file in non_cb_tests:
         gb.memory_wipe()
         for addr, val in test["initial"]["ram"]:
             gb.memory_write(addr, val)
-        gb.instruction_test()
+        # gb.instruction_test()
+        gb.fetch_instruction()
+        done = False
+        cb_done = False
+        while not done:
+            result = gb.tick_machine_cycle()
+            # print(f"{result:#X}")
+            # input()
+            if ((result >> 8) == 0 and (cb_done or result & 0xFF != 0xCB)):
+                done = True
+            if result & 0xFF == 0xCB: cb_done = True
 
         if not cpu.test_final(test["final"]) or not test_ram(test["final"]["ram"]):
             print(f"\t↑↑↑ Test # {i}")
@@ -100,14 +118,14 @@ for test_file in non_cb_tests:
         perfect += 1
     else:
         print(f"↑↑↑ {test["name"]}")
-        # input()
+        input()
     # input()
     results[test_file.stem] = correct
 
 print({key: val for key, val in results.items() if val != 1000})
 passed_total = sum(results.values())
-total = len(non_cb_tests) * 1000
-print(f"Total tests: {passed_total} / {total}, {passed_total / total * 100: .2f} %, Instructions passing: {perfect} / {len(non_cb_tests)}")
+total = len(all_tests) * 1000
+print(f"Total tests: {passed_total} / {total}, {passed_total / total * 100: .2f} %, Instructions passing: {perfect} / {len(all_tests)}")
 
 
     # print(tests[0])

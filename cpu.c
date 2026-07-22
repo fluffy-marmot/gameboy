@@ -1025,9 +1025,7 @@ shift_r(uint8_t *val, bool arithmetic_shift)
 {
     CLR_N; CLR_H;
     if (*val & MASK_BIT_L) SET_C; else CLR_C;
-    *val >>= 1;
-    if (arithmetic_shift)
-        *val |= (*val & MASK_BIT_H);
+    *val = (*val >> 1) | (arithmetic_shift ? (*val & MASK_BIT_H) : 0);
     if (*val) CLR_Z; else SET_Z;
 }
 
@@ -1042,7 +1040,7 @@ swap_nibbles(uint8_t *val)
 static void
 test_bit(uint8_t *val)
 {
-    CLR_N; CLR_H;
+    CLR_N; SET_H;
     if (((*val) >> IR_BIT_NUM) & MASK_BIT_L) CLR_Z; else SET_Z;
 }
 
@@ -1758,11 +1756,11 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
 
 };
 
-static void
+void
 fetch_instruction()
 {
-    if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
-        cpu.IME = 1;
+    // if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
+    //     cpu.IME = 1;
     cpu.IR = cpu.bus->read(cpu.PC++);
     if (!cpu.cb_instruction) {
         cpu.instruction = &OPCODE_TABLE[cpu.IR];
@@ -1774,22 +1772,33 @@ fetch_instruction()
     }
 }
 
-void 
+/*
+Returns a two byte int where the lower byte is the opcode of the instruction that was executed this machine
+cycle (even if a new opcode has been loaded into IR due to a fetch) and the higher byte is the number of machine
+cycles needed to finish executing this instruction. If that is 0, the instruction has just finished executing
+and a new fetch occurred. Hopefully helpful for testing.
+*/
+uint16_t
 tick_machine_cycle()
 {
-    cpu.instruction->cycles[cpu.cycle_num]();
-    if (cpu.cycle_num == cpu.instruction->cycle_count) fetch_instruction();
+    if (cpu.cycle_num == cpu.instruction->cycle_count)
+        fetch_instruction();
+
+    cpu.instruction->cycles[cpu.cycle_num++]();
+    uint16_t result = cpu.IR + ((cpu.instruction->cycle_count - cpu.cycle_num) << 8);
 
     // Tick down the IME latch for delayed interrupt enable
     if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
         cpu.IME = 1;
+
+    return result;
 }
 
-void
-instruction_test()
-{
-    fetch_instruction();
-    while (cpu.cycle_num < cpu.instruction->cycle_count) {
-        cpu.instruction->cycles[cpu.cycle_num++]();
-    }
-}
+// void
+// instruction_test()
+// {
+//     fetch_instruction();
+//     while (cpu.cycle_num < cpu.instruction->cycle_count) {
+//         cpu.instruction->cycles[cpu.cycle_num++]();
+//     }
+// }

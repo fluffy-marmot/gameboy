@@ -16,3 +16,12 @@ add delay for EI's enabling of interrupts,
 SBC n instruction typo: was using addition microcycle instead of subtraction
     Total tests: 243008 / 244000,  99.59 %, Instructions passing: 243 / 244
 small typo: load HL SP+e was running two microcycles of lower byte instead of low then high
+    Total tests: 244000 / 244000,  100.00 %, Instructions passing: 244 / 244
+
+
+Now including secondary optable:
+    Total tests: 430954 / 500000,  86.19 %, Instructions passing: 427 / 500
+Fix right arithmetic shift erasing 7 bits:
+    Total tests: 435000 / 500000,  87.00 %, Instructions passing: 435 / 500
+test bit was setting wrong H flag, this fixes a lot...everything else
+    Total tests: 500000 / 500000,  100.00 %, Instructions passing: 500 / 500
