@@ -9,8 +9,10 @@ static void    write_boot_rom(memaddr, uint8_t) {}
 static bus_interface_t bus_boot_rom =  { read_boot_rom, write_boot_rom };
 
 int
-init_bootrom(char *filename)
+init_bootrom(char *filename, gb_bus_t *bus)
 {
+    bus->interface_rom_boot = &bus_boot_rom;
+
     FILE *f = fopen(filename, "rb");
     if (f == NULL)
         return -1;
@@ -20,4 +22,3 @@ init_bootrom(char *filename)
         return -1;
     return 0;
 }
-

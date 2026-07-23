@@ -1,8 +1,9 @@
 CC = gcc
 SHARED_FLAGS = -shared -fPIC -g
+SRCS = $(wildcard src/*.c)
 
-gameboy.so: bus.c bus.h cpu.c cpu.h system.c system.h
-	$(CC) bus.c cpu.c system.c $(SHARED_FLAGS) -o gameboy.so
+gameboy.so: $(SRCS)
+	$(CC) $(SRCS) $(SHARED_FLAGS) -o gameboy.so
 
 lib: gameboy.so
 

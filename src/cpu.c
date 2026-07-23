@@ -58,7 +58,7 @@
 // Needed declarations - function is defined below one that uses it
 static uint8_t add_and_set_carry_flags(uint8_t, uint8_t, uint8_t);
 
-gb_cpu_t cpu;
+gb_cpu_t cpu; // TODO make static and access from py via gb struct
 
 // TODO: can I inline other stuff here? I'm unclear
 // TODO: get rid of nop, leave blank?
@@ -462,7 +462,6 @@ static const instruction_t LD_HL_SPe = {
 /*
 Helper for adding two 8-bit values and setting both carry flags
 */
-// TODO kind of ugly having to add the carry here just for ADD HL rr
 static uint8_t 
 add_and_set_carry_flags(uint8_t val1, uint8_t val2, uint8_t carry)
 {
@@ -483,10 +482,10 @@ add_to_A(uint8_t val, uint8_t carry)
     if (cpu.A) CLR_Z; else SET_Z;
 }
 
-static void add_r_to_A  () { add_to_A(cpu.reg[IR_REG_R], 0);                    }
-static void adc_r_to_A  () { add_to_A(cpu.reg[IR_REG_R], FLAG_C);           }
-static void add_Z_to_A  () { add_to_A(cpu.Z, 0);                                }
-static void adc_Z_to_A  () { add_to_A(cpu.Z, FLAG_C);                       }
+static void add_r_to_A  () { add_to_A(cpu.reg[IR_REG_R], 0);                 }
+static void adc_r_to_A  () { add_to_A(cpu.reg[IR_REG_R], FLAG_C);            }
+static void add_Z_to_A  () { add_to_A(cpu.Z, 0);                             }
+static void adc_Z_to_A  () { add_to_A(cpu.Z, FLAG_C);                        }
 static void add_e_to_SPl() { add_and_set_carry_flags(cpu.SP, cpu.Z, 0);      }  // Cheating a 'lil with Z latch
 static void add_e_to_SPh() { cpu.WZ = cpu.SP + (int8_t) cpu.Z; CLR_N; CLR_Z; }
 
@@ -1756,9 +1755,18 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
 
 };
 
+/* ############################################################################
+###############################################################################
+
+        Actually running the CPU and interacting with the world
+
+###############################################################################
+############################################################################ */
+
 void
 fetch_instruction()
 {
+    // TODO could be static?
     // if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
     //     cpu.IME = 1;
     cpu.IR = cpu.bus->read(cpu.PC++);
@@ -1818,4 +1826,12 @@ write_interrupt_wiring(memaddr address, uint8_t value)
         cpu.IE = value;
     }
 }
-static bus_interface_t bus_boot_lock = { read_bus_FF50, write_bus_FF50 };
+static bus_interface_t bus_registers_interrupt = { read_interrupt_wiring, write_interrupt_wiring };
+
+gb_cpu_t *
+init_gameboy_cpu(gb_bus_t *bus)
+{
+    cpu.bus = bus->bus_dispatcher;
+    bus->interface_registers_interrupt = &bus_registers_interrupt;
+    return &cpu;
+}

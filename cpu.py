@@ -19,10 +19,12 @@ class CPU(ctypes.Structure):
         ("PC", ctypes.c_uint16),
         ("SP", ctypes.c_uint16),
         ("IR", ctypes.c_uint8),
-        ("IME", ctypes.c_uint8),
-        ("IME_latch", ctypes.c_uint8),
         ("Z", ctypes.c_uint8),
         ("W", ctypes.c_uint8),
+        ("IME", ctypes.c_uint8),
+        ("IME_latch", ctypes.c_uint8),
+        ("IE", ctypes.c_uint8),
+        ("IF", ctypes.c_uint8),
         ("bus", ctypes.c_void_p),
         ("cycle_num", ctypes.c_uint8),
         ("cb_instruction", ctypes.c_uint8),
@@ -59,14 +61,18 @@ gb.fetch_instruction.argtypes = []
 gb.tick_machine_cycle.restype = ctypes.c_uint16
 gb.tick_machine_cycle.argtypes = []
 
-gb.memory_read.restype = ctypes.c_uint8
-gb.memory_read.argtypes = [ctypes.c_uint16]
+gb.test_memory_read.restype = ctypes.c_uint8
+gb.test_memory_read.argtypes = [ctypes.c_uint16]
 
-gb.memory_write.restype = None
-gb.memory_write.argtypes = [ctypes.c_uint16, ctypes.c_uint8]
+gb.test_memory_write.restype = None
+gb.test_memory_write.argtypes = [ctypes.c_uint16, ctypes.c_uint8]
 
-gb.memory_wipe.restype = None
-gb.memory_wipe.argtypes = []
+gb.test_memory_wipe.restype = None
+gb.test_memory_wipe.argtypes = []
+
+gb.test_memory_mode_enable.restype = None
+gb.test_memory_mode_enable.argtypes = []
+gb.test_memory_mode_enable()
 
 SM83_DIR = BASE_DIR / "sm83" / "v1"
 
@@ -77,8 +83,8 @@ all_tests = sorted(f for f in SM83_DIR.glob("*.json"))
 def test_ram(ram):
     ok = True
     for addr, val in ram:
-        if gb.memory_read(addr) != val:
-            print(f"\t\tAddress {addr:#X}, actual: {gb.memory_read(addr):>3d}, expected: {val:>3d}")
+        if gb.test_memory_read(addr) != val:
+            print(f"\t\tAddress {addr:#X}, actual: {gb.test_memory_read(addr):>3d}, expected: {val:>3d}")
             ok = False
     if not ok:
         print()
@@ -93,9 +99,9 @@ for test_file in all_tests:
         tests = json.load(f)
     for i, test in enumerate(tests):
         cpu.load_test(test["initial"])
-        gb.memory_wipe()
+        gb.test_memory_wipe()
         for addr, val in test["initial"]["ram"]:
-            gb.memory_write(addr, val)
+            gb.test_memory_write(addr, val)
         # gb.instruction_test()
         gb.fetch_instruction()
         done = False

@@ -58,6 +58,8 @@ typedef struct {
 typedef sm83_cpu_t gb_cpu_t;
 
 extern gb_cpu_t cpu;
+
+gb_cpu_t *init_gameboy_cpu(gb_bus_t *);
 uint16_t tick_machine_cycle(void);
 
 #endif
