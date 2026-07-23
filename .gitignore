@@ -14,3 +14,6 @@ gameboy.so
 
 # copyrighted boot roms, may as well steer clear
 bootroms/
+
+__pycache__/
+*.pyc

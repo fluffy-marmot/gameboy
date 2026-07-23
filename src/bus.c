@@ -151,4 +151,6 @@ init_gameboy_bus(void)
     bus.interface_unusable = &bus_unusable;
 
     bus.interface_register_FF50 = &bus_boot_lock;
+
+    return &bus;
 }

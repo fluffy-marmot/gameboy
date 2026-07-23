@@ -19,6 +19,7 @@ class CPU(ctypes.Structure):
         ("PC", ctypes.c_uint16),
         ("SP", ctypes.c_uint16),
         ("IR", ctypes.c_uint8),
+        ("_pad0", ctypes.c_uint8),  # oops thats due to not defining the union python side, alignment issues
         ("Z", ctypes.c_uint8),
         ("W", ctypes.c_uint8),
         ("IME", ctypes.c_uint8),
