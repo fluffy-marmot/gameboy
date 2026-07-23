@@ -49,7 +49,7 @@ class CPU(ctypes.Structure):
             print()
         return ok
                 
-gb.main()
+# gb.main()
 
 cpu = CPU.in_dll(gb, "cpu")
 

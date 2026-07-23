@@ -1794,11 +1794,28 @@ tick_machine_cycle()
     return result;
 }
 
-// void
-// instruction_test()
-// {
-//     fetch_instruction();
-//     while (cpu.cycle_num < cpu.instruction->cycle_count) {
-//         cpu.instruction->cycles[cpu.cycle_num++]();
-//     }
-// }
+uint8_t
+read_interrupt_wiring(memaddr address)
+{ 
+    switch (address) {
+    case MEMADDR_IF:
+        return cpu.IF;
+    case MEMADDR_IE:
+    default:
+        return cpu.IE;
+    }
+}
+
+// 
+void
+write_interrupt_wiring(memaddr address, uint8_t value)
+{
+    switch (address) {
+    case MEMADDR_IF:
+        cpu.IF = value;
+    case MEMADDR_IE:
+    default:
+        cpu.IE = value;
+    }
+}
+static bus_interface_t bus_boot_lock = { read_bus_FF50, write_bus_FF50 };

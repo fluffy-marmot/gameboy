@@ -35,9 +35,7 @@ typedef struct {
     uint16_t PC;                    // program counter
     uint16_t SP;
     uint8_t IR;                     // instruction register
-    uint8_t IME;                    // interrupt master enable flag
-    uint8_t IME_latch;              // used to delay enabling the IME
-    uint8_t IE;
+
     union {
         uint16_t WZ;
         struct {
@@ -46,10 +44,15 @@ typedef struct {
         };
     };
 
-    gb_bus_t *bus;                  // access to memory read/write
+    uint8_t IME;                    // interrupt master enable flag
+    uint8_t IME_latch;              // used to delay enabling the IME until next machine cycle
+    uint8_t IE;                     // interrupt enable, FFFF register
+    uint8_t IF;                     // interrupt flags  
+
+    bus_interface_t *bus;           // access to memory read/write
     uint8_t cycle_num;              // current machine cycle within current instruction
     uint8_t cb_instruction;         // 1 if next fetch should use CB table
-    const instruction_t *instruction;     // current instruction
+    const instruction_t *instruction;    // current instruction
 } sm83_cpu_t;
 
 typedef sm83_cpu_t gb_cpu_t;
