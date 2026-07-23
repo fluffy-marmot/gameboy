@@ -26,34 +26,46 @@ FE00 - FE9F Object Attribute Memory (OAM)                                       
     b1 - obj enable , on = 1
     b0 - BG & window enable priority
 */
-#define ADDR_STR_ROMFIXD 0x0000
-#define ADDR_END_ROMFIXD 0x3FFF
-#define ADDR_STR_ROMBANK 0x4000
-#define ADDR_END_ROMBANK 0x7FFF
-#define ADDR_STR_PPUVRAM 0x8000
-#define ADDR_END_PPUVRAM 0x9FFF
-#define ADDR_STR_WRAMEXT 0xA000
-#define ADDR_END_WRAMEXT 0xBFFF
-#define ADDR_STR_WRAMONE 0xC000
-#define ADDR_END_WRAMONE 0xCFFF
-#define ADDR_STR_WRAMSEC 0xD000
-#define ADDR_END_WRAMSEC 0xDFFF
-#define ADDR_STR_MEMECHO 0xE000
-#define ADDR_END_MEMECHO 0xFDFF
-#define ADDR_STR_MEM_OAM 0xFE00
-#define ADDR_END_MEM_OAM 0xFE9F
-#define ADDR_STR_UNUSBLE 0xFEA0
-#define ADDR_END_UNUSBLE 0xFEFF
-#define ADDR_STR_IO_REGS 0xFF00
-#define ADDR_END_IO_REGS 0xFF7F
-#define ADDR_STR_HIGHRAM 0xFF80
-#define ADDR_END_HIGHRAM 0xFFFE
+
+#define KiB                                     1024
+
+#define GB_DMG_WRAM_SIZE                        ( 8 * KiB)
+#define GB_CGB_WRAM_SIZE                        (32 * KiB)
+#define GB_DMG_VRAM_SIZE                        ( 8 * KiB)
+#define GB_CGB_VRAM_SIZE                        (16 * KiB)
+#define GB_DMG_HRAM_SIZE                        127
+#define GB_DMG__OAM_SIZE                        160
+
+#define ADDR_STR_ROMFIXD                        0x0000
+#define ADDR_END_ROMFIXD                        0x3FFF
+#define ADDR_STR_ROMBANK                        0x4000
+#define ADDR_END_ROMBANK                        0x7FFF
+#define ADDR_STR_PPUVRAM                        0x8000
+#define ADDR_END_PPUVRAM                        0x9FFF
+#define ADDR_STR_WRAMEXT                        0xA000
+#define ADDR_END_WRAMEXT                        0xBFFF
+#define ADDR_STR_WRAMONE                        0xC000
+#define ADDR_END_WRAMONE                        0xCFFF
+#define ADDR_STR_WRAMSEC                        0xD000
+#define ADDR_END_WRAMSEC                        0xDFFF
+#define ADDR_STR_MEMECHO                        0xE000
+#define ADDR_END_MEMECHO                        0xFDFF
+#define ADDR_STR_MEM_OAM                        0xFE00
+#define ADDR_END_MEM_OAM                        0xFE9F
+#define ADDR_STR_UNUSBLE                        0xFEA0
+#define ADDR_END_UNUSBLE                        0xFEFF
+#define ADDR_STR_IO_REGS                        0xFF00
+#define ADDR_END_IO_REGS                        0xFF7F
+#define ADDR_STR_HIGHRAM                        0xFF80
+#define ADDR_END_HIGHRAM                        0xFFFE
 
 #define GB_DMG_BOOT_ROM_SIZE                    0xFF
 
 #define MEMADDR_IF                              0xFF0F
 #define MEMADDR_IE                              0xFFFF
 #define MEMADDR_BOOT_ROM_LOCK                   0xFF50
+
+#define UNREADABLE                              0xFF
 
 #define IMPLEMENTED_BITS_BOOT_ROM_LOCK          0b00000001
 
@@ -79,6 +91,7 @@ typedef struct {
     bus_interface_t *interface_hram;            //
 
     bus_interface_t *interface_register_FF50;       //
+    bus_interface_t *interface_registers_ppu;       //
     bus_interface_t *interface_registers_interrupt; //
 
     uint8_t BOOT_ROM_LOCK;                              // FF50 boot ROM lock register

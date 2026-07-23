@@ -1802,36 +1802,10 @@ tick_machine_cycle()
     return result;
 }
 
-uint8_t
-read_interrupt_wiring(memaddr address)
-{ 
-    switch (address) {
-    case MEMADDR_IF:
-        return cpu.IF;
-    case MEMADDR_IE:
-    default:
-        return cpu.IE;
-    }
-}
-
-// 
-void
-write_interrupt_wiring(memaddr address, uint8_t value)
-{
-    switch (address) {
-    case MEMADDR_IF:
-        cpu.IF = value;
-    case MEMADDR_IE:
-    default:
-        cpu.IE = value;
-    }
-}
-static bus_interface_t bus_registers_interrupt = { read_interrupt_wiring, write_interrupt_wiring };
-
 gb_cpu_t *
-init_gameboy_cpu(gb_bus_t *bus)
+init_gameboy_cpu(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
     cpu.bus = bus->bus_dispatcher;
-    bus->interface_registers_interrupt = &bus_registers_interrupt;
+    cpu.irq = irq;
     return &cpu;
 }

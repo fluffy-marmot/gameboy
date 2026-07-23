@@ -2,8 +2,7 @@
 #define GB_CPU
 
 #include "bus.h"
-
-#include <stdint.h>
+#include "irq.h"
 
 #define MAX_MCYCLE_INSTRUCTION 6
 
@@ -46,10 +45,10 @@ typedef struct {
 
     uint8_t IME;                    // interrupt master enable flag
     uint8_t IME_latch;              // used to delay enabling the IME until next machine cycle
-    uint8_t IE;                     // interrupt enable, FFFF register
-    uint8_t IF;                     // interrupt flags  
 
     bus_interface_t *bus;           // access to memory read/write
+    gb_irq_handler_t *irq;          // direct access to interrupts data
+
     uint8_t cycle_num;              // current machine cycle within current instruction
     uint8_t cb_instruction;         // 1 if next fetch should use CB table
     const instruction_t *instruction;    // current instruction
@@ -59,7 +58,7 @@ typedef sm83_cpu_t gb_cpu_t;
 
 extern gb_cpu_t cpu;
 
-gb_cpu_t *init_gameboy_cpu(gb_bus_t *);
+gb_cpu_t *init_gameboy_cpu(gb_bus_t *, gb_irq_handler_t *);
 uint16_t tick_machine_cycle(void);
 
 #endif

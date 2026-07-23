@@ -3,20 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define KiB                         1024
-
-#define GB_DMG_WRAM_SIZE            ( 8 * KiB)
-#define GB_CGB_WRAM_SIZE            (32 * KiB)
-#define GB_DMG_VRAM_SIZE            ( 8 * KiB)
-#define GB_CGB_VRAM_SIZE            (16 * KiB)
-#define GB_DMG_HRAM_SIZE            127
-
 // Boot ROM lock register (aka BANK register) values
 #define FF50_BOOT_ROM_ACTIVE        0b00000000
 #define FF50_BOOT_ROM_INACTIVE      0b00000001
 
 #define MASK_ECHO_RAM               0b0001111111111111
-#define UNREADABLE                  0xFF
 
 #define ADDR_RANGE(low, high) ((low <= address) && (address <= high))
 
@@ -68,6 +59,7 @@ select_interface(memaddr address)
     if (ADDR_RANGE(0xE000, 0xFDFF))                     return bus.interface_echo;
     if (ADDR_RANGE(0xFE00, 0xFE9F))                     return bus.interface_oam;            // 160 B
     if (ADDR_RANGE(0xFEA0, 0xFEFF))                     return bus.interface_unusable;
+    if (ADDR_RANGE(0xFF40, 0xFF4B))                     return bus.interface_registers_ppu;  // TODO add exception for DMA one
     // (ADDR_RANGE(0xFF7F, 0xFEFF))                     # I/O Registers, handled in switch below
     if (ADDR_RANGE(0xFF80, 0xFFFE))                     return bus.interface_hram;
 
