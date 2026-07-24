@@ -44,6 +44,9 @@
 #define OAM_TILE_INDEX(i)           (ppu.oam[i * 4 + 2])
 #define OAM_FLAGS(i)                (ppu.oam[i * 4 + 3])
 
+#define VRAM(address)               ppu.vram[address - ADDR_STR_PPUVRAM]
+#define  OAM(address)               ppu.oam [address - ADDR_STR_MEM_OAM]
+
 typedef enum {
     GET_TILE,
     GET_DATA_LOW,
@@ -120,24 +123,24 @@ static bus_interface_t bus_registers_ppu = { .read = read_ppu_reg, .write = writ
 static uint8_t
 read_vram(memaddr address)
 {
-    return ppu.vram[address - ADDR_STR_PPUVRAM];
+    return VRAM(address);
 }
 static void
 write_vram(memaddr address, uint8_t val)
 {
-    ppu.vram[address - ADDR_STR_PPUVRAM] = val;
+    VRAM(address) = val;
 }
 static bus_interface_t bus_vram = { .read = read_vram, .write = write_vram };
 
 static uint8_t
 read_oam(memaddr address)
 {
-    return ppu.oam[address - ADDR_STR_MEM_OAM];
+    return OAM(address);
 }
 static void
 write_oam(memaddr address, uint8_t val)
 {
-    ppu.oam[address - ADDR_STR_MEM_OAM] = val;
+    OAM(address) = val;
 }
 static bus_interface_t bus_oam = { .read = read_oam, .write = write_oam };
 // TODO when is vram / oam access blocked and to what?
@@ -165,18 +168,35 @@ begin_draw_mode(void)
 static void
 mode3(void)
 {
+    // TODO need to add 2 dot timing for first 3
     switch (bg_fetcher.mode) {
     case GET_TILE:
-        bg_fetcher.tile_number = ppu.vram[BG_TILE_MAP + bg_fetcher.tile++ - ADDR_STR_PPUVRAM];
+        bg_fetcher.tile_number = VRAM(BG_TILE_MAP + bg_fetcher.tile++);
         bg_fetcher.mode = GET_DATA_LOW;
         break;
     case GET_DATA_LOW:
-    
+        uint8_t y_offset = 2 * ((ppu.LY + ppu.SCY) % 8);
         if (BG_TILE_DATA_METHOD == BG_TILE_DATA_METHOD_8000)
-            bg_fetcher.data_low = ppu.vram[0x8000 + 16 * bg_fetcher.tile_number]
+            bg_fetcher.data_low = VRAM(0x8000 + 16 * bg_fetcher.tile_number + y_offset);
+        else
+            bg_fetcher.data_low = VRAM(0x9000 + 16 * (int8_t) bg_fetcher.tile_number + y_offset);
+        bg_fetcher.mode = GET_DATA_HIGH;
         break;
     case GET_DATA_HIGH:
+        uint8_t y_offset = 2 * ((ppu.LY + ppu.SCY) % 8);
+        if (BG_TILE_DATA_METHOD == BG_TILE_DATA_METHOD_8000)
+            bg_fetcher.data_high = VRAM(0x8000 + 16 * bg_fetcher.tile_number + y_offset + 1);
+        else
+            bg_fetcher.data_high = VRAM(0x9000 + 16 * (int8_t) bg_fetcher.tile_number + y_offset + 1);
+        bg_fetcher.mode = SLEEP;
         break;
+    case SLEEP:
+        if (bg_fetcher.bg_pixels_len == 0) {
+            for (uint8_t i = 0; i < 8; i++) {
+                bg_fetcher.bg_pixels[i].color = 
+            }
+            bg_fetcher.mode = GET_TILE;
+        }
     }
 }
 
