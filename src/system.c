@@ -15,6 +15,9 @@ boot_system (void)
     
     if (init_bootrom(BOOT_ROM, gb.bus) == -1)
         printf("Error loading bootrom file: %s\n", BOOT_ROM);
+
+    if (init_cartridge(CARTRIDGE_ROM, gb.bus) == -1)
+        printf("Error loading cartridge rom file: %s\n", CARTRIDGE_ROM);
     
     // on init - map boot ROM to 0x0000 - 0x00FF
 }

@@ -1,5 +1,7 @@
 #include "ppu.h"
 
+#include <stdio.h>
+
 #define MEMADDR_LCDC                0xFF40
 #define MEMADDR_STAT                0xFF41
 #define MEMADDR_SCY                 0xFF42
@@ -51,7 +53,7 @@ typedef enum {
     GET_TILE,
     GET_DATA_LOW,
     GET_DATA_HIGH,
-    SLEEP
+    PUSH
 } bg_fetcher_mode;
 
 typedef struct {
@@ -62,21 +64,31 @@ typedef struct {
 
 static struct {
     bg_fetcher_mode mode;
+    uint8_t delay;
     uint8_t data_low;
     uint8_t data_high;
 
     uint16_t tile;
     uint8_t tile_number;
     uint8_t win_line_counter;
-
-    fifo_pixel_t bg_pixels[8];
-    uint8_t bg_pixels_len;
 } bg_fetcher;
 
 static struct {
+    uint8_t warmup;
+    uint8_t discard;
+
     fifo_pixel_t obj_pixels[8];
     uint8_t obj_pixels_len;
-} obj_fetcher;
+    uint8_t bg_pixels[8];
+    uint8_t bg_pixels_len;
+} pixel_mixer;
+
+static const uint32_t LCD_COLORS[4] = {
+    0x00DDEEDD,
+    0x0088AA88,
+    0x00445544,
+    0x00001100
+};
 
 
 
@@ -159,20 +171,28 @@ oam_scan_step(void)
 static void
 begin_draw_mode(void)
 {
+    ppu.lx = 0;
+
+    pixel_mixer.bg_pixels_len = 0;
+    pixel_mixer.obj_pixels_len = 0;
+    pixel_mixer.warmup = 12;
+    pixel_mixer.discard = ppu.SCX % 8;
+
     bg_fetcher.mode = GET_TILE;
-    bg_fetcher.bg_pixels_len = 0;
+    bg_fetcher.delay = 5;
     // if background, what if window?
     bg_fetcher.tile = (((ppu.SCX / 8) & 0x1F) + 32 * (((ppu.LY + ppu.SCY) & 0xFF) / 8)) & 0x03FF;
 }
 
 static void
-mode3(void)
+step_bg_fetcher(void)
 {
-    // TODO need to add 2 dot timing for first 3
+    if (bg_fetcher.delay && bg_fetcher.delay--) return;
     switch (bg_fetcher.mode) {
     case GET_TILE:
         bg_fetcher.tile_number = VRAM(BG_TILE_MAP + bg_fetcher.tile++);
         bg_fetcher.mode = GET_DATA_LOW;
+        bg_fetcher.delay = 1;
         break;
     case GET_DATA_LOW:
         uint8_t y_offset = 2 * ((ppu.LY + ppu.SCY) % 8);
@@ -181,23 +201,45 @@ mode3(void)
         else
             bg_fetcher.data_low = VRAM(0x9000 + 16 * (int8_t) bg_fetcher.tile_number + y_offset);
         bg_fetcher.mode = GET_DATA_HIGH;
+        bg_fetcher.delay = 1;
         break;
     case GET_DATA_HIGH:
-        uint8_t y_offset = 2 * ((ppu.LY + ppu.SCY) % 8);
+        // TODO fix the ugliness later
+        uint8_t offset = 2 * ((ppu.LY + ppu.SCY) % 8);
         if (BG_TILE_DATA_METHOD == BG_TILE_DATA_METHOD_8000)
-            bg_fetcher.data_high = VRAM(0x8000 + 16 * bg_fetcher.tile_number + y_offset + 1);
+            bg_fetcher.data_high = VRAM(0x8000 + 16 * bg_fetcher.tile_number + offset + 1);
         else
-            bg_fetcher.data_high = VRAM(0x9000 + 16 * (int8_t) bg_fetcher.tile_number + y_offset + 1);
-        bg_fetcher.mode = SLEEP;
+            bg_fetcher.data_high = VRAM(0x9000 + 16 * (int8_t) bg_fetcher.tile_number + offset + 1);
+        bg_fetcher.mode = PUSH;
         break;
-    case SLEEP:
-        if (bg_fetcher.bg_pixels_len == 0) {
-            for (uint8_t i = 0; i < 8; i++) {
-                bg_fetcher.bg_pixels[i].color = 
+    case PUSH:
+        if (pixel_mixer.bg_pixels_len == 0) {
+            for (int i = 7; i >= 0; i--) {
+                pixel_mixer.bg_pixels[i] = (((bg_fetcher.data_high & (1 << i)) >> i) << 1) |
+                                            ((bg_fetcher.data_low  & (1 << i)) >> i);
             }
+            pixel_mixer.bg_pixels_len = 8;
             bg_fetcher.mode = GET_TILE;
+            bg_fetcher.delay = 1;
         }
     }
+}
+
+static void
+step_mixer()
+{
+    if (pixel_mixer.warmup && pixel_mixer.warmup--) return;
+    if (pixel_mixer.bg_pixels_len == 0) return;
+    if (pixel_mixer.discard && pixel_mixer.discard-- && pixel_mixer.bg_pixels_len--) return;
+
+    uint16_t lcd_index = ppu.LY * LCD_WIDTH + ppu.lx++;
+    ppu.lcd[lcd_index] = LCD_COLORS[ppu.BGP >> (2 * pixel_mixer.bg_pixels[--pixel_mixer.bg_pixels_len])];
+}
+
+static void
+mode3(void)
+{
+    step_bg_fetcher();
 }
 
 void
@@ -212,7 +254,13 @@ dot_cycle(void)
             begin_draw_mode();
         break;
     case PPU_MODE_DRAWING:
-
+        step_bg_fetcher();
+        step_mixer();
+        if (ppu.lx == LCD_WIDTH)
+            PPU_MODE_SET(PPU_MODE_HBLANK);
+        break;
+    case PPU_MODE_HBLANK:
+    case PPU_MODE_VBLANK:
     }
 
     ppu.frame_dot++;
@@ -234,6 +282,12 @@ dot_cycle(void)
         }
         ppu.oam_scan_count = 0;
     }
+}
+
+uint32_t *
+get_lcd(void)
+{
+    return ppu.lcd;
 }
 
 gb_ppu_t *

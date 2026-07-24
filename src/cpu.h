@@ -56,9 +56,12 @@ typedef struct {
 
 typedef sm83_cpu_t gb_cpu_t;
 
+// ABI
 extern gb_cpu_t cpu;
 
 gb_cpu_t *init_gameboy_cpu(gb_bus_t *, gb_irq_handler_t *);
 uint16_t tick_machine_cycle(void);
+
+// ABI
 
 #endif

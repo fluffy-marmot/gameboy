@@ -17,3 +17,4 @@ bootroms/
 
 __pycache__/
 *.pyc
+.venv/

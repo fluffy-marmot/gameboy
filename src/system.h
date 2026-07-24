@@ -3,11 +3,13 @@
 
 #include "bootrom.h"
 #include "bus.h"
+#include "cartridge.h"
 #include "cpu.h"
 #include "irq.h"
 #include "ppu.h"
 
 #define BOOT_ROM                    "bootroms/dmg_boot.bin"
+#define CARTRIDGE_ROM               "dmg-acid2.gb"
 
 typedef struct {
     gb_cpu_t *cpu;

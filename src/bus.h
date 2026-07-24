@@ -80,13 +80,13 @@ typedef struct {
     bus_interface_t *bus_dispatcher;            //
 
     bus_interface_t *interface_rom_boot;        //
-    bus_interface_t *interface_rom_fixed;       // cartridge todo
-    bus_interface_t *interface_rom_bank;        // cartridge todo
-    bus_interface_t *interface_vram;            // ppu todo
+    bus_interface_t *interface_rom_fixed;       //
+    bus_interface_t *interface_rom_bank;        //
+    bus_interface_t *interface_vram;            // 
     bus_interface_t *interface_wram_system;     //
-    bus_interface_t *interface_wram_extern;     // cartridge todo
+    bus_interface_t *interface_wram_extern;     //
     bus_interface_t *interface_echo;            //
-    bus_interface_t *interface_oam;             // ppu todo
+    bus_interface_t *interface_oam;             // 
     bus_interface_t *interface_unusable;        //
     bus_interface_t *interface_hram;            //
 
@@ -99,11 +99,13 @@ typedef struct {
 
 gb_bus_t *init_gameboy_bus(void);
 
-// use these functions for a flat 64 KiB memory layout, for e.g. simple single instruction sm83 tests
+// ABI
 void test_memory_mode_enable(void);
 void test_memory_mode_disable(void);
 void test_memory_wipe(void);
 void test_memory_write(memaddr, uint8_t);
 uint8_t test_memory_read (memaddr);
+
+// ABI
 
 #endif

@@ -6,6 +6,7 @@
 
 #include <stdbool.h>
 
+// 10:9 ratio
 #define LCD_WIDTH                       160
 #define LCD_HEIGHT                      144
 
@@ -31,9 +32,9 @@ typedef struct {
     uint8_t  oam[GB_DMG__OAM_SIZE];
     uint32_t lcd[LCD_WIDTH * LCD_HEIGHT];
 
+    uint8_t lx;
     uint16_t frame_dot;
     bool window_condition;
-    uint8_t x;
     uint8_t oam_scan_indices[10];
     uint8_t oam_scan_count;
         
@@ -41,5 +42,11 @@ typedef struct {
 } gb_ppu_t;
 
 gb_ppu_t *init_gameboy_ppu(gb_bus_t *, gb_irq_handler_t *);
+
+// ABI
+
+void dot_cycle(void);
+uint32_t *get_lcd(void);
+// ABI
 
 #endif
