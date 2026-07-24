@@ -4,11 +4,14 @@
 #include "bus.h"
 #include "irq.h"
 
+#include <stdbool.h>
+
 #define LCD_WIDTH                       160
 #define LCD_HEIGHT                      144
 
 #define DOTS_PER_SCANLINE               456
 #define SCANLINES_PER_FRAME             154
+#define SCANLINE_MAX_OBJS               10
 
 typedef struct {
     uint8_t LCDC;                       // FF40
@@ -29,7 +32,10 @@ typedef struct {
     uint32_t lcd[LCD_WIDTH * LCD_HEIGHT];
 
     uint16_t frame_dot;
-
+    bool window_condition;
+    uint8_t x;
+    uint8_t oam_scan_indices[10];
+    uint8_t oam_scan_count;
 
     gb_irq_handler_t *irq;              // direct access to interrupts data
 } gb_ppu_t;

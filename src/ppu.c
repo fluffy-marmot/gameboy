@@ -15,13 +15,40 @@
 #define USEPINS_STAT                0b01111111
 #define WRITEABLE_STAT              0b01111000
 
-#define MASK_PPU_MODE               0b00000011
+#define LCDC_BIT_PPU_ENABLE         0b10000000
+#define LCDC_BIT_WIN_TILEMAP        0b01000000
+#define LCDC_BIT_WIN_ENABLE         0b00100000
+#define LCDC_BIT_BG_WIN_TILES       0b00010000
+#define LCDC_BIT_BG_TILE_MAP        0b00001000
+#define LCDC_BIT_OBJ_HEIGHT         0b00000100
+#define LCDC_BIT_OBJ_ENABLE         0b00000010
+#define LCDC_BIT_BG_WIN_PRIORITY    0b00000001
 
-#define PPU_MODE                    (ppu.STAT & MASK_PPU_MODE)
+#define OBJ_HEIGHT                  ((ppu.LCDC & LCDC_BIT_OBJ_HEIGHT) >> 2)
+
+#define PPU_MODE_MASK               0b00000011
+#define PPU_MODE                    (ppu.STAT & PPU_MODE_MASK)
+#define PPU_MODE_SET(mode)          (ppu.STAT = (ppu.STAT & (PPU_MODE_MASK ^ 0xFF)) | (mode))
 #define PPU_MODE_HBLANK             0b00000000
 #define PPU_MODE_VBLANK             0b00000001
 #define PPU_MODE_OAM_SCAN           0b00000010
 #define PPU_MODE_DRAWING            0b00000011
+
+typedef enum {
+    GET_TILE,
+    GET_DATA_LOW,
+    GET_DATA_HIGH,
+    SLEEP
+} bg_fetcher_mode;
+
+typedef struct {
+    bg_fetcher_mode mode;
+
+    uint8_t x;
+    uint8_t y;
+
+    
+} bg_fetcher_t;
 
 static gb_ppu_t ppu;
 
@@ -29,36 +56,36 @@ static uint8_t
 read_ppu_reg(memaddr address)
 {
     switch (address) {
-    case MEMADDR_LCDC:      return ppu.LCDC;
-    case MEMADDR_STAT:      return ppu.STAT | (USEPINS_STAT ^ 0xFF);
-    case MEMADDR_SCY:       return ppu.SCY;
-    case MEMADDR_SCX:       return ppu.SCX;
-    case MEMADDR_LY:        return ppu.LY;
-    case MEMADDR_LYC:       return ppu.LYC;
-    case MEMADDR_BGP:       return ppu.BGP;
-    case MEMADDR_OBP0:      return ppu.OBP0;
-    case MEMADDR_OBP1:      return ppu.OBP1;
-    case MEMADDR_WY:        return ppu.WY;
-    case MEMADDR_WX:        return ppu.WX;
-    default:                return 0xFF;
-    }
+    case MEMADDR_LCDC:              return ppu.LCDC;
+    case MEMADDR_STAT:              return ppu.STAT | (USEPINS_STAT ^ 0xFF);
+    case MEMADDR_SCY:               return ppu.SCY;
+    case MEMADDR_SCX:               return ppu.SCX;
+    case MEMADDR_LY:                return ppu.LY;
+    case MEMADDR_LYC:               return ppu.LYC;
+    case MEMADDR_BGP:               return ppu.BGP;
+    case MEMADDR_OBP0:              return ppu.OBP0;
+    case MEMADDR_OBP1:              return ppu.OBP1;
+    case MEMADDR_WY:                return ppu.WY;
+    case MEMADDR_WX:                return ppu.WX;
+    default:                        return 0xFF;
+    }       
 }
 
 static void
 write_ppu_reg(memaddr address, uint8_t val)
 {
     switch (address) {
-    case MEMADDR_LCDC:      ppu.LCDC = val;
-    case MEMADDR_STAT:      ppu.STAT = (val & WRITEABLE_STAT) | (USEPINS_STAT ^ 0xFF);
-    case MEMADDR_SCY:       ppu.SCY = val;
-    case MEMADDR_SCX:       ppu.SCX = val;
-    case MEMADDR_LY:        break;  // read-only                                    
-    case MEMADDR_LYC:       ppu.LYC = val;
-    case MEMADDR_BGP:       ppu.BGP = val;
-    case MEMADDR_OBP0:      ppu.OBP0 = val;
-    case MEMADDR_OBP1:      ppu.OBP1 = val;
-    case MEMADDR_WY:        ppu.WY = val;
-    case MEMADDR_WX:        ppu.WX = val;
+    case MEMADDR_LCDC:              ppu.LCDC = val;
+    case MEMADDR_STAT:              ppu.STAT = (val & WRITEABLE_STAT) | (USEPINS_STAT ^ 0xFF);
+    case MEMADDR_SCY:               ppu.SCY = val;
+    case MEMADDR_SCX:               ppu.SCX = val;
+    case MEMADDR_LY:                break;  // read-only                                    
+    case MEMADDR_LYC:               ppu.LYC = val;
+    case MEMADDR_BGP:               ppu.BGP = val;
+    case MEMADDR_OBP0:              ppu.OBP0 = val;
+    case MEMADDR_OBP1:              ppu.OBP1 = val;
+    case MEMADDR_WY:                ppu.WY = val;
+    case MEMADDR_WX:                ppu.WX = val;
     }
 }
 static bus_interface_t bus_registers_ppu = { .read = read_ppu_reg, .write = write_ppu_reg };
@@ -98,10 +125,39 @@ init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
     return &ppu;
 }
 
+static void
+oam_scan_step(void)
+{
+    uint8_t obj_index = ((ppu.frame_dot %  DOTS_PER_SCANLINE) / 2);
+    int16_t obj_y = (ppu.oam[obj_index * 4]) - 16;
+    if (obj_y <= ppu.LY && ppu.LY < obj_y + 8 * (OBJ_HEIGHT + 1))
+        ppu.oam_scan_indices[ppu.oam_scan_count++] = obj_index;
+}
+
 void
 dot_cycle(void)
 {
+    switch (PPU_MODE) {
+    case PPU_MODE_OAM_SCAN:
+        if (ppu.frame_dot % 2 == 0 && ppu.oam_scan_count < SCANLINE_MAX_OBJS)
+            oam_scan_step();
+        break;
+    }
 
+    ppu.frame_dot++;
+    if (ppu.frame_dot % DOTS_PER_SCANLINE == 0) {
+        ppu.LY++;
+        if (ppu.LY > SCANLINES_PER_FRAME) {
+            // finished a frame
+            ppu.LY = 0;
+            ppu.frame_dot = 0;
+            ppu.window_condition = false;
+        }
+
+        // do i need vblank interrupts? will do later
+        PPU_MODE_SET(ppu.LY > LCD_HEIGHT ? PPU_MODE_VBLANK : PPU_MODE_OAM_SCAN);
+        ppu.oam_scan_count = 0;
+    }
 }
 
 
@@ -113,7 +169,7 @@ dot_cycle(void)
 /*
 FF40 LCD Control 
 7   6   5   4   3   2   1   0 
-LCD & PPU enable    Window tile map Window enable   BG & Window tiles   BG tile map OBJ size    OBJ enable  BG & Window enable / priority
+LCD & PPU enable    Window tile map Window enable   BG & Window tiles   BG tile map    OBJ size    OBJ enable  BG & Window enable / priority
 I think its all writeable?
 https://gbdev.io/pandocs/LCDC.html#ff40--lcdc-lcd-control
 
