@@ -36,7 +36,7 @@ typedef struct {
     uint8_t x;
     uint8_t oam_scan_indices[10];
     uint8_t oam_scan_count;
-
+        
     gb_irq_handler_t *irq;              // direct access to interrupts data
 } gb_ppu_t;
 

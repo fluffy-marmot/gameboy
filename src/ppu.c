@@ -24,7 +24,12 @@
 #define LCDC_BIT_OBJ_ENABLE         0b00000010
 #define LCDC_BIT_BG_WIN_PRIORITY    0b00000001
 
-#define OBJ_HEIGHT                  ((ppu.LCDC & LCDC_BIT_OBJ_HEIGHT) >> 2)
+// 8px or 16px sprite heights
+#define OBJ_HEIGHT                  ((((ppu.LCDC & LCDC_BIT_OBJ_HEIGHT) >> 2) + 1) * 8)
+#define BG_TILE_MAP                 (((ppu.LCDC & LCDC_BIT_BG_TILE_MAP) >> 3) ? 0x9C00 : 0x9800)
+#define BG_TILE_DATA_METHOD         ((ppu.LCDC & LCDC_BIT_BG_WIN_TILES) >> 4)
+#define BG_TILE_DATA_METHOD_8000    0b00000001
+#define BG_TILE_DATA_METHOD_8800    0b00000000
 
 #define PPU_MODE_MASK               0b00000011
 #define PPU_MODE                    (ppu.STAT & PPU_MODE_MASK)
@@ -34,6 +39,11 @@
 #define PPU_MODE_OAM_SCAN           0b00000010
 #define PPU_MODE_DRAWING            0b00000011
 
+#define OAM_Y(i)                    (ppu.oam[i * 4])
+#define OAM_X(i)                    (ppu.oam[i * 4 + 1])
+#define OAM_TILE_INDEX(i)           (ppu.oam[i * 4 + 2])
+#define OAM_FLAGS(i)                (ppu.oam[i * 4 + 3])
+
 typedef enum {
     GET_TILE,
     GET_DATA_LOW,
@@ -42,13 +52,30 @@ typedef enum {
 } bg_fetcher_mode;
 
 typedef struct {
+    uint8_t color;
+    uint8_t palette;
+    uint8_t bg_priority;
+} fifo_pixel_t;
+
+static struct {
     bg_fetcher_mode mode;
+    uint8_t data_low;
+    uint8_t data_high;
 
-    uint8_t x;
-    uint8_t y;
+    uint16_t tile;
+    uint8_t tile_number;
+    uint8_t win_line_counter;
 
-    
-} bg_fetcher_t;
+    fifo_pixel_t bg_pixels[8];
+    uint8_t bg_pixels_len;
+} bg_fetcher;
+
+static struct {
+    fifo_pixel_t obj_pixels[8];
+    uint8_t obj_pixels_len;
+} obj_fetcher;
+
+
 
 static gb_ppu_t ppu;
 
@@ -113,25 +140,44 @@ write_oam(memaddr address, uint8_t val)
     ppu.oam[address - ADDR_STR_MEM_OAM] = val;
 }
 static bus_interface_t bus_oam = { .read = read_oam, .write = write_oam };
-
-
-gb_ppu_t *
-init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
-{
-    ppu.irq = irq;
-    bus->interface_vram = &bus_vram;
-    bus->interface_oam = &bus_oam;
-    bus->interface_registers_ppu = &bus_registers_ppu;
-    return &ppu;
-}
+// TODO when is vram / oam access blocked and to what?
 
 static void
 oam_scan_step(void)
 {
-    uint8_t obj_index = ((ppu.frame_dot %  DOTS_PER_SCANLINE) / 2);
-    int16_t obj_y = (ppu.oam[obj_index * 4]) - 16;
-    if (obj_y <= ppu.LY && ppu.LY < obj_y + 8 * (OBJ_HEIGHT + 1))
+    uint8_t obj_index = ((ppu.frame_dot % DOTS_PER_SCANLINE) / 2);
+    // dont add objs with X 0
+    if (OAM_X(obj_index) == 0) 
+        return;      
+    if (OAM_Y(obj_index) <= ppu.LY + 16 && ppu.LY + 16 < OAM_Y(obj_index) + OBJ_HEIGHT)
         ppu.oam_scan_indices[ppu.oam_scan_count++] = obj_index;
+}
+
+static void
+begin_draw_mode(void)
+{
+    bg_fetcher.mode = GET_TILE;
+    bg_fetcher.bg_pixels_len = 0;
+    // if background, what if window?
+    bg_fetcher.tile = (((ppu.SCX / 8) & 0x1F) + 32 * (((ppu.LY + ppu.SCY) & 0xFF) / 8)) & 0x03FF;
+}
+
+static void
+mode3(void)
+{
+    switch (bg_fetcher.mode) {
+    case GET_TILE:
+        bg_fetcher.tile_number = ppu.vram[BG_TILE_MAP + bg_fetcher.tile++ - ADDR_STR_PPUVRAM];
+        bg_fetcher.mode = GET_DATA_LOW;
+        break;
+    case GET_DATA_LOW:
+    
+        if (BG_TILE_DATA_METHOD == BG_TILE_DATA_METHOD_8000)
+            bg_fetcher.data_low = ppu.vram[0x8000 + 16 * bg_fetcher.tile_number]
+        break;
+    case GET_DATA_HIGH:
+        break;
+    }
 }
 
 void
@@ -141,7 +187,12 @@ dot_cycle(void)
     case PPU_MODE_OAM_SCAN:
         if (ppu.frame_dot % 2 == 0 && ppu.oam_scan_count < SCANLINE_MAX_OBJS)
             oam_scan_step();
+        // last dot of oam scan, prepare to enter drawing mode next dot
+        if (ppu.frame_dot % 80 == 79)
+            begin_draw_mode();
         break;
+    case PPU_MODE_DRAWING:
+
     }
 
     ppu.frame_dot++;
@@ -154,10 +205,25 @@ dot_cycle(void)
             ppu.window_condition = false;
         }
 
-        // do i need vblank interrupts? will do later
-        PPU_MODE_SET(ppu.LY > LCD_HEIGHT ? PPU_MODE_VBLANK : PPU_MODE_OAM_SCAN);
+        if (ppu.LY > LCD_HEIGHT) {
+            PPU_MODE_SET(PPU_MODE_VBLANK);
+            bg_fetcher.win_line_counter = 0;
+            // do i need vblank interrupts? will do later
+        } else {
+            PPU_MODE_SET(PPU_MODE_OAM_SCAN);
+        }
         ppu.oam_scan_count = 0;
     }
+}
+
+gb_ppu_t *
+init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
+{
+    ppu.irq = irq;
+    bus->interface_vram = &bus_vram;
+    bus->interface_oam = &bus_oam;
+    bus->interface_registers_ppu = &bus_registers_ppu;
+    return &ppu;
 }
 
 
@@ -178,11 +244,6 @@ FF41 STAT: LCD status - uses bits 6-0 (bits 2, 1 and 0 are read only)
 LYC int select	Mode 2 int select	Mode 1 int select	Mode 0 int select	LYC == LY	PPU mode
 https://gbdev.io/pandocs/STAT.html
 
-FF42 SCY vertical scroll for background (and objs?)
-
-FF43 SCX horizontal scroll for background (and objs?)
-
-FF44 - LY LCD Y coordinate (read only)
 
 FF45 - LYC: LY compare The Game Boy constantly compares the value of the LYC and LY registers. When both values
 are identical, the “LYC=LY” flag in the STAT register is set, and (if enabled) a STAT interrupt is requested.
