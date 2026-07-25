@@ -102,7 +102,7 @@ read_ppu_reg(memaddr address)
     case MEMADDR_STAT:              return ppu.STAT | (USEPINS_STAT ^ 0xFF);
     case MEMADDR_SCY:               return ppu.SCY;
     case MEMADDR_SCX:               return ppu.SCX;
-    case MEMADDR_LY:                return ppu.LY;
+    case MEMADDR_LY:                return 0x90; //return ppu.LY;
     case MEMADDR_LYC:               return ppu.LYC;
     case MEMADDR_BGP:               return ppu.BGP;
     case MEMADDR_OBP0:              return ppu.OBP0;
@@ -117,17 +117,17 @@ static void
 write_ppu_reg(memaddr address, uint8_t val)
 {
     switch (address) {
-    case MEMADDR_LCDC:              ppu.LCDC = val;
-    case MEMADDR_STAT:              ppu.STAT = (val & WRITEABLE_STAT) | (USEPINS_STAT ^ 0xFF);
-    case MEMADDR_SCY:               ppu.SCY = val;
-    case MEMADDR_SCX:               ppu.SCX = val;
-    case MEMADDR_LY:                break;  // read-only                                    
-    case MEMADDR_LYC:               ppu.LYC = val;
-    case MEMADDR_BGP:               ppu.BGP = val;
-    case MEMADDR_OBP0:              ppu.OBP0 = val;
-    case MEMADDR_OBP1:              ppu.OBP1 = val;
-    case MEMADDR_WY:                ppu.WY = val;
-    case MEMADDR_WX:                ppu.WX = val;
+    case MEMADDR_LCDC:              ppu.LCDC = val;                                                 break;
+    case MEMADDR_STAT:              ppu.STAT = (val & WRITEABLE_STAT) | (USEPINS_STAT ^ 0xFF);      break;
+    case MEMADDR_SCY:               ppu.SCY = val;                                                  break;
+    case MEMADDR_SCX:               ppu.SCX = val;                                                  break;
+    case MEMADDR_LY:                                                                                break;                                 
+    case MEMADDR_LYC:               ppu.LYC = val;                                                  break;
+    case MEMADDR_BGP:               ppu.BGP = val;                                                  break;
+    case MEMADDR_OBP0:              ppu.OBP0 = val;                                                 break;
+    case MEMADDR_OBP1:              ppu.OBP1 = val;                                                 break;
+    case MEMADDR_WY:                ppu.WY = val;                                                   break;
+    case MEMADDR_WX:                ppu.WX = val;                                                   break;
     }
 }
 static bus_interface_t bus_registers_ppu = { .read = read_ppu_reg, .write = write_ppu_reg };

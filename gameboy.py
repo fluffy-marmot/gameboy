@@ -36,7 +36,7 @@ def main() -> None:
     screen = pygame.display.set_mode((160, 144))
     GB.set_post_boot_state()
     f.write(f"A:{cpu.A:02X} F:{cpu.F:02X} B:{cpu.B:02X} C:{cpu.C:02X} D:{cpu.D:02X} E:{cpu.E:02X} H:{cpu.H:02X} L:{cpu.L:02X} SP:{cpu.SP:04X} PC:{cpu.PC:04X} PCMEM:{GB.read_bus_dispatch(cpu.PC):02X},{GB.read_bus_dispatch(cpu.PC + 1):02X},{GB.read_bus_dispatch(cpu.PC +2):02X},{GB.read_bus_dispatch(cpu.PC+3):02X}\n")
-    GB.fetch_instruction()
+    # GB.fetch_instruction()
 
     frame = 0
     dot = 0

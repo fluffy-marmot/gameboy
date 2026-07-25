@@ -1483,6 +1483,20 @@ daa_confusion()
     if (cpu.A) CLR_Z; else SET_Z;
 }
 
+static void
+ready_interrupt()
+{
+    cpu.IME = 0;
+    SP_dec();
+    for (int i = 0; i <= 4; i++) {
+        if (cpu.irq->IE & cpu.irq->IF & (MASK_BIT_L << i)) {
+            cpu.WZ = 0x40 + 0x08 * i;                   // TODO could maybe improve instead of hardcoded logic
+            cpu.irq->IF ^= (MASK_BIT_L << i);
+            break;
+        }
+    }
+}
+
 static void        set_carry_flag () { CLR_N; CLR_H; SET_C;                }
 static void complement_carry_flag () { CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C; }
 static void complement_accumulator() { SET_N; SET_H; cpu.A ^= MASK_BYTE;   }
@@ -1577,6 +1591,14 @@ static const instruction_t ____PREFIX = {
 static const instruction_t ____INVALID = {
     .cycles = { invalid },
     .cycle_count = 1
+};
+
+/*
+Interrupt Handler, not an opcode instruction but can be modeled as one
+*/
+static const instruction_t ____INTERRUPT_HANDLER = {
+    .cycles = { nop, ready_interrupt, stack_push_PC_h, stack_push_PC_l, nop },
+    .cycle_count = 5
 };
 
 /* ############################################################################
@@ -1766,17 +1788,18 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
 void
 fetch_instruction()
 {
-    // TODO could be static?
-    // if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
-    //     cpu.IME = 1;
-    cpu.IR = cpu.bus->read(cpu.PC++);
-    if (!cpu.cb_instruction) {
-        cpu.instruction = &OPCODE_TABLE[cpu.IR];
-        cpu.cycle_num = 0;
-    } else {
+    if (cpu.cb_instruction) {
+        cpu.IR = cpu.bus->read(cpu.PC++);
         cpu.instruction = &CB_OPCODE_TABLE[cpu.IR];
         cpu.cb_instruction = 0;
         cpu.cycle_num = 1;
+    } else if (cpu.IME && (cpu.irq->IE & cpu.irq->IF & 0x1F)) {
+        cpu.instruction = &____INTERRUPT_HANDLER;
+        cpu.cycle_num = 0;
+    } else {
+        cpu.IR = cpu.bus->read(cpu.PC++);
+        cpu.instruction = &OPCODE_TABLE[cpu.IR];
+        cpu.cycle_num = 0;
     }
 }
 
@@ -1789,15 +1812,14 @@ and a new fetch occurred. Hopefully helpful for testing.
 uint16_t
 tick_machine_cycle()
 {
+    if (cpu.instruction == NULL || cpu.cycle_num == cpu.instruction->cycle_count)
+        fetch_instruction();
     cpu.instruction->cycles[cpu.cycle_num++]();
-    uint16_t result = cpu.IR + ((cpu.instruction->cycle_count - cpu.cycle_num) << 8);
+    uint16_t result = cpu.IR + ((cpu.instruction == &____INTERRUPT_HANDLER ? 1 : ((cpu.instruction->cycle_count - cpu.cycle_num) + cpu.cb_instruction)) << 8);
 
     // Tick down the IME latch for delayed interrupt enable
     if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
         cpu.IME = 1;
-
-    if (cpu.cycle_num == cpu.instruction->cycle_count)
-        fetch_instruction();
 
     return result;
 }
@@ -1807,5 +1829,6 @@ init_gameboy_cpu(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
     cpu.bus = bus->bus_dispatcher;
     cpu.irq = irq;
+    //cpu.instruction = &NOP;
     return &cpu;
 }

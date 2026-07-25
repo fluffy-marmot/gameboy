@@ -9,7 +9,7 @@
 #include "ppu.h"
 
 #define BOOT_ROM                    "bootroms/dmg_boot.bin"
-#define CARTRIDGE_ROM               "gb-test-roms/cpu_instrs/individual/01-special.gb"
+#define CARTRIDGE_ROM               "dmg-acid2.gb"
 #define ROM_SIZE                    (32 * KiB)
 
 typedef struct {
