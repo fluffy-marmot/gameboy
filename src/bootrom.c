@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-static uint8_t boot_rom[GB_DMG_BOOT_ROM_SIZE];
+static uint8_t boot_rom[GB_DMG_BOOT_ROM_SIZE + 1];
 
 static uint8_t read_boot_rom (memaddr address)  { return boot_rom[address & GB_DMG_BOOT_ROM_SIZE]; }
 static void    write_boot_rom(memaddr, uint8_t) {}
@@ -16,9 +16,9 @@ init_bootrom(char *filename, gb_bus_t *bus)
     FILE *f = fopen(filename, "rb");
     if (f == NULL)
         return -1;
-    size_t bytes_read = fread(boot_rom, 1, GB_DMG_BOOT_ROM_SIZE, f);
+    size_t bytes_read = fread(boot_rom, 1, GB_DMG_BOOT_ROM_SIZE + 1, f);
     fclose(f);
-    if (bytes_read != GB_DMG_BOOT_ROM_SIZE)
+    if (bytes_read != GB_DMG_BOOT_ROM_SIZE + 1)
         return -1;
     return 0;
 }

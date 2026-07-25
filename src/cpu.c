@@ -1789,15 +1789,15 @@ and a new fetch occurred. Hopefully helpful for testing.
 uint16_t
 tick_machine_cycle()
 {
-    if (cpu.cycle_num == cpu.instruction->cycle_count)
-        fetch_instruction();
-
     cpu.instruction->cycles[cpu.cycle_num++]();
     uint16_t result = cpu.IR + ((cpu.instruction->cycle_count - cpu.cycle_num) << 8);
 
     // Tick down the IME latch for delayed interrupt enable
     if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
         cpu.IME = 1;
+
+    if (cpu.cycle_num == cpu.instruction->cycle_count)
+        fetch_instruction();
 
     return result;
 }

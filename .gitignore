@@ -6,11 +6,15 @@ test.py
 
 # ignore sm83 tests for now until a better structure is decided
 sm83/
+gameboy-doctor/
+gb-test-roms/
 
 # an example reference
 gdb-notes.md
 
 gameboy.so
+# gameboy doctor log
+gb.log
 
 # copyrighted boot roms, may as well steer clear
 bootroms/

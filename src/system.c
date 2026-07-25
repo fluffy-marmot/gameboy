@@ -21,3 +21,19 @@ boot_system (void)
     
     // on init - map boot ROM to 0x0000 - 0x00FF
 }
+
+void
+set_post_boot_state(void)
+{
+    gb.cpu->A = 0x01;
+    gb.cpu->F = 0xB0;
+    gb.cpu->B = 0x00;
+    gb.cpu->C = 0x13;
+    gb.cpu->D = 0x00;
+    gb.cpu->E = 0xD8;
+    gb.cpu->H = 0x01;
+    gb.cpu->L = 0x4D;
+    gb.cpu->SP = 0xFFFE;
+    gb.cpu->PC = 0x0100;
+    gb.bus->bus_dispatcher->write(0xFF50, 1); // lock boot ROM
+}

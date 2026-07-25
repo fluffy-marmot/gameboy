@@ -87,3 +87,6 @@ GB.get_lcd.restype = ctypes.POINTER(ctypes.c_uint32)
 LCD = GB.get_lcd()
 # lcd_type = ctypes.c_uint32 * (160 * 144)
 # LCD = ctypes.cast(ptr, ctypes(lcd_type)).contents
+
+GB.set_post_boot_state.argtypes = []
+GB.set_post_boot_state.restype = None

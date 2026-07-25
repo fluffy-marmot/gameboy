@@ -9,7 +9,8 @@
 #include "ppu.h"
 
 #define BOOT_ROM                    "bootroms/dmg_boot.bin"
-#define CARTRIDGE_ROM               "dmg-acid2.gb"
+#define CARTRIDGE_ROM               "gb-test-roms/cpu_instrs/individual/01-special.gb"
+#define ROM_SIZE                    (32 * KiB)
 
 typedef struct {
     gb_cpu_t *cpu;
@@ -18,5 +19,10 @@ typedef struct {
 
     gb_irq_handler_t *irq;
 } gb_gameboy_t;
+
+// ABI
+void set_post_boot_state(void);
+
+//ABI
 
 #endif

@@ -105,6 +105,7 @@ void test_memory_mode_disable(void);
 void test_memory_wipe(void);
 void test_memory_write(memaddr, uint8_t);
 uint8_t test_memory_read (memaddr);
+//uint8_t read_bus_dispatch (memaddr address);
 
 // ABI
 

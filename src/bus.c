@@ -1,5 +1,6 @@
 #include "bus.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,14 +19,16 @@ static uint8_t *mem_test;
 static uint8_t mem_wram[GB_DMG_WRAM_SIZE];
 static uint8_t mem_hram[GB_DMG_HRAM_SIZE];
 
+// TODO for now nonstatic for testing
 // main dispatch function forward declaration
-static uint8_t read_bus_dispatch (memaddr);
+uint8_t read_bus_dispatch (memaddr);
 static void    write_bus_dispatch(memaddr, uint8_t);
 
 // alternate dispatch functions to use while running tests with a simple memory layout
-uint8_t test_memory_read (memaddr addr)                      { return mem_test[addr];  }
-void    test_memory_write(memaddr addr, uint8_t value)       { mem_test[addr] = value; }
+uint8_t test_memory_read (memaddr addr)                      { /*return mem_test[addr];*/  }
+void    test_memory_write(memaddr addr, uint8_t value)       { /*mem_test[addr] = value*;*/ }
 void    test_memory_wipe(void)        { if (mem_test != NULL) memset(mem_test, 0, 64 * KiB); }
+static  bus_interface_t nop_bus = { .read = test_memory_read, .write = test_memory_write };
 
 void
 test_memory_mode_enable(void)
@@ -68,13 +71,12 @@ select_interface(memaddr address)
     case MEMADDR_IF:                                    
     case MEMADDR_IE:                                    return bus.interface_registers_interrupt;
     default:
-        // TODO
-        
-
+        return &nop_bus;
     }    
 }
 
-static uint8_t 
+// TODO non static for testing purposes
+uint8_t 
 read_bus_dispatch (memaddr address)
 {
     return select_interface(address)->read(address);
@@ -141,6 +143,7 @@ init_gameboy_bus(void)
     bus.interface_wram_system = &bus_wram_system;
     bus.interface_echo = &bus_echo;
     bus.interface_unusable = &bus_unusable;
+    bus.interface_hram = &bus_hram;
 
     bus.interface_register_FF50 = &bus_boot_lock;
 

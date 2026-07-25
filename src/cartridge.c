@@ -1,8 +1,9 @@
 #include "bus.h"
+#include "cartridge.h"
 
 #include <stdio.h>
 
-static uint8_t rom[32 * KiB];
+static uint8_t rom[ROM_SIZE];
 static uint8_t ram_extern[8 * KiB];
 
 static uint8_t read_rom (memaddr address)  { return rom[address]; }
@@ -23,9 +24,9 @@ init_cartridge(char *filename, gb_bus_t *bus)
     FILE *f = fopen(filename, "rb");
     if (f == NULL)
         return -1;
-    size_t bytes_read = fread(rom, 1, 32 * KiB, f);
+    size_t bytes_read = fread(rom, 1, ROM_SIZE, f);
     fclose(f);
-    if (bytes_read != 32 * KiB)
+    if (bytes_read != ROM_SIZE)
         return -1;
     return 0;
 }
