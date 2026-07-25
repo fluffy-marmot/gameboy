@@ -33,6 +33,14 @@
 #define BG_TILE_DATA_METHOD_8000    0b00000001
 #define BG_TILE_DATA_METHOD_8800    0b00000000
 
+#define STAT_BIT_LYC_INT_SELECT     0b01000000
+#define STAT_BIT_MD2_INT_SELECT     0b00100000
+#define STAT_BIT_MD1_INT_SELECT     0b00010000
+#define STAT_BIT_MD0_INT_SELECT     0b00001000
+#define STAT_BIT_EQL                0b00000100
+
+#define STAT_COMPARE_LYC_LY         (ppu.STAT = (ppu.STAT & (STAT_BIT_EQL ^ 0xFF)) | ((ppu.LY == ppu.LYC) << 2))
+
 #define PPU_MODE_MASK               0b00000011
 #define PPU_MODE                    (ppu.STAT & PPU_MODE_MASK)
 #define PPU_MODE_SET(mode)          (ppu.STAT = (ppu.STAT & (PPU_MODE_MASK ^ 0xFF)) | (mode))
@@ -94,6 +102,15 @@ static const uint32_t LCD_COLORS[4] = {
 
 static gb_ppu_t ppu;
 
+static void
+check_lyc_interrupt(void)
+{
+    STAT_COMPARE_LYC_LY;
+    if (ppu.LY == ppu.LYC) {
+        ppu.irq->IF |= 2;
+    }
+}
+
 static uint8_t
 read_ppu_reg(memaddr address)
 {
@@ -103,7 +120,7 @@ read_ppu_reg(memaddr address)
     case MEMADDR_SCY:               return ppu.SCY;
     case MEMADDR_SCX:               return ppu.SCX;
     case MEMADDR_LY:                return 0x90; //return ppu.LY;
-    case MEMADDR_LYC:               return ppu.LYC;
+    case MEMADDR_LYC:               return ppu.LYC; 
     case MEMADDR_BGP:               return ppu.BGP;
     case MEMADDR_OBP0:              return ppu.OBP0;
     case MEMADDR_OBP1:              return ppu.OBP1;
@@ -122,7 +139,7 @@ write_ppu_reg(memaddr address, uint8_t val)
     case MEMADDR_SCY:               ppu.SCY = val;                                                  break;
     case MEMADDR_SCX:               ppu.SCX = val;                                                  break;
     case MEMADDR_LY:                                                                                break;                                 
-    case MEMADDR_LYC:               ppu.LYC = val;                                                  break;
+    case MEMADDR_LYC:               ppu.LYC = val; check_lyc_interrupt();                           break;
     case MEMADDR_BGP:               ppu.BGP = val;                                                  break;
     case MEMADDR_OBP0:              ppu.OBP0 = val;                                                 break;
     case MEMADDR_OBP1:              ppu.OBP1 = val;                                                 break;
@@ -182,6 +199,7 @@ begin_draw_mode(void)
     bg_fetcher.delay = 5;
     // if background, what if window?
     bg_fetcher.tile = (((ppu.SCX / 8) & 0x1F) + 32 * (((ppu.LY + ppu.SCY) & 0xFF) / 8)) & 0x03FF;
+    PPU_MODE_SET(PPU_MODE_DRAWING);
 }
 
 static void
@@ -265,19 +283,21 @@ dot_cycle(void)
 
     ppu.frame_dot++;
     if (ppu.frame_dot % DOTS_PER_SCANLINE == 0) {
-        ppu.LY++;
-        if (ppu.LY > SCANLINES_PER_FRAME) {
+        ppu.LY = (ppu.LY + 1) % SCANLINES_PER_FRAME;
+        check_lyc_interrupt();
+        if (ppu.LY >= SCANLINES_PER_FRAME) {
             // finished a frame
             ppu.LY = 0;
             ppu.frame_dot = 0;
             ppu.window_condition = false;
         }
 
-        if (ppu.LY > LCD_HEIGHT) {
+        if (ppu.LY == LCD_HEIGHT) {
             PPU_MODE_SET(PPU_MODE_VBLANK);
             bg_fetcher.win_line_counter = 0;
+            ppu.irq->IF |= 1;
             // do i need vblank interrupts? will do later
-        } else {
+        } else if (ppu.LY < LCD_HEIGHT) {
             PPU_MODE_SET(PPU_MODE_OAM_SCAN);
         }
         ppu.oam_scan_count = 0;
