@@ -9,11 +9,14 @@ import pygame
 
 from gameboy_cstuff import CPU, cpu, GB, LCD
 
-def window_draw(screen: pygame.Surface) -> None:
+SCALE = 6
+
+def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
     np_view = np.ctypeslib.as_array(LCD, shape=(144, 160))
 
-    pygame.surfarray.blit_array(screen, np_view.T)
-    
+    pygame.surfarray.blit_array(render_surface, np_view.T)
+    pygame.transform.scale(render_surface, screen.get_size(), screen)
+
 
 def main() -> None:
     # if len(sys.argv) != 2:
@@ -33,8 +36,9 @@ def main() -> None:
 
     f = open("gb.log", "w")
     pygame.init()
-    screen = pygame.display.set_mode((160, 144))
-    GB.set_post_boot_state()
+    screen = pygame.display.set_mode((160 * SCALE, 144 * SCALE))
+    render_surface = pygame.Surface((160, 144))
+    # GB.set_post_boot_state()
     f.write(f"A:{cpu.A:02X} F:{cpu.F:02X} B:{cpu.B:02X} C:{cpu.C:02X} D:{cpu.D:02X} E:{cpu.E:02X} H:{cpu.H:02X} L:{cpu.L:02X} SP:{cpu.SP:04X} PC:{cpu.PC:04X} PCMEM:{GB.read_bus_dispatch(cpu.PC):02X},{GB.read_bus_dispatch(cpu.PC + 1):02X},{GB.read_bus_dispatch(cpu.PC +2):02X},{GB.read_bus_dispatch(cpu.PC+3):02X}\n")
     # GB.fetch_instruction()
 
@@ -52,14 +56,14 @@ def main() -> None:
 
         for _ in range(456 * 154 // 4):
             result = GB.tick_machine_cycle()
-            print(f"{cpu.PC:#X}  --  {result & 0xFF:#X}")
-            if (result >> 8 == 0):
-                f.write(f"A:{cpu.A:02X} F:{cpu.F:02X} B:{cpu.B:02X} C:{cpu.C:02X} D:{cpu.D:02X} E:{cpu.E:02X} H:{cpu.H:02X} L:{cpu.L:02X} SP:{cpu.SP:04X} PC:{cpu.PC:04X} PCMEM:{GB.read_bus_dispatch(cpu.PC):02X},{GB.read_bus_dispatch(cpu.PC + 1):02X},{GB.read_bus_dispatch(cpu.PC +2):02X},{GB.read_bus_dispatch(cpu.PC+3):02X}\n")
+            # print(f"{cpu.PC:#X}  --  {result & 0xFF:#X}")
+            # if (result >> 8 == 0):
+                # f.write(f"A:{cpu.A:02X} F:{cpu.F:02X} B:{cpu.B:02X} C:{cpu.C:02X} D:{cpu.D:02X} E:{cpu.E:02X} H:{cpu.H:02X} L:{cpu.L:02X} SP:{cpu.SP:04X} PC:{cpu.PC:04X} PCMEM:{GB.read_bus_dispatch(cpu.PC):02X},{GB.read_bus_dispatch(cpu.PC + 1):02X},{GB.read_bus_dispatch(cpu.PC +2):02X},{GB.read_bus_dispatch(cpu.PC+3):02X}\n")
             for _ in range(4):
                 GB.dot_cycle()
                 dot += 1
 
-        window_draw(screen)
+        window_draw(screen, render_surface)
         pygame.display.flip()
 
         clock.tick(60)

@@ -5,6 +5,7 @@ BASE_DIR = Path(__file__).parent.resolve()
 GB = ctypes.CDLL("./gameboy.so")
 
 class CPU(ctypes.Structure):
+    B: int # can add type annotations? TODO
     _fields_ = [
         ("B", ctypes.c_uint8),
         ("C", ctypes.c_uint8),
@@ -28,7 +29,7 @@ class CPU(ctypes.Structure):
         ("cb_instruction", ctypes.c_uint8),
         ("instruction", ctypes.c_void_p),
     ]
-
+    
     def load_test(self, test):
         for key in test:
             if key == "ram": continue

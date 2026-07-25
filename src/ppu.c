@@ -92,10 +92,10 @@ static struct {
 } pixel_mixer;
 
 static const uint32_t LCD_COLORS[4] = {
-    0x00DDEEDD,
-    0x0088AA88,
-    0x00445544,
-    0x00001100
+    0x00F4FFBF,
+    0x009AD941,
+    0x00608057,
+    0x00002B40
 };
 
 
@@ -251,7 +251,7 @@ step_mixer()
     if (pixel_mixer.discard && pixel_mixer.discard-- && pixel_mixer.bg_pixels_len--) return;
 
     uint16_t lcd_index = ppu.LY * LCD_WIDTH + ppu.lx++;
-    ppu.lcd[lcd_index] = LCD_COLORS[ppu.BGP >> (2 * pixel_mixer.bg_pixels[--pixel_mixer.bg_pixels_len])];
+    ppu.lcd[lcd_index] = LCD_COLORS[(ppu.BGP >> (2 * pixel_mixer.bg_pixels[--pixel_mixer.bg_pixels_len])) &0x03];
 }
 
 static void
@@ -268,7 +268,7 @@ dot_cycle(void)
         if (ppu.frame_dot % 2 == 0 && ppu.oam_scan_count < SCANLINE_MAX_OBJS)
             oam_scan_step();
         // last dot of oam scan, prepare to enter drawing mode next dot
-        if (ppu.frame_dot % 80 == 79)
+        if (ppu.frame_dot % DOTS_PER_SCANLINE == 79)
             begin_draw_mode();
         break;
     case PPU_MODE_DRAWING:

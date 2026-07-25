@@ -23,6 +23,6 @@ typedef struct {
 // ABI
 void set_post_boot_state(void);
 
-//ABI
+// ABI
 
 #endif
