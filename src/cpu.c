@@ -1497,6 +1497,10 @@ ready_interrupt()
     }
 }
 
+static void halt() {
+    cpu.cycle_num = (cpu.irq->IE & cpu.irq->IF & 0x1F) ? 1 : 0;
+}
+
 static void        set_carry_flag () { CLR_N; CLR_H; SET_C;                }
 static void complement_carry_flag () { CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C; }
 static void complement_accumulator() { SET_N; SET_H; cpu.A ^= MASK_BYTE;   }
@@ -1577,7 +1581,7 @@ static const instruction_t ____STOP = {
 
 // HALT
 static const instruction_t ____HALT = {
-    .cycles = { nop },
+    .cycles = { halt },
     .cycle_count = 1
 };
 
