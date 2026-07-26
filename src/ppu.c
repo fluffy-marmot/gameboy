@@ -38,6 +38,10 @@
 #define OAM_FLAG_BIT_XFLIP          0b00100000
 #define OAM_FLAG_BIT_PALETTE        0b00010000
 
+#define LCDC_ENABLE_WINDOW          (ppu.LCDC & LCDC_BIT_WIN_ENABLE)
+#define LCDC_ENABLE_OBJ             (ppu.LCDC & LCDC_BIT_OBJ_ENABLE)
+#define LCDC_ENABLE_PRIORITY        (ppu.LCDC & LCDC_BIT_BG_WIN_PRIORITY)
+
 // 8px or 16px sprite heights
 #define OBJ_HEIGHT                  ((((ppu.LCDC & LCDC_BIT_OBJ_HEIGHT) >> 2) + 1) * 8)
 #define BG_TILE_MAP                 (((ppu.LCDC & LCDC_BIT_BG_TILE_MAP) >> 3) ? 0x9C00 : 0x9800)
@@ -243,23 +247,29 @@ step_obj_fetcher(void)
         obj_fetcher.delay = 1;
         break;
     case GET_DATA_LOW:
-        uint8_t y_offset = 2 * ((ppu.LY - OAM_Y(ppu.oam_scan_indices[obj_fetcher.searched]) + 16) % 8); // 8 high for now
-        obj_fetcher.data_low = VRAM(0x8000 + 16 * obj_fetcher.tile_number + y_offset);
+        uint8_t y_offset = (ppu.LY - OAM_Y(ppu.oam_scan_indices[obj_fetcher.searched]) + 16) % OBJ_HEIGHT;
+        if (OAM_YFLIP(ppu.oam_scan_indices[obj_fetcher.searched]))
+            y_offset = OBJ_HEIGHT - 1 - y_offset;
+        obj_fetcher.data_low = VRAM(0x8000 + 16 * obj_fetcher.tile_number + 2 * y_offset);
         obj_fetcher.mode = GET_DATA_HIGH;
         obj_fetcher.delay = 1;
         break;
     case GET_DATA_HIGH:
-        uint8_t offset = 2 * ((ppu.LY - OAM_Y(ppu.oam_scan_indices[obj_fetcher.searched]) + 16) % 8); // 8 high for now
-        obj_fetcher.data_high = VRAM(0x8000 + 16 * obj_fetcher.tile_number + offset + 1);
+        uint8_t offset = (ppu.LY - OAM_Y(ppu.oam_scan_indices[obj_fetcher.searched]) + 16) % OBJ_HEIGHT;
+        if (OAM_YFLIP(ppu.oam_scan_indices[obj_fetcher.searched]))
+            offset = OBJ_HEIGHT - 1 - offset;
+        obj_fetcher.data_high = VRAM(0x8000 + 16 * obj_fetcher.tile_number + 2 * offset + 1);
 
         // xflip here?
         for (int i = 7; i >= 0; i--) {
-            if (pixel_mixer.obj_pixels[7 - i].color) continue;
-            pixel_mixer.obj_pixels[7 - i].color = (((obj_fetcher.data_high & (1 << i)) >> i) << 1) |
+            uint8_t idx = OAM_XFLIP(ppu.oam_scan_indices[obj_fetcher.searched]) ? i : 7 - i;
+            if (pixel_mixer.obj_pixels[idx].color) continue;
+            pixel_mixer.obj_pixels[idx].color = (((obj_fetcher.data_high & (1 << i)) >> i) << 1) |
                                                    ((obj_fetcher.data_low  & (1 << i)) >> i);
-            pixel_mixer.obj_pixels[7 - i].bg_priority = OAM_PRIORITY(ppu.oam_scan_indices[obj_fetcher.searched]);
-            pixel_mixer.obj_pixels[7 - i].palette = OAM_PALETTE(ppu.oam_scan_indices[obj_fetcher.searched]);
+            pixel_mixer.obj_pixels[idx].bg_priority = OAM_PRIORITY(ppu.oam_scan_indices[obj_fetcher.searched]);
+            pixel_mixer.obj_pixels[idx].palette = OAM_PALETTE(ppu.oam_scan_indices[obj_fetcher.searched]);
         }
+        //obj_fetcher.searched++;
         obj_fetcher.mode = CHECK_X;
         break;
     case CHECK_X:
@@ -328,10 +338,10 @@ step_mixer()
 
     obj_pixel_t pixel = pixel_mixer.obj_pixels[0];
     uint8_t bg_color_index = pixel_mixer.bg_pixels[pixel_mixer.bg_pixels_len - 1];
-    uint8_t color;
-    if (!pixel.color || (pixel.bg_priority && bg_color_index))
+    uint8_t color = 0b00;
+    if (LCDC_ENABLE_PRIORITY && (!LCDC_ENABLE_OBJ || !pixel.color || (pixel.bg_priority && bg_color_index)))
         color = ppu.BGP >> (2 * bg_color_index);
-    else
+    else if (LCDC_ENABLE_OBJ)
         color = ppu.OBP[pixel.palette] >> (2 * pixel.color);
 
     uint16_t lcd_index = ppu.LY * LCD_WIDTH + ppu.lx++;
