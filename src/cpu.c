@@ -4,53 +4,53 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define MASK_BYTE            0b11111111
-#define MASK_NIBBLE_L        0b00001111
-#define MASK_NIBBLE_H        0b11110000
-#define MASK_BIT_L           0b00000001
-#define MASK_BIT_H           0b10000000
-#define MASK_ZERO            0b00000000
-#define MASK_FLAGS           0b11110000
-#define MASK_FLAG_Z          0b10000000
-#define MASK_FLAG_N          0b01000000
-#define MASK_FLAG_H          0b00100000
-#define MASK_FLAG_C          0b00010000
-#define MASK_BIT_NUMBER      0b00111000
-#define MASK_REG_8b          0b00000111
-#define MASK_REG_16b         0b00110000
-#define MASK_REG_SPorAF      0b00000011
-#define MASK_CONDITION       0b00011000
-#define MASK_CONDITION_NZ    0b00000000
-#define MASK_CONDITION_NC    0b00010000
-#define MASK_CONDITION__Z    0b00001000
-#define MASK_CONDITION__C    0b00011000
-#define MASK_ADDRESS         0b00111000
+#define MASK_BYTE                   0b11111111
+#define MASK_NIBBLE_L               0b00001111
+#define MASK_NIBBLE_H               0b11110000
+#define MASK_BIT_L                  0b00000001
+#define MASK_BIT_H                  0b10000000
+#define MASK_ZERO                   0b00000000
+#define MASK_FLAGS                  0b11110000
+#define MASK_FLAG_Z                 0b10000000
+#define MASK_FLAG_N                 0b01000000
+#define MASK_FLAG_H                 0b00100000
+#define MASK_FLAG_C                 0b00010000
+#define MASK_BIT_NUMBER             0b00111000
+#define MASK_REG_8b                 0b00000111
+#define MASK_REG_16b                0b00110000
+#define MASK_REG_SPorAF             0b00000011
+#define MASK_CONDITION              0b00011000
+#define MASK_CONDITION_NZ           0b00000000
+#define MASK_CONDITION_NC           0b00010000
+#define MASK_CONDITION__Z           0b00001000
+#define MASK_CONDITION__C           0b00011000
+#define MASK_ADDRESS                0b00111000
 
-#define FLAG_Z ((cpu.F & MASK_FLAG_Z) >> 7)
-#define FLAG_N ((cpu.F & MASK_FLAG_N) >> 6)
-#define FLAG_H ((cpu.F & MASK_FLAG_H) >> 5)
-#define FLAG_C ((cpu.F & MASK_FLAG_C) >> 4)
+#define FLAG_Z                      ((cpu.F & MASK_FLAG_Z) >> 7)
+#define FLAG_N                      ((cpu.F & MASK_FLAG_N) >> 6)
+#define FLAG_H                      ((cpu.F & MASK_FLAG_H) >> 5)
+#define FLAG_C                      ((cpu.F & MASK_FLAG_C) >> 4)
 
-#define SET_Z (cpu.F |=  MASK_FLAG_Z              )
-#define SET_N (cpu.F |=  MASK_FLAG_N              )
-#define SET_H (cpu.F |=  MASK_FLAG_H              )
-#define SET_C (cpu.F |=  MASK_FLAG_C              )
-#define CLR_Z (cpu.F &= (MASK_FLAG_Z ^ MASK_FLAGS))
-#define CLR_N (cpu.F &= (MASK_FLAG_N ^ MASK_FLAGS))
-#define CLR_H (cpu.F &= (MASK_FLAG_H ^ MASK_FLAGS))
-#define CLR_C (cpu.F &= (MASK_FLAG_C ^ MASK_FLAGS))
+#define SET_Z                       (cpu.F |=  MASK_FLAG_Z              )
+#define SET_N                       (cpu.F |=  MASK_FLAG_N              )
+#define SET_H                       (cpu.F |=  MASK_FLAG_H              )
+#define SET_C                       (cpu.F |=  MASK_FLAG_C              )
+#define CLR_Z                       (cpu.F &= (MASK_FLAG_Z ^ MASK_FLAGS))
+#define CLR_N                       (cpu.F &= (MASK_FLAG_N ^ MASK_FLAGS))
+#define CLR_H                       (cpu.F &= (MASK_FLAG_H ^ MASK_FLAGS))
+#define CLR_C                       (cpu.F &= (MASK_FLAG_C ^ MASK_FLAGS))
 
-#define IR_REG_L   ((cpu.IR >> 3) & MASK_REG_8b          )
-#define IR_REG_R   ((cpu.IR)      & MASK_REG_8b          )
-#define IR_REG_16  ((cpu.IR       & MASK_REG_16b)    >> 4)
-#define IR_BIT_NUM ((cpu.IR       & MASK_BIT_NUMBER) >> 3)
-#define IR_COND    ((cpu.IR)      & MASK_CONDITION       )
-#define IR_ADDRESS ((cpu.IR)      & MASK_ADDRESS         )
+#define IR_REG_L                    ((cpu.IR >> 3) & MASK_REG_8b          )
+#define IR_REG_R                    ((cpu.IR)      & MASK_REG_8b          )
+#define IR_REG_16                   ((cpu.IR       & MASK_REG_16b)    >> 4)
+#define IR_BIT_NUM                  ((cpu.IR       & MASK_BIT_NUMBER) >> 3)
+#define IR_COND                     ((cpu.IR)      & MASK_CONDITION       )
+#define IR_ADDRESS                  ((cpu.IR)      & MASK_ADDRESS         )
 
 // TODO probably define others here too instead of relying on endianness
-#define BC ((uint16_t) ((cpu.B << 8) | cpu.C))
-#define DE ((uint16_t) ((cpu.D << 8) | cpu.E))
-#define HL ((uint16_t) ((cpu.H << 8) | cpu.L))
+#define BC                          ((uint16_t) ((cpu.B << 8) | cpu.C))
+#define DE                          ((uint16_t) ((cpu.D << 8) | cpu.E))
+#define HL                          ((uint16_t) ((cpu.H << 8) | cpu.L))
 
 
 
@@ -81,35 +81,35 @@ static inline void HL_inc()         { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu
 /*
 Helper functions to load to temporary 8-bit latch Z or W from various 16-bit memory locations
 */
-static void memory_read_PC_Z   () { cpu.Z = cpu.bus->read(cpu.PC++);            }
-static void memory_read_PC_W   () { cpu.W = cpu.bus->read(cpu.PC++);            }
-static void memory_read_SP_Z   () { cpu.Z = cpu.bus->read(cpu.SP++);            }
-static void memory_read_SP_W   () { cpu.W = cpu.bus->read(cpu.SP++);            }
-static void memory_read_BC_Z   () { cpu.Z = cpu.bus->read(BC);                  }
-static void memory_read_DE_Z   () { cpu.Z = cpu.bus->read(DE);                  }
-static void memory_read_HL_Z   () { cpu.Z = cpu.bus->read(HL);                  }
-static void memory_read_HLdZ   () { cpu.Z = cpu.bus->read(HL); HL_dec();        }
-static void memory_read_HLiZ   () { cpu.Z = cpu.bus->read(HL); HL_inc();        }
-static void memory_read_WZ_Z   () { cpu.Z = cpu.bus->read(cpu.WZ);              }
-static void memory_read__C_Z   () { cpu.Z = cpu.bus->read(0xFF00 + cpu.C);      }
-static void memory_read__Z_Z   () { cpu.Z = cpu.bus->read(0xFF00 + cpu.Z);      }
+static void memory_read_PC_Z()      { cpu.Z = cpu.bus->read(cpu.PC++);            }
+static void memory_read_PC_W()      { cpu.W = cpu.bus->read(cpu.PC++);            }
+static void memory_read_SP_Z()      { cpu.Z = cpu.bus->read(cpu.SP++);            }
+static void memory_read_SP_W()      { cpu.W = cpu.bus->read(cpu.SP++);            }
+static void memory_read_BC_Z()      { cpu.Z = cpu.bus->read(BC);                  }
+static void memory_read_DE_Z()      { cpu.Z = cpu.bus->read(DE);                  }
+static void memory_read_HL_Z()      { cpu.Z = cpu.bus->read(HL);                  }
+static void memory_read_HLdZ()      { cpu.Z = cpu.bus->read(HL); HL_dec();        }
+static void memory_read_HLiZ()      { cpu.Z = cpu.bus->read(HL); HL_inc();        }
+static void memory_read_WZ_Z()      { cpu.Z = cpu.bus->read(cpu.WZ);              }
+static void memory_read__C_Z()      { cpu.Z = cpu.bus->read(0xFF00 + cpu.C);      }
+static void memory_read__Z_Z()      { cpu.Z = cpu.bus->read(0xFF00 + cpu.Z);      }
 
 /*
 Helper functions to write to various 16-bit memory locations, various 8-bit values
 */
-static void memory_write_HL_R  () { cpu.bus->write(HL, cpu.reg[IR_REG_R]);      }
-static void memory_write_HL_Z  () { cpu.bus->write(HL, cpu.Z);                  }
-static void memory_write_BC_A  () { cpu.bus->write(BC, cpu.A);                  }
-static void memory_write_DE_A  () { cpu.bus->write(DE, cpu.A);                  }
-static void memory_write_HLdA  () { cpu.bus->write(HL, cpu.A); HL_dec();        }
-static void memory_write_HLiA  () { cpu.bus->write(HL, cpu.A); HL_inc();        }
-static void memory_write_WZ_A  () { cpu.bus->write(cpu.WZ, cpu.A);              }
-static void memory_write_WZ_SPl() { cpu.bus->write(cpu.WZ, cpu.SP); cpu.WZ++;   }
-static void memory_write_WZ_SPh() { cpu.bus->write(cpu.WZ, cpu.SP >> 8);        }
-static void memory_write__C_A  () { cpu.bus->write(0xFF00 + cpu.C, cpu.A);      }
-static void memory_write__Z_A  () { cpu.bus->write(0xFF00 + cpu.Z, cpu.A);      }
-static void memory_write_SP_PCh() { cpu.bus->write(cpu.SP, cpu.PC >> 8);        }
-static void memory_write_SP_PCl() { cpu.bus->write(cpu.SP, cpu.PC);             }
+static void memory_write_HL_R  ()   { cpu.bus->write(HL, cpu.reg[IR_REG_R]);      }
+static void memory_write_HL_Z  ()   { cpu.bus->write(HL, cpu.Z);                  }
+static void memory_write_BC_A  ()   { cpu.bus->write(BC, cpu.A);                  }
+static void memory_write_DE_A  ()   { cpu.bus->write(DE, cpu.A);                  }
+static void memory_write_HLdA  ()   { cpu.bus->write(HL, cpu.A); HL_dec();        }
+static void memory_write_HLiA  ()   { cpu.bus->write(HL, cpu.A); HL_inc();        }
+static void memory_write_WZ_A  ()   { cpu.bus->write(cpu.WZ, cpu.A);              }
+static void memory_write_WZ_SPl()   { cpu.bus->write(cpu.WZ, cpu.SP); cpu.WZ++;   }
+static void memory_write_WZ_SPh()   { cpu.bus->write(cpu.WZ, cpu.SP >> 8);        }
+static void memory_write__C_A  ()   { cpu.bus->write(0xFF00 + cpu.C, cpu.A);      }
+static void memory_write__Z_A  ()   { cpu.bus->write(0xFF00 + cpu.Z, cpu.A);      }
+static void memory_write_SP_PCh()   { cpu.bus->write(cpu.SP, cpu.PC >> 8);        }
+static void memory_write_SP_PCl()   { cpu.bus->write(cpu.SP, cpu.PC);             }
 
 /*
 Helper functions that need to decide between the different 16-bit registers
@@ -1055,36 +1055,36 @@ set_bit(uint8_t *val)
     *val |= (MASK_BIT_L << IR_BIT_NUM);
 }
 
-static void rlc_a () { rotate_l_circ_carry(&cpu.A); CLR_Z;               }
-static void rrc_a () { rotate_r_circ_carry(&cpu.A); CLR_Z;               }
-static void rlc_r () { rotate_l_circ_carry(&cpu.reg[IR_REG_R]);          }
-static void rrc_r () { rotate_r_circ_carry(&cpu.reg[IR_REG_R]);          }
-static void rlc_z () { rotate_l_circ_carry(&cpu.Z); memory_write_HL_Z(); }
-static void rrc_z () { rotate_r_circ_carry(&cpu.Z); memory_write_HL_Z(); }
+static void rlc_a () { rotate_l_circ_carry(&cpu.A); CLR_Z;                                  }
+static void rrc_a () { rotate_r_circ_carry(&cpu.A); CLR_Z;                                  }
+static void rlc_r () { rotate_l_circ_carry(&cpu.reg[IR_REG_R]);                             }
+static void rrc_r () { rotate_r_circ_carry(&cpu.reg[IR_REG_R]);                             }
+static void rlc_z () { rotate_l_circ_carry(&cpu.Z);                    memory_write_HL_Z(); }
+static void rrc_z () { rotate_r_circ_carry(&cpu.Z);                    memory_write_HL_Z(); }
 
-static void rl_a  () { rotate_l_thru_carry(&cpu.A); CLR_Z;               }
-static void rr_a  () { rotate_r_thru_carry(&cpu.A); CLR_Z;               }
-static void rl_r  () { rotate_l_thru_carry(&cpu.reg[IR_REG_R]);          }
-static void rr_r  () { rotate_r_thru_carry(&cpu.reg[IR_REG_R]);          }
-static void rl_z  () { rotate_l_thru_carry(&cpu.Z); memory_write_HL_Z(); }
-static void rr_z  () { rotate_r_thru_carry(&cpu.Z); memory_write_HL_Z(); }
+static void rl_a  () { rotate_l_thru_carry(&cpu.A); CLR_Z;                                  }
+static void rr_a  () { rotate_r_thru_carry(&cpu.A); CLR_Z;                                  }
+static void rl_r  () { rotate_l_thru_carry(&cpu.reg[IR_REG_R]);                             }
+static void rr_r  () { rotate_r_thru_carry(&cpu.reg[IR_REG_R]);                             }
+static void rl_z  () { rotate_l_thru_carry(&cpu.Z);                    memory_write_HL_Z(); }
+static void rr_z  () { rotate_r_thru_carry(&cpu.Z);                    memory_write_HL_Z(); }
 
-static void sla_r () { shift_l(&cpu.reg[IR_REG_R]);                      }
-static void sra_r () { shift_r(&cpu.reg[IR_REG_R], true);                }
-static void srl_r () { shift_r(&cpu.reg[IR_REG_R], false);               }
-static void sla_z () { shift_l(&cpu.Z);             memory_write_HL_Z(); }
-static void sra_z () { shift_r(&cpu.Z, true );      memory_write_HL_Z(); }
-static void srl_z () { shift_r(&cpu.Z, false);      memory_write_HL_Z(); }
+static void sla_r () { shift_l(&cpu.reg[IR_REG_R]);                                         }
+static void sra_r () { shift_r(&cpu.reg[IR_REG_R], true);                                   }
+static void srl_r () { shift_r(&cpu.reg[IR_REG_R], false);                                  }
+static void sla_z () { shift_l(&cpu.Z);                                memory_write_HL_Z(); }
+static void sra_z () { shift_r(&cpu.Z, true );                         memory_write_HL_Z(); }
+static void srl_z () { shift_r(&cpu.Z, false);                         memory_write_HL_Z(); }
 
 
-static void swap_r() { swap_nibbles(&cpu.reg[IR_REG_R]);                 }
-static void bit_r () {  test_bit   (&cpu.reg[IR_REG_R]);                 }
-static void res_r () { reset_bit   (&cpu.reg[IR_REG_R]);                 }
-static void set_r () {   set_bit   (&cpu.reg[IR_REG_R]);                 }
-static void swap_z() { swap_nibbles(&cpu.Z);        memory_write_HL_Z(); }
-static void bit_z () {  test_bit   (&cpu.Z);        memory_write_HL_Z(); }
-static void res_z () { reset_bit   (&cpu.Z);        memory_write_HL_Z(); }
-static void set_z () {   set_bit   (&cpu.Z);        memory_write_HL_Z(); }
+static void swap_r() { swap_nibbles(&cpu.reg[IR_REG_R]);                                    }
+static void bit_r () {  test_bit   (&cpu.reg[IR_REG_R]);                                    }
+static void res_r () { reset_bit   (&cpu.reg[IR_REG_R]);                                    }
+static void set_r () {   set_bit   (&cpu.reg[IR_REG_R]);                                    }
+static void swap_z() { swap_nibbles(&cpu.Z);                           memory_write_HL_Z(); }
+static void bit_z () {  test_bit   (&cpu.Z);                           memory_write_HL_Z(); }
+static void res_z () { reset_bit   (&cpu.Z);                           memory_write_HL_Z(); }
+static void set_z () {   set_bit   (&cpu.Z);                           memory_write_HL_Z(); }
 
 // INSTRUCTIONS ###############################################################
 
@@ -1355,7 +1355,7 @@ static void   stack_push_PC_l () { memory_write_SP_PCl(); cpu.PC = cpu.WZ;      
 static void     con_call_func () { if (condition()) SP_dec();        else cpu.cycle_num += 3; }
 static void     con__ret_func () { if (condition())    nop();        else cpu.cycle_num += 3; }
 static void     ret_interrupt () { cpu.PC = cpu.WZ; cpu.IME = 1;                              }
-static void         jump_fixed() { cpu.PC =IR_ADDRESS;                                        } // Cheating !
+static void         jump_fixed() { cpu.PC = IR_ADDRESS;                                       } // Cheating !
 
 // INSTRUCTIONS ###############################################################
 

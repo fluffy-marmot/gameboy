@@ -23,8 +23,7 @@ typedef struct {
     uint8_t LYC;                        // FF45
                                         // FF46 is DMA related - undecided where that belongs
     uint8_t BGP;                        // FF47
-    uint8_t OBP0;                       // FF48
-    uint8_t OBP1;                       // FF49
+    uint8_t OBP[2];                     // FF48 and FF49
     uint8_t WY;                         // FF4A
     uint8_t WX;                         // FF4B
 
