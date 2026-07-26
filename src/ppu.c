@@ -1,6 +1,7 @@
 #include "ppu.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #define MEMADDR_LCDC                0xFF40
 #define MEMADDR_STAT                0xFF41
@@ -26,18 +27,23 @@
 #define LCDC_BIT_OBJ_ENABLE         0b00000010
 #define LCDC_BIT_BG_WIN_PRIORITY    0b00000001
 
+#define STAT_BIT_LYC_INT_SELECT     0b01000000
+#define STAT_BIT_MD2_INT_SELECT     0b00100000
+#define STAT_BIT_MD1_INT_SELECT     0b00010000
+#define STAT_BIT_MD0_INT_SELECT     0b00001000
+#define STAT_BIT_EQL                0b00000100
+
+#define OAM_FLAG_BIT_PRIORITY       0b10000000
+#define OAM_FLAG_BIT_YFLIP          0b01000000
+#define OAM_FLAG_BIT_XFLIP          0b00100000
+#define OAM_FLAG_BIT_PALETTE        0b00010000
+
 // 8px or 16px sprite heights
 #define OBJ_HEIGHT                  ((((ppu.LCDC & LCDC_BIT_OBJ_HEIGHT) >> 2) + 1) * 8)
 #define BG_TILE_MAP                 (((ppu.LCDC & LCDC_BIT_BG_TILE_MAP) >> 3) ? 0x9C00 : 0x9800)
 #define BG_TILE_DATA_METHOD         ((ppu.LCDC & LCDC_BIT_BG_WIN_TILES) >> 4)
 #define BG_TILE_DATA_METHOD_8000    0b00000001
 #define BG_TILE_DATA_METHOD_8800    0b00000000
-
-#define STAT_BIT_LYC_INT_SELECT     0b01000000
-#define STAT_BIT_MD2_INT_SELECT     0b00100000
-#define STAT_BIT_MD1_INT_SELECT     0b00010000
-#define STAT_BIT_MD0_INT_SELECT     0b00001000
-#define STAT_BIT_EQL                0b00000100
 
 #define STAT_COMPARE_LYC_LY         (ppu.STAT = (ppu.STAT & (STAT_BIT_EQL ^ 0xFF)) | ((ppu.LY == ppu.LYC) << 2))
 
@@ -49,20 +55,27 @@
 #define PPU_MODE_OAM_SCAN           0b00000010
 #define PPU_MODE_DRAWING            0b00000011
 
-#define OAM_Y(i)                    (ppu.oam[i * 4])
-#define OAM_X(i)                    (ppu.oam[i * 4 + 1])
-#define OAM_TILE_INDEX(i)           (ppu.oam[i * 4 + 2])
-#define OAM_FLAGS(i)                (ppu.oam[i * 4 + 3])
+#define OAM_Y(i)                    (ppu.oam[(i) * 4])
+#define OAM_X(i)                    (ppu.oam[(i) * 4 + 1])
+#define OAM_TILE_INDEX(i)           (ppu.oam[(i) * 4 + 2])
+#define OAM_FLAGS(i)                (ppu.oam[(i) * 4 + 3])
 
-#define VRAM(address)               ppu.vram[address - ADDR_STR_PPUVRAM]
-#define  OAM(address)               ppu.oam [address - ADDR_STR_MEM_OAM]
+#define OAM_PRIORITY(i)             ((OAM_FLAGS(i) & OAM_FLAG_BIT_PRIORITY) >> 7)
+#define OAM_YFLIP(i)                ((OAM_FLAGS(i) & OAM_FLAG_BIT_YFLIP) >> 6)
+#define OAM_XFLIP(i)                ((OAM_FLAGS(i) & OAM_FLAG_BIT_XFLIP) >> 5)
+#define OAM_PALETTE(i)              ((OAM_FLAGS(i) & OAM_FLAG_BIT_PALETTE) >> 4)
+
+#define VRAM(address)               (ppu.vram[(address) - ADDR_STR_PPUVRAM])
+#define  OAM(address)               (ppu.oam [(address) - ADDR_STR_MEM_OAM])
 
 typedef enum {
     GET_TILE,
     GET_DATA_LOW,
     GET_DATA_HIGH,
-    PUSH
-} bg_fetcher_mode;
+    PUSH,
+    CHECK_X,
+    IDLE
+} fetcher_mode;
 
 typedef struct {
     uint8_t color;
@@ -71,7 +84,7 @@ typedef struct {
 } fifo_pixel_t;
 
 static struct {
-    bg_fetcher_mode mode;
+    fetcher_mode mode;
     uint8_t delay;
     uint8_t data_low;
     uint8_t data_high;
@@ -82,11 +95,22 @@ static struct {
 } bg_fetcher;
 
 static struct {
+    fetcher_mode mode;
+    uint8_t delay;
+    uint8_t data_low;
+    uint8_t data_high;
+
+    uint8_t searched;
+    bool index_used[10];
+    uint16_t tile_number;
+} obj_fetcher;
+
+static struct {
     uint8_t warmup;
     uint8_t discard;
 
     fifo_pixel_t obj_pixels[8];
-    uint8_t obj_pixels_len;
+    // uint8_t obj_pixels_len;
     uint8_t bg_pixels[8];
     uint8_t bg_pixels_len;
 } pixel_mixer;
@@ -190,16 +214,71 @@ begin_draw_mode(void)
 {
     ppu.lx = 0;
 
-    pixel_mixer.bg_pixels_len = 0;
-    pixel_mixer.obj_pixels_len = 0;
-    pixel_mixer.warmup = 12;
-    pixel_mixer.discard = ppu.SCX % 8;
+    obj_fetcher.mode = CHECK_X;
+    obj_fetcher.searched = 0;
+    for (int i = 0; i < SCANLINE_MAX_OBJS; i++)
+        obj_fetcher.index_used[i] = !(i < ppu.oam_scan_count);
 
     bg_fetcher.mode = GET_TILE;
     bg_fetcher.delay = 5;
     // if background, what if window?
     bg_fetcher.tile = (((ppu.SCX / 8) & 0x1F) + 32 * (((ppu.LY + ppu.SCY) & 0xFF) / 8)) & 0x03FF;
+
+    pixel_mixer.bg_pixels_len = 0;
+    memset(pixel_mixer.obj_pixels, 0, sizeof(pixel_mixer.obj_pixels));
+    pixel_mixer.warmup = 12;
+    pixel_mixer.discard = ppu.SCX % 8;
+
     PPU_MODE_SET(PPU_MODE_DRAWING);
+}
+
+static void
+step_obj_fetcher(void)
+{
+    if (obj_fetcher.delay && obj_fetcher.delay--) return;
+    switch (obj_fetcher.mode) {
+    case GET_TILE:
+        obj_fetcher.tile_number = OAM_TILE_INDEX(ppu.oam_scan_indices[obj_fetcher.searched]);
+        obj_fetcher.mode = GET_DATA_LOW;
+        obj_fetcher.delay = 1;
+        break;
+    case GET_DATA_LOW:
+        uint8_t y_offset = 2 * ((ppu.LY + ppu.SCY - OAM_Y(obj_fetcher.searched) + 16) % 8); // 8 high for now
+        obj_fetcher.data_low = VRAM(0x8000 + 16 * obj_fetcher.tile_number + y_offset);
+        obj_fetcher.mode = GET_DATA_HIGH;
+        obj_fetcher.delay = 1;
+        break;
+    case GET_DATA_HIGH:
+        uint8_t y_offset = 2 * ((ppu.LY + ppu.SCY - OAM_Y(obj_fetcher.searched) + 16) % 8); // 8 high for now
+        obj_fetcher.data_low = VRAM(0x8000 + 16 * obj_fetcher.tile_number + y_offset + 1);
+
+        // xflip here?
+        for (int i = 7; i >= 0; i--) {
+            if (pixel_mixer.obj_pixels[7 - i].color) continue;
+            pixel_mixer.obj_pixels[7 - i].color = (((obj_fetcher.data_high & (1 << i)) >> i) << 1) |
+                                                   ((obj_fetcher.data_low  & (1 << i)) >> i);
+            pixel_mixer.obj_pixels[7 - i].bg_priority = OAM_PRIORITY(ppu.oam_scan_indices[obj_fetcher.searched]);
+            pixel_mixer.obj_pixels[7 - i].palette = OAM_PALETTE(ppu.oam_scan_indices[obj_fetcher.searched]);
+        }
+        obj_fetcher.mode = CHECK_X;
+        break;
+    case CHECK_X:
+        for (int i = obj_fetcher.searched; i < SCANLINE_MAX_OBJS; i++, obj_fetcher.searched++) {
+            if (obj_fetcher.index_used[i]) continue;
+            if (OAM_X(ppu.oam_scan_indices[i]) <= ppu.lx + 8) {
+                obj_fetcher.mode = GET_TILE;
+                // obj_fetcher.delay = 1; // no delay i think already built in by 1 dot on check mode?
+                obj_fetcher.index_used[i] = true;
+                break;
+            }
+        }
+        if (obj_fetcher.searched == SCANLINE_MAX_OBJS) {
+            obj_fetcher.mode = IDLE;
+            bg_fetcher.mode = GET_TILE;
+            bg_fetcher.delay = 1;
+        }
+        break;
+    }
 }
 
 static void
@@ -250,7 +329,7 @@ step_mixer()
     if (pixel_mixer.bg_pixels_len == 0) return;
     if (pixel_mixer.discard && pixel_mixer.discard-- && pixel_mixer.bg_pixels_len--) return;
 
-    uint16_t lcd_index = ppu.LY * LCD_WIDTH + ppu.lx++;
+    uint16_t lcd_index = ppu.LY * LCD_WIDTH + ppu.lx;
     ppu.lcd[lcd_index] = LCD_COLORS[(ppu.BGP >> (2 * pixel_mixer.bg_pixels[--pixel_mixer.bg_pixels_len])) &0x03];
 }
 
@@ -272,10 +351,15 @@ dot_cycle(void)
             begin_draw_mode();
         break;
     case PPU_MODE_DRAWING:
-        step_bg_fetcher();
-        step_mixer();
-        if (ppu.lx == LCD_WIDTH)
-            PPU_MODE_SET(PPU_MODE_HBLANK);
+        if (obj_fetcher.mode != IDLE)
+            step_obj_fetcher();
+        if (obj_fetcher.mode == IDLE) {
+            step_bg_fetcher();
+            step_mixer();
+            obj_fetcher.mode = CHECK_X;
+            if (++ppu.lx == LCD_WIDTH)
+                PPU_MODE_SET(PPU_MODE_HBLANK);
+        }
         break;
     case PPU_MODE_HBLANK:
     case PPU_MODE_VBLANK:
