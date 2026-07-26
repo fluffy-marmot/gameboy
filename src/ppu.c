@@ -267,8 +267,6 @@ step_obj_fetcher(void)
             if (obj_fetcher.index_used[i]) continue;
             if (OAM_X(ppu.oam_scan_indices[i]) <= ppu.lx + 8) {
                 obj_fetcher.mode = GET_TILE;
-                bg_fetcher.mode = GET_TILE;
-                bg_fetcher.delay = 1;
                 // obj_fetcher.delay = 1; // no delay i think already built in by 1 dot on check mode?
                 obj_fetcher.index_used[i] = true;
                 break;
@@ -339,17 +337,11 @@ step_mixer()
     uint16_t lcd_index = ppu.LY * LCD_WIDTH + ppu.lx++;
     ppu.lcd[lcd_index] = LCD_COLORS[color & 0x03];
 
-    memmove(pixel_mixer.obj_pixels, pixel_mixer.obj_pixels + 1, 7);
+    memmove(pixel_mixer.obj_pixels, pixel_mixer.obj_pixels + 1, 7 * sizeof(obj_pixel_t));
     memset(pixel_mixer.obj_pixels + 7, 0, sizeof(obj_pixel_t));
     pixel_mixer.bg_pixels_len--;
     obj_fetcher.mode = CHECK_X;
     obj_fetcher.searched = 0;
-}
-
-static void
-mode3(void)
-{
-    step_bg_fetcher();
 }
 
 void
