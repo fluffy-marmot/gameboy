@@ -1,9 +1,9 @@
 #ifndef GB_PPU
 #define GB_PPU
 
+#include "_specification.h"
 #include "bus.h"
 #include "irq.h"
-#include "specification.h"
 
 #include <stdbool.h>
 

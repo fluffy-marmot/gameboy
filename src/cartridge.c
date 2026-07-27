@@ -1,5 +1,5 @@
+#include "_specification.h"
 #include "cartridge.h"
-#include "specification.h"
 
 #include <stdio.h>
 

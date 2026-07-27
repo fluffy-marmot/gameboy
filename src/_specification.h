@@ -1,10 +1,16 @@
+/* -- The more directly hardware-related stuffs -- */
+
+#ifndef GB_SPECIFICATION
+#define GB_SPECIFICATION
+
 #define KiB                                     1024
+#define   B                                     1
 
 // DMG - Original Gameboy
 #define GB_DMG_WRAM_SIZE                        ( 8 * KiB)
 #define GB_DMG_VRAM_SIZE                        ( 8 * KiB)
-#define GB_DMG_HRAM_SIZE                        127
-#define GB_DMG_OAM_SIZE                         160
+#define GB_DMG_HRAM_SIZE                        (127 * B)
+#define GB_DMG_OAM_SIZE                         (160 * B)
 
 // CGB - Color Game Boy
 #define GB_CGB_WRAM_SIZE                        (32 * KiB)
@@ -12,7 +18,7 @@
 
 // Boot ROM
 #define BOOT_ROM                                "bootroms/dmg_boot.bin"
-#define GB_DMG_BOOT_ROM_SIZE                    256
+#define GB_DMG_BOOT_ROM_SIZE                    (256 * B)
 
 // Cartridge
 #define CARTRIDGE_ROM                           "dmg-acid2.gb"
@@ -83,3 +89,5 @@
 
 // Because of hardware design, default when memory is inaccessible is 1 bits
 #define UNREADABLE                              0xFF
+
+#endif

@@ -1,5 +1,5 @@
+#include "_specification.h"
 #include "bootrom.h"
-#include "specification.h"
 
 #include <stdio.h>
 

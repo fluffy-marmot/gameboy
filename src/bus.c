@@ -1,5 +1,5 @@
+#include "_specification.h"
 #include "bus.h"
-#include "specification.h"
 
 #include <stdio.h>
 #include <stdlib.h>
