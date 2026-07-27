@@ -27,6 +27,9 @@ test bit was setting wrong H flag, this fixes a lot...everything else
     Total tests: 500000 / 500000,  100.00 %, Instructions passing: 500 / 500
 
 TODO:
-- full halt behavior
+- full halt bug behavior
 - full interrupt and STAT low -> high behavior
 - timers
+- joypad input
+- DMA
+- blocking VRAM access during certain times etc.

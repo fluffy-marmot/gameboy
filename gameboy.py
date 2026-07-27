@@ -12,9 +12,9 @@ from gameboy_cstuff import CPU, cpu, GB, LCD
 SCALE = 6
 
 def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
-    np_view = np.ctypeslib.as_array(LCD, shape=(144, 160))
+    np_view = np.ctypeslib.as_array(LCD, shape=(160, 144))
 
-    pygame.surfarray.blit_array(render_surface, np_view.T)
+    pygame.surfarray.blit_array(render_surface, np_view)
     pygame.transform.scale(render_surface, screen.get_size(), screen)
 
 
