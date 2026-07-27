@@ -1,5 +1,6 @@
 #include "bus.h"
 #include "cpu.h"
+#include "specification.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -1490,7 +1491,7 @@ ready_interrupt()
     SP_dec();
     for (int i = 0; i <= 4; i++) {
         if (cpu.irq->IE & cpu.irq->IF & (MASK_BIT_L << i)) {
-            cpu.WZ = 0x40 + 0x08 * i;                   // TODO could maybe improve instead of hardcoded logic
+            cpu.WZ = ADDR_INTERRUPT_VBLANK + 0x08 * i;                   // TODO could maybe improve instead of hardcoded logic
             cpu.irq->IF ^= (MASK_BIT_L << i);
             break;
         }

@@ -3,18 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MEMADDR_LCDC                0xFF40
-#define MEMADDR_STAT                0xFF41
-#define MEMADDR_SCY                 0xFF42
-#define MEMADDR_SCX                 0xFF43
-#define MEMADDR_LY                  0xFF44
-#define MEMADDR_LYC                 0xFF45
-#define MEMADDR_BGP                 0xFF47
-#define MEMADDR_OBP0                0xFF48
-#define MEMADDR_OBP1                0xFF49
-#define MEMADDR_WY                  0xFF4A
-#define MEMADDR_WX                  0xFF4B
-
 #define USEPINS_STAT                0b01111111
 #define WRITEABLE_STAT              0b01111000
 
@@ -70,8 +58,8 @@
 #define OAM_XFLIP(i)                ((OAM_FLAGS(i) & OAM_FLAG_BIT_XFLIP) >> 5)
 #define OAM_PALETTE(i)              ((OAM_FLAGS(i) & OAM_FLAG_BIT_PALETTE) >> 4)
 
-#define VRAM(address)               (ppu.vram[(address) - ADDR_STR_PPUVRAM])
-#define  OAM(address)               (ppu.oam [(address) - ADDR_STR_MEM_OAM])
+#define VRAM(address)               (ppu.vram[(address) - ADDR_START_VRAM])
+#define  OAM(address)               (ppu.oam [(address) - ADDR_START_OAM_MEM])
 
 typedef enum {
     GET_TILE,
@@ -452,7 +440,7 @@ init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
     ppu.irq = irq;
     bus->interface_vram = &bus_vram;
     bus->interface_oam = &bus_oam;
-    bus->interface_registers_ppu = &bus_registers_ppu;
+    bus->interface_reg_ppu = &bus_registers_ppu;
     return &ppu;
 }
 

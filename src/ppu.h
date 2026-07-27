@@ -3,38 +3,31 @@
 
 #include "bus.h"
 #include "irq.h"
+#include "specification.h"
 
 #include <stdbool.h>
 
-// 10:9 ratio
-#define LCD_WIDTH                       160
-#define LCD_HEIGHT                      144
-
-#define DOTS_PER_SCANLINE               456
-#define SCANLINES_PER_FRAME             154
-#define SCANLINE_MAX_OBJS               10
-
 typedef struct {
-    uint8_t LCDC;                       // FF40
-    uint8_t STAT;                       // FF41
-    uint8_t SCY;                        // FF42
-    uint8_t SCX;                        // FF43
-    uint8_t LY;                         // FF44
-    uint8_t LYC;                        // FF45
-                                        // FF46 is DMA related - undecided where that belongs
-    uint8_t BGP;                        // FF47
-    uint8_t OBP[2];                     // FF48 and FF49
-    uint8_t WY;                         // FF4A
-    uint8_t WX;                         // FF4B
+    uint8_t LCDC;
+    uint8_t STAT;
+    uint8_t SCY;
+    uint8_t SCX;
+    uint8_t LY;
+    uint8_t LYC;
+    
+    uint8_t BGP;
+    uint8_t OBP[2];
+    uint8_t WY;
+    uint8_t WX;
 
     uint8_t vram[GB_DMG_VRAM_SIZE];
-    uint8_t  oam[GB_DMG__OAM_SIZE];
+    uint8_t  oam[GB_DMG_OAM_SIZE];
     uint32_t lcd[LCD_WIDTH * LCD_HEIGHT];
 
     uint8_t lx;
     uint32_t frame_dot;
     bool window_condition;
-    uint8_t oam_scan_indices[10];
+    uint8_t oam_scan_indices[SCANLINE_MAX_OBJS];
     uint8_t oam_scan_count;
         
     gb_irq_handler_t *irq;              // direct access to interrupts data

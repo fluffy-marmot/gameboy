@@ -8,10 +8,6 @@
 #include "irq.h"
 #include "ppu.h"
 
-#define BOOT_ROM                    "bootroms/dmg_boot.bin"
-#define CARTRIDGE_ROM               "dmg-acid2.gb"
-#define ROM_SIZE                    (32 * KiB)
-
 typedef struct {
     gb_cpu_t *cpu;
     gb_bus_t *bus;

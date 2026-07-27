@@ -1,17 +1,17 @@
 #include "bus.h"
+#include "specification.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Boot ROM lock register (aka BANK register) values
-#define FF50_BOOT_ROM_ACTIVE        0b00000000
-#define FF50_BOOT_ROM_INACTIVE      0b00000001
+#define BOOT_ROM_ACTIVE                         0b00000000
+#define BOOT_ROM_DISABLED                       0b00000001
+#define USEPINS_BOOT_ROM_LOCK                   0b00000001
 
-#define MASK_ECHO_RAM               0b0001111111111111
+#define MASK_ECHO_RAM                           0b0001111111111111
 
-#define ADDR_RANGE(low, high) ((low <= address) && (address <= high))
-
+#define ADDR_RANGE(low, high)                   ((low <= address) && (address <= high))
 
 
 static gb_bus_t bus;
@@ -19,16 +19,21 @@ static uint8_t *mem_test;
 static uint8_t mem_wram[GB_DMG_WRAM_SIZE];
 static uint8_t mem_hram[GB_DMG_HRAM_SIZE];
 
-// TODO for now nonstatic for testing
-// main dispatch function forward declaration
+// main dispatch functions forward declaration
 uint8_t read_bus_dispatch (memaddr);
-static void    write_bus_dispatch(memaddr, uint8_t);
+static void write_bus_dispatch(memaddr, uint8_t);
 
 // alternate dispatch functions to use while running tests with a simple memory layout
-uint8_t test_memory_read (memaddr addr)                      { /*return mem_test[addr];*/  }
-void    test_memory_write(memaddr addr, uint8_t value)       { /*mem_test[addr] = value*;*/ }
-void    test_memory_wipe(void)        { if (mem_test != NULL) memset(mem_test, 0, 64 * KiB); }
-static  bus_interface_t nop_bus = { .read = test_memory_read, .write = test_memory_write };
+uint8_t test_memory_read (memaddr addr) {
+    return mem_test[addr];
+}
+void test_memory_write(memaddr addr, uint8_t value) {
+    mem_test[addr] = value;
+}
+void test_memory_wipe() {
+    if (mem_test != NULL) 
+        memset(mem_test, 0, 64 * KiB);
+}
 
 void
 test_memory_mode_enable(void)
@@ -47,105 +52,113 @@ test_memory_mode_disable(void)
     bus.bus_dispatcher->write = write_bus_dispatch;
 }
 
+uint8_t nop_read(memaddr) {}
+void    nop_write(memaddr, uint8_t) {}
+static  bus_interface_t bus_nop = { .read = nop_read, .write = nop_write };
+
+// Based on address, dispatch the request to the correct interface
 static bus_interface_t *
 select_interface(memaddr address)
 {
-    if (ADDR_RANGE(0x0000, GB_DMG_BOOT_ROM_SIZE))
-        if (bus.BOOT_ROM_LOCK == FF50_BOOT_ROM_ACTIVE)
-                                                        return bus.interface_rom_boot;       // 256 B (DMG)
-    if (ADDR_RANGE(0x0000, 0x3FFF))                     return bus.interface_rom_fixed;      // 16 KiB
-    if (ADDR_RANGE(0x4000, 0x7FFF))                     return bus.interface_rom_bank;       // 16 KiB
-    if (ADDR_RANGE(0x8000, 0x9FFF))                     return bus.interface_vram;           //  8 KiB
-    if (ADDR_RANGE(0xA000, 0xBFFF))                     return bus.interface_wram_extern;    //  8 KiB
-    if (ADDR_RANGE(0xC000, 0xCFFF))                     return bus.interface_wram_system;    //  4 KiB
-    if (ADDR_RANGE(0xD000, 0xDFFF))                     return bus.interface_wram_system;    //  4 KiB
-    if (ADDR_RANGE(0xE000, 0xFDFF))                     return bus.interface_echo;
-    if (ADDR_RANGE(0xFE00, 0xFE9F))                     return bus.interface_oam;            // 160 B
-    if (ADDR_RANGE(0xFEA0, 0xFEFF))                     return bus.interface_unusable;
-    if (ADDR_RANGE(0xFF40, 0xFF4B))                     return bus.interface_registers_ppu;  // TODO add exception for DMA one
-    // (ADDR_RANGE(0xFF7F, 0xFEFF))                     # I/O Registers, handled in switch below
-    if (ADDR_RANGE(0xFF80, 0xFFFE))                     return bus.interface_hram;
+    if (ADDR_RANGE(ADDR_START_ROM_BOOT, ADDR_END_ROM_BOOT))
+        if (bus.BOOT_ROM_LOCK == BOOT_ROM_ACTIVE)
+                                                                        return bus.interface_rom_boot;
+    if (ADDR_RANGE(ADDR_START_ROM_FIXED, ADDR_END_ROM_FIXED))           return bus.interface_rom_fixed;
+    if (ADDR_RANGE(ADDR_START_ROM_BANK, ADDR_END_ROM_BANK))             return bus.interface_rom_bank;
+    if (ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM))                     return bus.interface_vram;
+    if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) return bus.interface_wram_extern;
+    if (ADDR_RANGE(ADDR_START_WRAM_1, ADDR_END_WRAM_1))                 return bus.interface_wram_system;
+    if (ADDR_RANGE(ADDR_START_WRAM_2, ADDR_END_WRAM_2))                 return bus.interface_wram_system;
+    if (ADDR_RANGE(ADDR_START_ECHO_MEM, ADDR_END_ECHO_MEM))             return bus.interface_echo;
+    if (ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_OAM_MEM))               return bus.interface_oam;
+    if (ADDR_RANGE(ADDR_START_UNUSABLE, ADDR_END_UNUSABLE))             return bus.interface_unusable;
+    if (ADDR_RANGE(ADDR_START_HRAM, ADDR_END_HRAM))                     return bus.interface_hram;
 
     switch (address) {
-    case MEMADDR_BOOT_ROM_LOCK:                         return bus.interface_register_FF50;  // FF50           
+    case MEMADDR_BOOT_ROM_LOCK:                                         return bus.interface_reg_bootlock;
+
     case MEMADDR_IF:                                    
-    case MEMADDR_IE:                                    return bus.interface_registers_interrupt;
-    default:
-        return &nop_bus;
+    case MEMADDR_IE:                                                    return bus.interface_reg_interrupt;
+
+    case MEMADDR_LCDC:
+    case MEMADDR_STAT:
+    case MEMADDR_SCY:
+    case MEMADDR_SCX:
+    case MEMADDR_LY:
+    case MEMADDR_LYC :
+    case MEMADDR_BGP:
+    case MEMADDR_OBP0:
+    case MEMADDR_OBP1:
+    case MEMADDR_WY:
+    case MEMADDR_WX:                                                    return bus.interface_reg_ppu;
+
+    default:                                                            return bus.interface_nop;
     }    
 }
 
-// TODO non static for testing purposes
-uint8_t 
-read_bus_dispatch (memaddr address)
-{
+// The main dispatcher interface using select_interface function to pass on bus requests
+uint8_t read_bus_dispatch (memaddr address) {
     return select_interface(address)->read(address);
 }
-static void
-write_bus_dispatch(memaddr address, uint8_t val)
-{
+static void write_bus_dispatch(memaddr address, uint8_t val) {
     select_interface(address)->write(address, val);
 }
 static bus_interface_t bus_dispatcher = { .read = read_bus_dispatch, .write = write_bus_dispatch };
 
-
-static uint8_t
-read_wram (memaddr address)
-{
-    return mem_wram[address - ADDR_STR_WRAMONE];
+// WRAM interface
+static uint8_t read_wram (memaddr address) {
+    return mem_wram[address - ADDR_START_WRAM_1];
 }
-static void
-write_wram(memaddr address, uint8_t val)
-{
-    mem_wram[address - ADDR_STR_WRAMONE] = val;
+static void write_wram(memaddr address, uint8_t val) {
+    mem_wram[address - ADDR_START_WRAM_1] = val;
 }
-static bus_interface_t bus_wram_system = { .read = read_wram, .write = write_wram };
+static bus_interface_t bus_wram = { .read = read_wram, .write = write_wram };
 
-
-static uint8_t
-read_hram (memaddr address)
-{
-    return mem_hram[address - ADDR_STR_HIGHRAM];
+// HRAM interface
+static uint8_t read_hram (memaddr address) {
+    return mem_hram[address - ADDR_START_HRAM];
 }
-static void
-write_hram(memaddr address, uint8_t val)
-{
-    mem_hram[address - ADDR_STR_HIGHRAM] = val;
+static void write_hram(memaddr address, uint8_t val) {
+    mem_hram[address - ADDR_START_HRAM] = val;
 }
 static bus_interface_t bus_hram = { .read = read_hram, .write = write_hram };
 
-
-static uint8_t 
-read_echo(memaddr address)
-{
+// Echo RAM interface - mask out highest 3 bits
+static uint8_t read_echo(memaddr address) {
     return read_bus_dispatch(address & MASK_ECHO_RAM);
 }
-static void
-write_echo (memaddr address, uint8_t val)
-{
+static void write_echo (memaddr address, uint8_t val) {
     write_bus_dispatch(address & MASK_ECHO_RAM, val);
 }
 static bus_interface_t bus_echo =  { .read = read_echo, .write = write_echo };
 
+// Boot ROM lock register - can only be written and turned on to unmap boot ROM
+static uint8_t read_reg_bootlock(memaddr) { 
+    return UNREADABLE;     
+}
+static void write_reg_bootlock(memaddr, uint8_t) {
+    bus.BOOT_ROM_LOCK = USEPINS_BOOT_ROM_LOCK;
+}
+static bus_interface_t bus_reg_boot_lock = { .read = read_reg_bootlock, .write = write_reg_bootlock };
 
-static uint8_t read_bus_FF50(memaddr)          { return UNREADABLE;                                  }
-static void   write_bus_FF50(memaddr, uint8_t) { bus.BOOT_ROM_LOCK = IMPLEMENTED_BITS_BOOT_ROM_LOCK; }
-static bus_interface_t bus_boot_lock =         { .read = read_bus_FF50, .write = write_bus_FF50      };
-
-static uint8_t read_unusable(memaddr)          { return UNREADABLE;                                  }
-static void   write_unusable(memaddr, uint8_t) {}
-static bus_interface_t bus_unusable =          { .read = read_unusable, .write = write_unusable      };
+// Unusable memory region interface, not much to do
+static uint8_t read_unusable(memaddr) {
+    return UNREADABLE;
+}
+static void write_unusable(memaddr, uint8_t) {}
+static bus_interface_t bus_unusable = { .read = read_unusable, .write = write_unusable };
 
 gb_bus_t *
 init_gameboy_bus(void)
 {
     bus.bus_dispatcher = &bus_dispatcher;
-    bus.interface_wram_system = &bus_wram_system;
+    bus.interface_wram_system = &bus_wram;
     bus.interface_echo = &bus_echo;
     bus.interface_unusable = &bus_unusable;
     bus.interface_hram = &bus_hram;
 
-    bus.interface_register_FF50 = &bus_boot_lock;
+    bus.interface_reg_bootlock = &bus_reg_boot_lock;
+    bus.interface_nop = &bus_nop;
 
     return &bus;
 }

@@ -1,9 +1,6 @@
 #include "irq.h"
+#include "specification.h"
 
-
-/*
-Interrupts: 0040, 0048, 0050, 0058, 0060 addresses used for interrupts?
-*/
 
 static gb_irq_handler_t irq_handler;
 
@@ -38,6 +35,6 @@ static bus_interface_t bus_registers_interrupt = { read_interrupt_registers, wri
 gb_irq_handler_t *
 init_gameboy_irq(gb_bus_t *bus)
 {
-    bus->interface_registers_interrupt = &bus_registers_interrupt;
+    bus->interface_reg_interrupt = &bus_registers_interrupt;
     return &irq_handler;
 }
