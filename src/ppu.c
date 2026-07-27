@@ -1,10 +1,8 @@
 #include "ppu.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-
-#define USEPINS_STAT                0b01111111
-#define WRITEABLE_STAT              0b01111000
 
 #define LCDC_BIT_PPU_ENABLE         0b10000000
 #define LCDC_BIT_WIN_TILEMAP        0b01000000
@@ -14,6 +12,9 @@
 #define LCDC_BIT_OBJ_HEIGHT         0b00000100
 #define LCDC_BIT_OBJ_ENABLE         0b00000010
 #define LCDC_BIT_BG_WIN_PRIORITY    0b00000001
+
+#define USEPINS_STAT                0b01111111
+#define WRITEABLE_STAT              0b01111000
 
 #define STAT_BIT_LYC_INT_SELECT     0b01000000
 #define STAT_BIT_MD2_INT_SELECT     0b00100000
@@ -30,13 +31,13 @@
 #define LCDC_ENABLE_OBJ             (ppu.LCDC & LCDC_BIT_OBJ_ENABLE)
 #define LCDC_ENABLE_PRIORITY        (ppu.LCDC & LCDC_BIT_BG_WIN_PRIORITY)
 
+#define BG_TILE_DATA_METHOD_8000    0b00000001
+#define BG_TILE_DATA_METHOD_8800    0b00000000
 // 8px or 16px sprite heights
 #define OBJ_HEIGHT                  ((((ppu.LCDC & LCDC_BIT_OBJ_HEIGHT) >> 2) + 1) * 8)
 #define WIN_TILE_MAP                (((ppu.LCDC & LCDC_BIT_WIN_TILEMAP) >> 6) ? 0x9C00 : 0x9800)
 #define BG_TILE_MAP                 (((ppu.LCDC & LCDC_BIT_BG_TILE_MAP) >> 3) ? 0x9C00 : 0x9800)
 #define BG_TILE_DATA_METHOD         ((ppu.LCDC & LCDC_BIT_BG_WIN_TILES) >> 4)
-#define BG_TILE_DATA_METHOD_8000    0b00000001
-#define BG_TILE_DATA_METHOD_8800    0b00000000
 
 #define STAT_COMPARE_LYC_LY         (ppu.STAT = (ppu.STAT & (STAT_BIT_EQL ^ 0xFF)) | ((ppu.LY == ppu.LYC) << 2))
 
@@ -68,7 +69,7 @@ typedef enum {
     PUSH,
     CHECK_X,
     IDLE
-} fetcher_mode;
+} fetcher_mode_t;
 
 typedef struct {
     uint8_t color;
@@ -77,19 +78,20 @@ typedef struct {
 } obj_pixel_t;
 
 static struct {
-    fetcher_mode mode;
+    fetcher_mode_t mode;
     bool window_active;
+    bool window_condition;
     uint8_t delay;
     uint8_t data_low;
     uint8_t data_high;
 
     uint16_t tile;
     uint8_t tile_number;
-    uint8_t win_line_counter;
+    uint8_t window_line;
 } bg_fetcher;
 
 static struct {
-    fetcher_mode mode;
+    fetcher_mode_t mode;
     uint8_t delay;
     uint8_t data_low;
     uint8_t data_high;
@@ -195,30 +197,30 @@ static bus_interface_t bus_oam = { .read = read_oam, .write = write_oam };
 static void
 oam_scan_step(void)
 {
-    uint8_t obj_index = ((ppu.frame_dot % DOTS_PER_SCANLINE) / 2);
+    uint8_t obj_index = ppu.line_dot/ 2;
     // dont add objs with X 0
     if (OAM_X(obj_index) == 0) 
         return;      
     if (OAM_Y(obj_index) <= ppu.LY + 16 && ppu.LY + 16 < OAM_Y(obj_index) + OBJ_HEIGHT)
-        ppu.oam_scan_indices[ppu.oam_scan_count++] = obj_index;
+        ppu.obj_buffer[ppu.obj_buffer_size++] = obj_index;
 }
 
 static void
-begin_draw_mode(void)
+transition_draw_mode(void)
 {
     ppu.lx = 0;
 
     obj_fetcher.mode = CHECK_X;
     obj_fetcher.searched = 0;
     for (int i = 0; i < SCANLINE_MAX_OBJS; i++)
-        obj_fetcher.index_used[i] = (i >= ppu.oam_scan_count);
+        obj_fetcher.index_used[i] = (i >= ppu.obj_buffer_size);
 
     bg_fetcher.mode = GET_TILE;
     bg_fetcher.delay = 5;
     bg_fetcher.window_active = false;
-    if (!bg_fetcher.window_active && ppu.window_condition && LCDC_ENABLE_WINDOW && ppu.lx + 7 >= ppu.WX) {
+    if (!bg_fetcher.window_active && bg_fetcher.window_condition && LCDC_ENABLE_WINDOW && ppu.lx + 7 >= ppu.WX) {
         bg_fetcher.window_active = true;
-        bg_fetcher.tile = 32 * (bg_fetcher.win_line_counter / 8);
+        bg_fetcher.tile = 32 * (bg_fetcher.window_line / 8);
         bg_fetcher.delay = 5;       // only thing changed from other spot, these really need to be combined
     } else {
         bg_fetcher.tile = (((ppu.SCX / 8) & 0x1F) + 32 * (((ppu.LY + ppu.SCY) & 0xFF) / 8)) & 0x03FF;
@@ -228,8 +230,6 @@ begin_draw_mode(void)
     pixel_mixer.bg_pixels_len = 0;
     memset(pixel_mixer.obj_pixels, 0, sizeof(pixel_mixer.obj_pixels));
     pixel_mixer.warmup = 12;
-
-    PPU_MODE_SET(PPU_MODE_DRAWING);
 }
 
 static void
@@ -238,34 +238,34 @@ step_obj_fetcher(void)
     if (obj_fetcher.delay && obj_fetcher.delay--) return;
     switch (obj_fetcher.mode) {
     case GET_TILE:
-        obj_fetcher.tile_number = OAM_TILE_INDEX(ppu.oam_scan_indices[obj_fetcher.searched]);
+        obj_fetcher.tile_number = OAM_TILE_INDEX(ppu.obj_buffer[obj_fetcher.searched]);
         if (OBJ_HEIGHT == 16)
             obj_fetcher.tile_number &= 0xFE;
         obj_fetcher.mode = GET_DATA_LOW;
         obj_fetcher.delay = 1;
         break;
     case GET_DATA_LOW:
-        uint8_t y_offset = (ppu.LY - OAM_Y(ppu.oam_scan_indices[obj_fetcher.searched]) + 16) % OBJ_HEIGHT;
-        if (OAM_YFLIP(ppu.oam_scan_indices[obj_fetcher.searched]))
+        uint8_t y_offset = (ppu.LY - OAM_Y(ppu.obj_buffer[obj_fetcher.searched]) + 16) % OBJ_HEIGHT;
+        if (OAM_YFLIP(ppu.obj_buffer[obj_fetcher.searched]))
             y_offset = OBJ_HEIGHT - 1 - y_offset;
         obj_fetcher.data_low = VRAM(0x8000 + 16 * obj_fetcher.tile_number + 2 * y_offset);
         obj_fetcher.mode = GET_DATA_HIGH;
         obj_fetcher.delay = 1;
         break;
     case GET_DATA_HIGH:
-        uint8_t offset = (ppu.LY - OAM_Y(ppu.oam_scan_indices[obj_fetcher.searched]) + 16) % OBJ_HEIGHT;
-        if (OAM_YFLIP(ppu.oam_scan_indices[obj_fetcher.searched]))
+        uint8_t offset = (ppu.LY - OAM_Y(ppu.obj_buffer[obj_fetcher.searched]) + 16) % OBJ_HEIGHT;
+        if (OAM_YFLIP(ppu.obj_buffer[obj_fetcher.searched]))
             offset = OBJ_HEIGHT - 1 - offset;
         obj_fetcher.data_high = VRAM(0x8000 + 16 * obj_fetcher.tile_number + 2 * offset + 1);
 
         // xflip here?
         for (int i = 7; i >= 0; i--) {
-            uint8_t idx = OAM_XFLIP(ppu.oam_scan_indices[obj_fetcher.searched]) ? i : 7 - i;
+            uint8_t idx = OAM_XFLIP(ppu.obj_buffer[obj_fetcher.searched]) ? i : 7 - i;
             if (pixel_mixer.obj_pixels[idx].color) continue;
             pixel_mixer.obj_pixels[idx].color = (((obj_fetcher.data_high & (1 << i)) >> i) << 1) |
                                                    ((obj_fetcher.data_low  & (1 << i)) >> i);
-            pixel_mixer.obj_pixels[idx].bg_priority = OAM_PRIORITY(ppu.oam_scan_indices[obj_fetcher.searched]);
-            pixel_mixer.obj_pixels[idx].palette = OAM_PALETTE(ppu.oam_scan_indices[obj_fetcher.searched]);
+            pixel_mixer.obj_pixels[idx].bg_priority = OAM_PRIORITY(ppu.obj_buffer[obj_fetcher.searched]);
+            pixel_mixer.obj_pixels[idx].palette = OAM_PALETTE(ppu.obj_buffer[obj_fetcher.searched]);
         }
         //obj_fetcher.searched++;
         obj_fetcher.mode = CHECK_X;
@@ -273,7 +273,7 @@ step_obj_fetcher(void)
     case CHECK_X:
         for (int i = obj_fetcher.searched; i < SCANLINE_MAX_OBJS; i++, obj_fetcher.searched++) {
             if (obj_fetcher.index_used[i]) continue;
-            if (OAM_X(ppu.oam_scan_indices[i]) <= ppu.lx + 8) {
+            if (OAM_X(ppu.obj_buffer[i]) <= ppu.lx + 8) {
                 obj_fetcher.mode = GET_TILE;
                 // obj_fetcher.delay = 1; // no delay i think already built in by 1 dot on check mode?
                 obj_fetcher.index_used[i] = true;
@@ -307,7 +307,7 @@ step_bg_fetcher(void)
         break;
     case GET_DATA_LOW:
         if (bg_fetcher.window_active)
-            y_offset = 2 * (bg_fetcher.win_line_counter % 8);
+            y_offset = 2 * (bg_fetcher.window_line % 8);
         else
             y_offset = 2 * ((ppu.LY + ppu.SCY) % 8);
         if (BG_TILE_DATA_METHOD == BG_TILE_DATA_METHOD_8000)
@@ -320,7 +320,7 @@ step_bg_fetcher(void)
     case GET_DATA_HIGH:
         // TODO fix the ugliness later
         if (bg_fetcher.window_active)
-            y_offset = 2 * (bg_fetcher.win_line_counter % 8);
+            y_offset = 2 * (bg_fetcher.window_line % 8);
         else
             y_offset = 2 * ((ppu.LY + ppu.SCY) % 8);
         if (BG_TILE_DATA_METHOD == BG_TILE_DATA_METHOD_8000)
@@ -361,9 +361,9 @@ step_mixer()
     uint16_t lcd_index = ppu.LY * LCD_WIDTH + ppu.lx++;
     ppu.lcd[lcd_index] = LCD_COLORS[color & 0x03];
 
-    if (!bg_fetcher.window_active && ppu.window_condition && LCDC_ENABLE_WINDOW && ppu.lx + 7 >= ppu.WX) {
+    if (!bg_fetcher.window_active && bg_fetcher.window_condition && LCDC_ENABLE_WINDOW && ppu.lx + 7 >= ppu.WX) {
         bg_fetcher.window_active = true;
-        bg_fetcher.tile = 32 * (bg_fetcher.win_line_counter / 8);
+        bg_fetcher.tile = 32 * (bg_fetcher.window_line / 8);
         pixel_mixer.bg_pixels_len = 0;
         bg_fetcher.mode = GET_TILE;
         bg_fetcher.delay = 1;
@@ -381,11 +381,12 @@ dot_cycle(void)
 {
     switch (PPU_MODE) {
     case PPU_MODE_OAM_SCAN:
-        if (ppu.frame_dot % 2 == 0 && ppu.oam_scan_count < SCANLINE_MAX_OBJS)
+        if (ppu.line_dot % 2 == 0 && ppu.obj_buffer_size < SCANLINE_MAX_OBJS)
             oam_scan_step();
-        // last dot of oam scan, prepare to enter drawing mode next dot
-        if (ppu.frame_dot % DOTS_PER_SCANLINE == 79)
-            begin_draw_mode();
+        if (ppu.line_dot == SCANLINE_FINAL_OAM_SCAN_DOT) {
+            transition_draw_mode();
+            PPU_MODE_SET(PPU_MODE_DRAWING);
+        }
         break;
     case PPU_MODE_DRAWING:
         if (obj_fetcher.mode != IDLE)
@@ -401,36 +402,34 @@ dot_cycle(void)
     case PPU_MODE_VBLANK:
     }
 
-    ppu.frame_dot++;
-    if (ppu.frame_dot % DOTS_PER_SCANLINE == 0) {
-        ppu.LY++;
+    // Check whether scanline finished
+    if (++ppu.line_dot == SCANLINE_FINAL_DOT) {
         if (bg_fetcher.window_active)
-            bg_fetcher.win_line_counter++;
-        check_lyc_interrupt();
-        if (ppu.LY >= SCANLINES_PER_FRAME) {
-            // finished a frame
-            ppu.LY = 0;
-            ppu.frame_dot = 0;
-            ppu.window_condition = false;
-            bg_fetcher.win_line_counter = 0;
-        }
+            bg_fetcher.window_line++;
 
-        if (ppu.LY == LCD_HEIGHT) {
-            PPU_MODE_SET(PPU_MODE_VBLANK);
-            ppu.irq->IF |= 1;
-            // do i need vblank interrupts? will do later
-        } else if (ppu.LY < LCD_HEIGHT) {
+        // Check whether frame finished
+        if (++ppu.LY == SCANLINES_PER_FRAME) {
+            ppu.LY = 0;
+            bg_fetcher.window_condition = false;
+            bg_fetcher.window_line = 0;
+        }
+        check_lyc_interrupt();
+
+        if (ppu.LY < LCD_HEIGHT) {
             PPU_MODE_SET(PPU_MODE_OAM_SCAN);
             if (ppu.LY == ppu.WY)
-                ppu.window_condition = true;
+                bg_fetcher.window_condition = true;
+        } else if (ppu.LY == LCD_HEIGHT) {
+            PPU_MODE_SET(PPU_MODE_VBLANK);
+            ppu.irq->IF |= 1;
         }
-        ppu.oam_scan_count = 0;
+
+        ppu.line_dot = 0;
+        ppu.obj_buffer_size = 0;
     }
 }
 
-uint32_t *
-get_lcd(void)
-{
+uint32_t * get_lcd(void) {
     return ppu.lcd;
 }
 

@@ -65,6 +65,16 @@
 #define ADDR_INTERRUPT_SERIAL                   0x0058
 #define ADDR_INTERRUPT_JOYPAD                   0x0060
 
+/* -- VRAM regions for tile data and tile maps --
+Blocks: 128 tiles x 16 bytes each = 2048 KiB / block
+Maps: : 32x32 tile indices        = 1024 KiB / map */
+
+#define ADDR_TILE_DATA_BLOCK_0                  0x8000      
+#define ADDR_TILE_DATA_BLOCK_1                  0x8800
+#define ADDR_TILE_DATA_BLOCK_2                  0x9000
+#define ADDR_TILE_MAP_0                         0x9800
+#define ADDR_TILE_MAP_1                         0x9C00
+
 /* --Addressable hardware registers-- */
 
 // Interrupt flags and individual interrupt enables
