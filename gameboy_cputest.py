@@ -103,7 +103,7 @@ for test_file in all_tests:
         for addr, val in test["initial"]["ram"]:
             gb.test_memory_write(addr, val)
         # gb.instruction_test()
-        gb.fetch_instruction()
+        # gb.fetch_instruction()
         done = False
         cb_done = False
         while not done:

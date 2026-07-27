@@ -5,71 +5,65 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define MASK_BYTE                   0b11111111
-#define MASK_NIBBLE_L               0b00001111
-#define MASK_NIBBLE_H               0b11110000
-#define MASK_BIT_L                  0b00000001
-#define MASK_BIT_H                  0b10000000
-#define MASK_ZERO                   0b00000000
-#define MASK_FLAGS                  0b11110000
-#define MASK_FLAG_Z                 0b10000000
-#define MASK_FLAG_N                 0b01000000
-#define MASK_FLAG_H                 0b00100000
-#define MASK_FLAG_C                 0b00010000
-#define MASK_BIT_NUMBER             0b00111000
-#define MASK_REG_8b                 0b00000111
-#define MASK_REG_16b                0b00110000
-#define MASK_REG_SPorAF             0b00000011
-#define MASK_CONDITION              0b00011000
-#define MASK_CONDITION_NZ           0b00000000
-#define MASK_CONDITION_NC           0b00010000
-#define MASK_CONDITION__Z           0b00001000
-#define MASK_CONDITION__C           0b00011000
-#define MASK_ADDRESS                0b00111000
+#define MASK_BYTE                               0b11111111
+#define MASK_NIBBLE_L                           0b00001111
+#define MASK_NIBBLE_H                           0b11110000
+#define MASK_BIT_L                              0b00000001
+#define MASK_BIT_H                              0b10000000
+#define MASK_ZERO                               0b00000000
+#define MASK_FLAGS                              0b11110000
+#define MASK_FLAG_Z                             0b10000000
+#define MASK_FLAG_N                             0b01000000
+#define MASK_FLAG_H                             0b00100000
+#define MASK_FLAG_C                             0b00010000
+#define MASK_BIT_NUMBER                         0b00111000
+#define MASK_REG_8b                             0b00000111
+#define MASK_REG_16b                            0b00110000
+#define MASK_REG_SPorAF                         0b00000011
+#define MASK_CONDITION                          0b00011000
+#define MASK_CONDITION_NZ                       0b00000000
+#define MASK_CONDITION_NC                       0b00010000
+#define MASK_CONDITION__Z                       0b00001000
+#define MASK_CONDITION__C                       0b00011000
+#define MASK_ADDRESS                            0b00111000
 
-#define FLAG_Z                      ((cpu.F & MASK_FLAG_Z) >> 7)
-#define FLAG_N                      ((cpu.F & MASK_FLAG_N) >> 6)
-#define FLAG_H                      ((cpu.F & MASK_FLAG_H) >> 5)
-#define FLAG_C                      ((cpu.F & MASK_FLAG_C) >> 4)
+#define FLAG_Z                                  ((cpu.F & MASK_FLAG_Z) >> 7)
+#define FLAG_N                                  ((cpu.F & MASK_FLAG_N) >> 6)
+#define FLAG_H                                  ((cpu.F & MASK_FLAG_H) >> 5)
+#define FLAG_C                                  ((cpu.F & MASK_FLAG_C) >> 4)
 
-#define SET_Z                       (cpu.F |=  MASK_FLAG_Z              )
-#define SET_N                       (cpu.F |=  MASK_FLAG_N              )
-#define SET_H                       (cpu.F |=  MASK_FLAG_H              )
-#define SET_C                       (cpu.F |=  MASK_FLAG_C              )
-#define CLR_Z                       (cpu.F &= (MASK_FLAG_Z ^ MASK_FLAGS))
-#define CLR_N                       (cpu.F &= (MASK_FLAG_N ^ MASK_FLAGS))
-#define CLR_H                       (cpu.F &= (MASK_FLAG_H ^ MASK_FLAGS))
-#define CLR_C                       (cpu.F &= (MASK_FLAG_C ^ MASK_FLAGS))
+#define SET_Z                                   (cpu.F |=  MASK_FLAG_Z              )
+#define SET_N                                   (cpu.F |=  MASK_FLAG_N              )
+#define SET_H                                   (cpu.F |=  MASK_FLAG_H              )
+#define SET_C                                   (cpu.F |=  MASK_FLAG_C              )
+#define CLR_Z                                   (cpu.F &= (MASK_FLAG_Z ^ MASK_FLAGS))
+#define CLR_N                                   (cpu.F &= (MASK_FLAG_N ^ MASK_FLAGS))
+#define CLR_H                                   (cpu.F &= (MASK_FLAG_H ^ MASK_FLAGS))
+#define CLR_C                                   (cpu.F &= (MASK_FLAG_C ^ MASK_FLAGS))
 
-#define IR_REG_L                    ((cpu.IR >> 3) & MASK_REG_8b          )
-#define IR_REG_R                    ((cpu.IR)      & MASK_REG_8b          )
-#define IR_REG_16                   ((cpu.IR       & MASK_REG_16b)    >> 4)
-#define IR_BIT_NUM                  ((cpu.IR       & MASK_BIT_NUMBER) >> 3)
-#define IR_COND                     ((cpu.IR)      & MASK_CONDITION       )
-#define IR_ADDRESS                  ((cpu.IR)      & MASK_ADDRESS         )
+#define IR_REG_L                                ((cpu.IR >> 3) & MASK_REG_8b          )
+#define IR_REG_R                                ((cpu.IR)      & MASK_REG_8b          )
+#define IR_REG_16                               ((cpu.IR       & MASK_REG_16b)    >> 4)
+#define IR_BIT_NUM                              ((cpu.IR       & MASK_BIT_NUMBER) >> 3)
+#define IR_COND                                 ((cpu.IR)      & MASK_CONDITION       )
+#define IR_ADDRESS                              ((cpu.IR)      & MASK_ADDRESS         )
 
-// TODO probably define others here too instead of relying on endianness
-#define BC                          ((uint16_t) ((cpu.B << 8) | cpu.C))
-#define DE                          ((uint16_t) ((cpu.D << 8) | cpu.E))
-#define HL                          ((uint16_t) ((cpu.H << 8) | cpu.L))
-
-
-
-
-// Needed declarations - function is defined below one that uses it
-static uint8_t add_and_set_carry_flags(uint8_t, uint8_t, uint8_t);
+#define BC                                      ((uint16_t) ((cpu.B << 8) | cpu.C))
+#define DE                                      ((uint16_t) ((cpu.D << 8) | cpu.E))
+#define HL                                      ((uint16_t) ((cpu.H << 8) | cpu.L))
+#define WZ                                      ((uint16_t) ((cpu.W << 8) | cpu.Z))
 
 gb_cpu_t cpu; // TODO make static and access from py via gb struct
 
-// TODO: can I inline other stuff here? I'm unclear
-// TODO: get rid of nop, leave blank?
-static void nop      (void) {};
-static void invalid  (void) {};
-static void cb_prefix(void) {};
+static inline void nop      (void) {};
+static inline void invalid  (void) {};
+static inline void cb_prefix(void) {};
 
-static inline void SP_dec()         { cpu.SP--;                                          }
-static inline void HL_dec()         { uint16_t hl = HL - 1; cpu.H = hl >> 8; cpu.L = hl; }
-static inline void HL_inc()         { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu.L = hl; }
+static inline void HL_dec()                     { uint16_t hl = HL - 1; cpu.H = hl >> 8; cpu.L = hl; }
+static inline void HL_inc()                     { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu.L = hl; }
+static inline void WZ_set(uint16_t val)         { cpu.W = val >> 8; cpu.Z = val;                     }
+static inline void WZ_inc()                     { WZ_set(WZ + 1);                                    }
+static inline void SP_dec()                     { cpu.SP--;                                          }
 
 /* ############################################################################
 ###############################################################################
@@ -82,35 +76,38 @@ static inline void HL_inc()         { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu
 /*
 Helper functions to load to temporary 8-bit latch Z or W from various 16-bit memory locations
 */
-static void memory_read_PC_Z()      { cpu.Z = cpu.bus->read(cpu.PC++);            }
-static void memory_read_PC_W()      { cpu.W = cpu.bus->read(cpu.PC++);            }
-static void memory_read_SP_Z()      { cpu.Z = cpu.bus->read(cpu.SP++);            }
-static void memory_read_SP_W()      { cpu.W = cpu.bus->read(cpu.SP++);            }
-static void memory_read_BC_Z()      { cpu.Z = cpu.bus->read(BC);                  }
-static void memory_read_DE_Z()      { cpu.Z = cpu.bus->read(DE);                  }
-static void memory_read_HL_Z()      { cpu.Z = cpu.bus->read(HL);                  }
-static void memory_read_HLdZ()      { cpu.Z = cpu.bus->read(HL); HL_dec();        }
-static void memory_read_HLiZ()      { cpu.Z = cpu.bus->read(HL); HL_inc();        }
-static void memory_read_WZ_Z()      { cpu.Z = cpu.bus->read(cpu.WZ);              }
-static void memory_read__C_Z()      { cpu.Z = cpu.bus->read(0xFF00 + cpu.C);      }
-static void memory_read__Z_Z()      { cpu.Z = cpu.bus->read(0xFF00 + cpu.Z);      }
+static void memory_read_PC_Z()                  { cpu.Z = cpu.bus->read(cpu.PC++);            }
+static void memory_read_PC_W()                  { cpu.W = cpu.bus->read(cpu.PC++);            }
+static void memory_read_SP_Z()                  { cpu.Z = cpu.bus->read(cpu.SP++);            }
+static void memory_read_SP_W()                  { cpu.W = cpu.bus->read(cpu.SP++);            }
+static void memory_read_BC_Z()                  { cpu.Z = cpu.bus->read(BC);                  }
+static void memory_read_DE_Z()                  { cpu.Z = cpu.bus->read(DE);                  }
+static void memory_read_HL_Z()                  { cpu.Z = cpu.bus->read(HL);                  }
+static void memory_read_HLdZ()                  { cpu.Z = cpu.bus->read(HL); HL_dec();        }
+static void memory_read_HLiZ()                  { cpu.Z = cpu.bus->read(HL); HL_inc();        }
+static void memory_read_WZ_Z()                  { cpu.Z = cpu.bus->read(WZ);                  }
+static void memory_read__C_Z()                  { cpu.Z = cpu.bus->read(0xFF00 + cpu.C);      }
+static void memory_read__Z_Z()                  { cpu.Z = cpu.bus->read(0xFF00 + cpu.Z);      }
 
 /*
 Helper functions to write to various 16-bit memory locations, various 8-bit values
 */
-static void memory_write_HL_R  ()   { cpu.bus->write(HL, cpu.reg[IR_REG_R]);      }
-static void memory_write_HL_Z  ()   { cpu.bus->write(HL, cpu.Z);                  }
-static void memory_write_BC_A  ()   { cpu.bus->write(BC, cpu.A);                  }
-static void memory_write_DE_A  ()   { cpu.bus->write(DE, cpu.A);                  }
-static void memory_write_HLdA  ()   { cpu.bus->write(HL, cpu.A); HL_dec();        }
-static void memory_write_HLiA  ()   { cpu.bus->write(HL, cpu.A); HL_inc();        }
-static void memory_write_WZ_A  ()   { cpu.bus->write(cpu.WZ, cpu.A);              }
-static void memory_write_WZ_SPl()   { cpu.bus->write(cpu.WZ, cpu.SP); cpu.WZ++;   }
-static void memory_write_WZ_SPh()   { cpu.bus->write(cpu.WZ, cpu.SP >> 8);        }
-static void memory_write__C_A  ()   { cpu.bus->write(0xFF00 + cpu.C, cpu.A);      }
-static void memory_write__Z_A  ()   { cpu.bus->write(0xFF00 + cpu.Z, cpu.A);      }
-static void memory_write_SP_PCh()   { cpu.bus->write(cpu.SP, cpu.PC >> 8);        }
-static void memory_write_SP_PCl()   { cpu.bus->write(cpu.SP, cpu.PC);             }
+static void memory_write_HL_R  ()               { cpu.bus->write(HL, cpu.reg[IR_REG_R]);      }
+static void memory_write_HL_Z  ()               { cpu.bus->write(HL, cpu.Z);                  }
+static void memory_write_BC_A  ()               { cpu.bus->write(BC, cpu.A);                  }
+static void memory_write_DE_A  ()               { cpu.bus->write(DE, cpu.A);                  }
+static void memory_write_HLdA  ()               { cpu.bus->write(HL, cpu.A);  HL_dec();       }
+static void memory_write_HLiA  ()               { cpu.bus->write(HL, cpu.A);  HL_inc();       }
+static void memory_write_WZ_A  ()               { cpu.bus->write(WZ, cpu.A);                  }
+static void memory_write_WZ_SPl()               { cpu.bus->write(WZ, cpu.SP); WZ_inc();       }
+static void memory_write_WZ_SPh()               { cpu.bus->write(WZ, cpu.SP >> 8);            }
+static void memory_write__C_A  ()               { cpu.bus->write(0xFF00 + cpu.C, cpu.A);      }
+static void memory_write__Z_A  ()               { cpu.bus->write(0xFF00 + cpu.Z, cpu.A);      }
+static void memory_write_SP_PCh()               { cpu.bus->write(cpu.SP, cpu.PC >> 8);        }
+static void memory_write_SP_PCl()               { cpu.bus->write(cpu.SP, cpu.PC);             }
+
+// Needed declarations - function is defined below one that uses it
+static uint8_t add_and_set_carry_flags(uint8_t, uint8_t, uint8_t);
 
 /*
 Helper functions that need to decide between the different 16-bit registers
@@ -187,7 +184,7 @@ load_SP_HL(void)
 static void
 load_SP_WZ(void)
 {
-    cpu.SP = cpu.WZ;
+    cpu.SP = WZ;
 }
 
 // Load 16-bit value of WZ latches to register rr
@@ -488,7 +485,7 @@ static void adc_r_to_A  () { add_to_A(cpu.reg[IR_REG_R], FLAG_C);            }
 static void add_Z_to_A  () { add_to_A(cpu.Z, 0);                             }
 static void adc_Z_to_A  () { add_to_A(cpu.Z, FLAG_C);                        }
 static void add_e_to_SPl() { add_and_set_carry_flags(cpu.SP, cpu.Z, 0);      }  // Cheating a 'lil with Z latch
-static void add_e_to_SPh() { cpu.WZ = cpu.SP + (int8_t) cpu.Z; CLR_N; CLR_Z; }
+static void add_e_to_SPh() { WZ_set(cpu.SP + (int8_t) cpu.Z); CLR_N; CLR_Z;  }
 
 static void
 add_to_reg(uint8_t *reg_addr, uint8_t val, uint8_t carry)
@@ -624,9 +621,9 @@ sub_from_A(uint16_t val, uint8_t carry)
     if (cpu.A) CLR_Z; else SET_Z;
 }
 static void sub_r_from_A() { sub_from_A(cpu.reg[IR_REG_R], 0);          }
-static void sbc_r_from_A() { sub_from_A(cpu.reg[IR_REG_R], FLAG_C); }
+static void sbc_r_from_A() { sub_from_A(cpu.reg[IR_REG_R], FLAG_C);     }
 static void sub_Z_from_A() { sub_from_A(cpu.Z, 0);                      }
-static void sbc_Z_from_A() { sub_from_A(cpu.Z, FLAG_C);             }
+static void sbc_Z_from_A() { sub_from_A(cpu.Z, FLAG_C);                 }
 
 /*
 Helper for compare instructions, similar to subtraction but without updating the A register
@@ -1347,15 +1344,15 @@ condition()
 }
 
 static void         jump_PC_HL() { cpu.PC = HL;                                               }
-static void         jump_PC_WZ() { cpu.PC = cpu.WZ;                                           }
+static void         jump_PC_WZ() { cpu.PC = WZ;                                               }
 static void     rel_jump_PC_e () { cpu.PC += (int8_t) cpu.Z;                                  } // Cheating !
 static void     con_jump_PC_WZ() { if (condition()) jump_PC_WZ();    else cpu.cycle_num++;    }
 static void rel_con_jump_PC_e () { if (condition()) rel_jump_PC_e(); else cpu.cycle_num++;    }
 static void   stack_push_PC_h () { memory_write_SP_PCh(); cpu.SP--;                           }
-static void   stack_push_PC_l () { memory_write_SP_PCl(); cpu.PC = cpu.WZ;                    }
+static void   stack_push_PC_l () { memory_write_SP_PCl(); cpu.PC = WZ;                        }
 static void     con_call_func () { if (condition()) SP_dec();        else cpu.cycle_num += 3; }
 static void     con__ret_func () { if (condition())    nop();        else cpu.cycle_num += 3; }
-static void     ret_interrupt () { cpu.PC = cpu.WZ; cpu.IME = 1;                              }
+static void     ret_interrupt () { cpu.PC = WZ; cpu.IME = 1;                                  }
 static void         jump_fixed() { cpu.PC = IR_ADDRESS;                                       } // Cheating !
 
 // INSTRUCTIONS ###############################################################
@@ -1489,7 +1486,7 @@ ready_interrupt()
 {
     cpu.IME = 0;
     SP_dec();
-    cpu.WZ = cpu.irq->call_interrupt(cpu.irq->check_next_enabled_and_requested());
+    WZ_set(cpu.irq->call_interrupt(cpu.irq->check_next_enabled_and_requested()));
 }
 
 static void halt() {
@@ -1784,7 +1781,7 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
 ###############################################################################
 ############################################################################ */
 
-void
+static void
 fetch_instruction()
 {
     if (cpu.cb_instruction) {
@@ -1813,6 +1810,7 @@ tick_machine_cycle()
 {
     if (cpu.instruction == NULL || cpu.cycle_num == cpu.instruction->cycle_count)
         fetch_instruction();
+
     cpu.instruction->cycles[cpu.cycle_num++]();
     uint16_t result = cpu.IR + ((cpu.instruction == &____INTERRUPT_HANDLER ? 1 : ((cpu.instruction->cycle_count - cpu.cycle_num) + cpu.cb_instruction)) << 8);
 
@@ -1828,6 +1826,5 @@ init_gameboy_cpu(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
     cpu.bus = bus->bus_dispatcher;
     cpu.irq = irq;
-    //cpu.instruction = &NOP;
     return &cpu;
 }

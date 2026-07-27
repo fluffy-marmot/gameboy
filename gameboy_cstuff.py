@@ -72,8 +72,8 @@ GB.test_memory_read.argtypes = [ctypes.c_uint16]
 
 cpu = CPU.in_dll(GB, "cpu")
 
-GB.fetch_instruction.restype = None
-GB.fetch_instruction.argtypes = []
+# GB.fetch_instruction.restype = None
+# GB.fetch_instruction.argtypes = []
 
 GB.tick_machine_cycle.restype = ctypes.c_uint16
 GB.tick_machine_cycle.argtypes = []
