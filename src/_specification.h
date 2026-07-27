@@ -4,13 +4,13 @@
 #define GB_SPECIFICATION
 
 #define KiB                                     1024
-#define   B                                     1
+#define BYTES                                   1
 
 // DMG - Original Gameboy
 #define GB_DMG_WRAM_SIZE                        ( 8 * KiB)
 #define GB_DMG_VRAM_SIZE                        ( 8 * KiB)
-#define GB_DMG_HRAM_SIZE                        (127 * B)
-#define GB_DMG_OAM_SIZE                         (160 * B)
+#define GB_DMG_HRAM_SIZE                        (127 * BYTES)
+#define GB_DMG_OAM_SIZE                         (160 * BYTES)
 
 // CGB - Color Game Boy
 #define GB_CGB_WRAM_SIZE                        (32 * KiB)
@@ -18,7 +18,7 @@
 
 // Boot ROM
 #define BOOT_ROM                                "bootroms/dmg_boot.bin"
-#define GB_DMG_BOOT_ROM_SIZE                    (256 * B)
+#define GB_DMG_BOOT_ROM_SIZE                    (256 * BYTES)
 
 // Cartridge
 #define CARTRIDGE_ROM                           "dmg-acid2.gb"
