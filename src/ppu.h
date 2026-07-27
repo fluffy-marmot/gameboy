@@ -32,7 +32,7 @@ typedef struct {
     uint32_t lcd[LCD_WIDTH * LCD_HEIGHT];
 
     uint8_t lx;
-    uint16_t frame_dot;
+    uint32_t frame_dot;
     bool window_condition;
     uint8_t oam_scan_indices[10];
     uint8_t oam_scan_count;

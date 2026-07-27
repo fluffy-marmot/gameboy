@@ -44,6 +44,7 @@
 
 // 8px or 16px sprite heights
 #define OBJ_HEIGHT                  ((((ppu.LCDC & LCDC_BIT_OBJ_HEIGHT) >> 2) + 1) * 8)
+#define WIN_TILE_MAP                (((ppu.LCDC & LCDC_BIT_WIN_TILEMAP) >> 6) ? 0x9C00 : 0x9800)
 #define BG_TILE_MAP                 (((ppu.LCDC & LCDC_BIT_BG_TILE_MAP) >> 3) ? 0x9C00 : 0x9800)
 #define BG_TILE_DATA_METHOD         ((ppu.LCDC & LCDC_BIT_BG_WIN_TILES) >> 4)
 #define BG_TILE_DATA_METHOD_8000    0b00000001
@@ -89,6 +90,7 @@ typedef struct {
 
 static struct {
     fetcher_mode mode;
+    bool window_active;
     uint8_t delay;
     uint8_t data_low;
     uint8_t data_high;
@@ -225,13 +227,19 @@ begin_draw_mode(void)
 
     bg_fetcher.mode = GET_TILE;
     bg_fetcher.delay = 5;
-    // if background, what if window?
-    bg_fetcher.tile = (((ppu.SCX / 8) & 0x1F) + 32 * (((ppu.LY + ppu.SCY) & 0xFF) / 8)) & 0x03FF;
+    bg_fetcher.window_active = false;
+    if (!bg_fetcher.window_active && ppu.window_condition && LCDC_ENABLE_WINDOW && ppu.lx + 7 >= ppu.WX) {
+        bg_fetcher.window_active = true;
+        bg_fetcher.tile = 32 * (bg_fetcher.win_line_counter / 8);
+        bg_fetcher.delay = 5;       // only thing changed from other spot, these really need to be combined
+    } else {
+        bg_fetcher.tile = (((ppu.SCX / 8) & 0x1F) + 32 * (((ppu.LY + ppu.SCY) & 0xFF) / 8)) & 0x03FF;
+        pixel_mixer.discard = ppu.SCX % 8;
+    }
 
     pixel_mixer.bg_pixels_len = 0;
     memset(pixel_mixer.obj_pixels, 0, sizeof(pixel_mixer.obj_pixels));
     pixel_mixer.warmup = 12;
-    pixel_mixer.discard = ppu.SCX % 8;
 
     PPU_MODE_SET(PPU_MODE_DRAWING);
 }
@@ -243,6 +251,8 @@ step_obj_fetcher(void)
     switch (obj_fetcher.mode) {
     case GET_TILE:
         obj_fetcher.tile_number = OAM_TILE_INDEX(ppu.oam_scan_indices[obj_fetcher.searched]);
+        if (OBJ_HEIGHT == 16)
+            obj_fetcher.tile_number &= 0xFE;
         obj_fetcher.mode = GET_DATA_LOW;
         obj_fetcher.delay = 1;
         break;
@@ -283,6 +293,7 @@ step_obj_fetcher(void)
             }
         }
         if (obj_fetcher.searched == SCANLINE_MAX_OBJS)
+            // TODO reset bg fetcher to get tile mode?
             obj_fetcher.mode = IDLE;
         break;
     }
@@ -291,15 +302,26 @@ step_obj_fetcher(void)
 static void
 step_bg_fetcher(void)
 {
+    uint8_t y_offset;
     if (bg_fetcher.delay && bg_fetcher.delay--) return;
     switch (bg_fetcher.mode) {
     case GET_TILE:
-        bg_fetcher.tile_number = VRAM(BG_TILE_MAP + bg_fetcher.tile++);
+        if (bg_fetcher.window_active)
+            bg_fetcher.tile_number = VRAM(WIN_TILE_MAP + bg_fetcher.tile);
+        else
+            bg_fetcher.tile_number = VRAM(BG_TILE_MAP + bg_fetcher.tile);
+        if (bg_fetcher.tile % 32 == 31)
+            bg_fetcher.tile -= 31;
+        else
+            bg_fetcher.tile++;
         bg_fetcher.mode = GET_DATA_LOW;
         bg_fetcher.delay = 1;
         break;
     case GET_DATA_LOW:
-        uint8_t y_offset = 2 * ((ppu.LY + ppu.SCY) % 8);
+        if (bg_fetcher.window_active)
+            y_offset = 2 * (bg_fetcher.win_line_counter % 8);
+        else
+            y_offset = 2 * ((ppu.LY + ppu.SCY) % 8);
         if (BG_TILE_DATA_METHOD == BG_TILE_DATA_METHOD_8000)
             bg_fetcher.data_low = VRAM(0x8000 + 16 * bg_fetcher.tile_number + y_offset);
         else
@@ -309,11 +331,14 @@ step_bg_fetcher(void)
         break;
     case GET_DATA_HIGH:
         // TODO fix the ugliness later
-        uint8_t offset = 2 * ((ppu.LY + ppu.SCY) % 8);
-        if (BG_TILE_DATA_METHOD == BG_TILE_DATA_METHOD_8000)
-            bg_fetcher.data_high = VRAM(0x8000 + 16 * bg_fetcher.tile_number + offset + 1);
+        if (bg_fetcher.window_active)
+            y_offset = 2 * (bg_fetcher.win_line_counter % 8);
         else
-            bg_fetcher.data_high = VRAM(0x9000 + 16 * (int8_t) bg_fetcher.tile_number + offset + 1);
+            y_offset = 2 * ((ppu.LY + ppu.SCY) % 8);
+        if (BG_TILE_DATA_METHOD == BG_TILE_DATA_METHOD_8000)
+            bg_fetcher.data_high = VRAM(0x8000 + 16 * bg_fetcher.tile_number + y_offset + 1);
+        else
+            bg_fetcher.data_high = VRAM(0x9000 + 16 * (int8_t) bg_fetcher.tile_number + y_offset + 1);
         bg_fetcher.mode = PUSH;
         break;
     case PUSH:
@@ -344,12 +369,21 @@ step_mixer()
     else if (LCDC_ENABLE_OBJ)
         color = ppu.OBP[pixel.palette] >> (2 * pixel.color);
 
+    // this is where we increment ppu.lx
     uint16_t lcd_index = ppu.LY * LCD_WIDTH + ppu.lx++;
     ppu.lcd[lcd_index] = LCD_COLORS[color & 0x03];
 
+    if (!bg_fetcher.window_active && ppu.window_condition && LCDC_ENABLE_WINDOW && ppu.lx + 7 >= ppu.WX) {
+        bg_fetcher.window_active = true;
+        bg_fetcher.tile = 32 * (bg_fetcher.win_line_counter / 8);
+        pixel_mixer.bg_pixels_len = 0;
+        bg_fetcher.mode = GET_TILE;
+        bg_fetcher.delay = 1;
+    } else
+        pixel_mixer.bg_pixels_len--;
+
     memmove(pixel_mixer.obj_pixels, pixel_mixer.obj_pixels + 1, 7 * sizeof(obj_pixel_t));
     memset(pixel_mixer.obj_pixels + 7, 0, sizeof(obj_pixel_t));
-    pixel_mixer.bg_pixels_len--;
     obj_fetcher.mode = CHECK_X;
     obj_fetcher.searched = 0;
 }
@@ -381,22 +415,26 @@ dot_cycle(void)
 
     ppu.frame_dot++;
     if (ppu.frame_dot % DOTS_PER_SCANLINE == 0) {
-        ppu.LY = (ppu.LY + 1) % SCANLINES_PER_FRAME;
+        ppu.LY++;
+        if (bg_fetcher.window_active)
+            bg_fetcher.win_line_counter++;
         check_lyc_interrupt();
         if (ppu.LY >= SCANLINES_PER_FRAME) {
             // finished a frame
             ppu.LY = 0;
             ppu.frame_dot = 0;
             ppu.window_condition = false;
+            bg_fetcher.win_line_counter = 0;
         }
 
         if (ppu.LY == LCD_HEIGHT) {
             PPU_MODE_SET(PPU_MODE_VBLANK);
-            bg_fetcher.win_line_counter = 0;
             ppu.irq->IF |= 1;
             // do i need vblank interrupts? will do later
         } else if (ppu.LY < LCD_HEIGHT) {
             PPU_MODE_SET(PPU_MODE_OAM_SCAN);
+            if (ppu.LY == ppu.WY)
+                ppu.window_condition = true;
         }
         ppu.oam_scan_count = 0;
     }
