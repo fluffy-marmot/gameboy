@@ -33,3 +33,4 @@ TODO:
 - joypad input
 - DMA
 - blocking VRAM access during certain times etc.
+- proper delay of BG fetcher when transitioning back from sprites, after reset?
