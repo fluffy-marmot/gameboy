@@ -3,9 +3,21 @@
 
 #include "bus.h"
 
+typedef enum {
+    INTERRUPT_VBLANK,
+    INTERRUPT_STAT,
+    INTERRUPT_TIMER,
+    INTERRUPT_SERIAL,
+    INTERRUPT_JOYPAD,
+    INTERRUPT_NONE
+} interrupt_t;
+
 typedef struct {
     uint8_t IE;
     uint8_t IF;
+
+    interrupt_t (*check_next_enabled_and_requested) (void);
+    memaddr     (*call_interrupt)                   (interrupt_t);
 } gb_irq_handler_t;
 
 gb_irq_handler_t *init_gameboy_irq(gb_bus_t *);

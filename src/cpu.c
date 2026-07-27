@@ -1489,13 +1489,7 @@ ready_interrupt()
 {
     cpu.IME = 0;
     SP_dec();
-    for (int i = 0; i <= 4; i++) {
-        if (cpu.irq->IE & cpu.irq->IF & (MASK_BIT_L << i)) {
-            cpu.WZ = ADDR_INTERRUPT_VBLANK + 0x08 * i;                   // TODO could maybe improve instead of hardcoded logic
-            cpu.irq->IF ^= (MASK_BIT_L << i);
-            break;
-        }
-    }
+    cpu.WZ = cpu.irq->call_interrupt(cpu.irq->check_next_enabled_and_requested());
 }
 
 static void halt() {
@@ -1798,7 +1792,7 @@ fetch_instruction()
         cpu.instruction = &CB_OPCODE_TABLE[cpu.IR];
         cpu.cb_instruction = 0;
         cpu.cycle_num = 1;
-    } else if (cpu.IME && (cpu.irq->IE & cpu.irq->IF & 0x1F)) {
+    } else if (cpu.IME && (cpu.irq->check_next_enabled_and_requested() != INTERRUPT_NONE )) {
         cpu.instruction = &____INTERRUPT_HANDLER;
         cpu.cycle_num = 0;
     } else {
