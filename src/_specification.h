@@ -28,7 +28,11 @@
 #define LCD_WIDTH                               160
 #define LCD_HEIGHT                              144
 
+#define DOTS_PER_SECOND                         4194304             // 2^22 = 4 Mihz
+#define DOTS_PER_FRAME                          70224
 #define DOTS_PER_SCANLINE                       456
+#define DOTS_PER_MACHINE_CYCLE                  4
+#define MACHINE_CYCLES_PER_FRAME                17556
 #define SCANLINES_PER_FRAME                     154
 #define SCANLINE_MAX_OBJS                       10
 
@@ -96,6 +100,13 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 #define MEMADDR_OBP1                            0xFF49
 #define MEMADDR_WY                              0xFF4A
 #define MEMADDR_WX                              0xFF4B
+
+// Timer registers
+#define MEMADDR_DIV                             0xFF04
+#define MEMADDR_TIMA                            0xFF05
+#define MEMADDR_TMA                             0xFF06
+#define MEMADDR_TAC                             0xFF07
+
 
 // Because of hardware design, default when memory is inaccessible is 1 bits
 #define UNREADABLE                              0xFF

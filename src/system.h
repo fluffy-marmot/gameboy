@@ -7,17 +7,20 @@
 #include "cpu.h"
 #include "irq.h"
 #include "ppu.h"
+#include "timers.h"
 
 typedef struct {
     gb_cpu_t *cpu;
     gb_bus_t *bus;
     gb_ppu_t *ppu;
+    gb_timers_t *timers;
 
     gb_irq_handler_t *irq;
 } gb_gameboy_t;
 
 // ABI
 void set_post_boot_state(void);
+void emulate_frame(void);
 
 // ABI
 

@@ -27,6 +27,7 @@ typedef struct {
     bus_interface_t *interface_reg_bootlock;
     bus_interface_t *interface_reg_ppu;
     bus_interface_t *interface_reg_interrupt;
+    bus_interface_t *interface_reg_timers;
 
     bus_interface_t *interface_nop;
 

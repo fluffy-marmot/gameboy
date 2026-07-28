@@ -80,6 +80,11 @@ select_interface(memaddr address)
     case MEMADDR_IF:                                    
     case MEMADDR_IE:                                                    return bus.interface_reg_interrupt;
 
+    case MEMADDR_DIV:
+    case MEMADDR_TIMA:
+    case MEMADDR_TMA:
+    case MEMADDR_TAC:                                                   return bus.interface_reg_timers;
+
     case MEMADDR_LCDC:
     case MEMADDR_STAT:
     case MEMADDR_SCY:

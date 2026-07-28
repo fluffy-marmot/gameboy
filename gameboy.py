@@ -3,6 +3,7 @@ import ctypes
 import math
 import pathlib
 import sys
+from time import perf_counter
 
 import numpy as np
 import pygame
@@ -53,15 +54,17 @@ def main() -> None:
                 raise SystemExit
             elif event.type in [pygame.KEYDOWN, pygame.KEYUP]:
                 pass
-
-        for _ in range(456 * 154 // 4):
-            result = GB.tick_machine_cycle()
-            # print(f"{cpu.PC:#X}  --  {result & 0xFF:#X}")
-            # if (result >> 8 == 0):
-                # f.write(f"A:{cpu.A:02X} F:{cpu.F:02X} B:{cpu.B:02X} C:{cpu.C:02X} D:{cpu.D:02X} E:{cpu.E:02X} H:{cpu.H:02X} L:{cpu.L:02X} SP:{cpu.SP:04X} PC:{cpu.PC:04X} PCMEM:{GB.read_bus_dispatch(cpu.PC):02X},{GB.read_bus_dispatch(cpu.PC + 1):02X},{GB.read_bus_dispatch(cpu.PC +2):02X},{GB.read_bus_dispatch(cpu.PC+3):02X}\n")
-            for _ in range(4):
-                GB.dot_cycle()
-                dot += 1
+        frame_start = perf_counter()
+        # for _ in range(456 * 154 // 4):
+        #     result = GB.tick_machine_cycle()
+        #     # print(f"{cpu.PC:#X}  --  {result & 0xFF:#X}")
+        #     # if (result >> 8 == 0):
+        #         # f.write(f"A:{cpu.A:02X} F:{cpu.F:02X} B:{cpu.B:02X} C:{cpu.C:02X} D:{cpu.D:02X} E:{cpu.E:02X} H:{cpu.H:02X} L:{cpu.L:02X} SP:{cpu.SP:04X} PC:{cpu.PC:04X} PCMEM:{GB.read_bus_dispatch(cpu.PC):02X},{GB.read_bus_dispatch(cpu.PC + 1):02X},{GB.read_bus_dispatch(cpu.PC +2):02X},{GB.read_bus_dispatch(cpu.PC+3):02X}\n")
+        #     for _ in range(4):
+        #         GB.dot_cycle()
+        #         dot += 1
+        GB.emulate_frame()
+        print(f"Frame took {perf_counter() - frame_start:.6f}")
 
         window_draw(screen, render_surface)
         pygame.display.flip()

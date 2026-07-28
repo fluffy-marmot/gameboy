@@ -28,9 +28,11 @@ test bit was setting wrong H flag, this fixes a lot...everything else
 
 TODO:
 - full halt bug behavior
+- stop instruction?
 X full interrupt and STAT low -> high behavior
 - timers
 - joypad input
 - DMA
 - blocking VRAM access during certain times etc.
 - proper delay of BG fetcher when transitioning back from sprites, after reset?
+- before MBC: tetris, doctor mario

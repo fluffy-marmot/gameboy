@@ -83,6 +83,9 @@ GB.tick_machine_cycle.argtypes = []
 GB.dot_cycle.restype = None
 GB.dot_cycle.argtypes = []
 
+GB.emulate_frame.restype = None
+GB.emulate_frame.argtypes = []
+
 GB.get_lcd.argtypes = []
 GB.get_lcd.restype = ctypes.POINTER(ctypes.c_uint32)
 LCD = GB.get_lcd()
