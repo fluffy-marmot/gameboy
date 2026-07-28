@@ -5,10 +5,10 @@
 #include "irq.h"
 
 typedef struct {
-    uint16_t DIV;
-    uint8_t TIMA;
-    uint8_t TMA;
-    uint8_t TAC;
+    uint16_t DIV;                               // Divider register
+    uint8_t TIMA;                               // Timer counter register
+    uint8_t TMA;                                // Timer modulo register
+    uint8_t TAC;                                // Timer control register
 
     uint8_t timer_operation_stored;
     uint8_t tima_overflow_cycles;

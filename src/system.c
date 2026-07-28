@@ -12,6 +12,7 @@ boot_system (void)
     gb.irq = init_gameboy_irq(gb.bus);
     gb.cpu = init_gameboy_cpu(gb.bus, gb.irq);
     gb.ppu = init_gameboy_ppu(gb.bus, gb.irq);
+    gb.dma = init_gameboy_dma(gb.bus);
     gb.timers = init_gameboy_timers(gb.bus, gb.irq);
     
     if (init_bootrom(BOOT_ROM, gb.bus) == -1)
@@ -28,6 +29,7 @@ void
 emulate_frame(void)
 {
     for (int mcycle = 0; mcycle < MACHINE_CYCLES_PER_FRAME; mcycle++) {
+        cycle_mcycle_dma();
         tick_machine_cycle();
         for (int dot = 0; dot < 4; dot++) {
             cycle_tcycle_timers();

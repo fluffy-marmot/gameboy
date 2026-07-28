@@ -29,9 +29,13 @@ typedef struct {
     bus_interface_t *interface_reg_interrupt;
     bus_interface_t *interface_reg_timers;
 
+    bus_interface_t *interface_dma;
+
     bus_interface_t *interface_nop;
 
     uint8_t BOOT_ROM_LOCK;
+
+    struct gb_dma *dma;
 } gb_bus_t;
 
 gb_bus_t *init_gameboy_bus(void);

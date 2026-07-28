@@ -21,7 +21,7 @@
 #define GB_DMG_BOOT_ROM_SIZE                    (256 * BYTES)
 
 // Cartridge
-#define CARTRIDGE_ROM                           "dmg-acid2.gb"
+#define CARTRIDGE_ROM                           "gb-test-roms/drmario.gb"
 #define ROM_SIZE                                (32 * KiB)
 
 // LCD Display and PPU (Picture Processing Unit)
@@ -87,6 +87,7 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 
 // Only writeable to unmap boot ROM from memory once
 #define MEMADDR_BOOT_ROM_LOCK                   0xFF50
+#define MEMADDR_DMA                             0xFF46
 
 // PPU registers
 #define MEMADDR_LCDC                            0xFF40

@@ -1,5 +1,6 @@
 #include "_specification.h"
 #include "bus.h"
+#include "dma.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +13,7 @@
 #define MASK_ECHO_RAM                           0b0001111111111111
 
 #define ADDR_RANGE(low, high)                   ((low <= address) && (address <= high))
+#define ADDRESS_FF_BUS(address)                 ((address & 0xFF00) == 0xFF00)
 
 
 static gb_bus_t bus;
@@ -80,6 +82,8 @@ select_interface(memaddr address)
     case MEMADDR_IF:                                    
     case MEMADDR_IE:                                                    return bus.interface_reg_interrupt;
 
+    case MEMADDR_DMA:                                                   return bus.interface_dma;
+
     case MEMADDR_DIV:
     case MEMADDR_TIMA:
     case MEMADDR_TMA:
@@ -103,9 +107,13 @@ select_interface(memaddr address)
 
 // The main dispatcher interface using select_interface function to pass on bus requests
 uint8_t read_bus_dispatch (memaddr address) {
+    if (bus.dma->status == DMA_TRANSFER_ACTIVE && !ADDRESS_FF_BUS(address))
+        return bus.dma->data;
     return select_interface(address)->read(address);
 }
 static void write_bus_dispatch(memaddr address, uint8_t val) {
+    if (bus.dma->status == DMA_TRANSFER_ACTIVE && !ADDRESS_FF_BUS(address))
+        return;
     select_interface(address)->write(address, val);
 }
 static bus_interface_t bus_dispatcher = { .read = read_bus_dispatch, .write = write_bus_dispatch };

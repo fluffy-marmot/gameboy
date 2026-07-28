@@ -5,6 +5,7 @@
 #include "bus.h"
 #include "cartridge.h"
 #include "cpu.h"
+#include "dma.h"
 #include "irq.h"
 #include "ppu.h"
 #include "timers.h"
@@ -12,6 +13,7 @@
 typedef struct {
     gb_cpu_t *cpu;
     gb_bus_t *bus;
+    gb_dma_t *dma;
     gb_ppu_t *ppu;
     gb_timers_t *timers;
 

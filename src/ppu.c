@@ -60,7 +60,7 @@
 #define OAM_PALETTE(i)              ((OAM_FLAGS(i) & OAM_FLAG_BIT_PALETTE) >> 4)
 
 #define VRAM(address)               (ppu.vram[(address) - ADDR_START_VRAM])
-#define  OAM(address)               (ppu.oam [(address) - ADDR_START_OAM_MEM])
+#define  OAM(address)               (ppu.oam [((address) - ADDR_START_OAM_MEM) % GB_DMG_OAM_SIZE])
 
 // mix bit i of the high and low bytes into a 2 bit palette index
 #define MIX_HIGH_LOW(high, low, i)  ((((high & (1 << i)) >> i) << 1) | ((low & (1 << i)) >> i))

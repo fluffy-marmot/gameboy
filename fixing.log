@@ -30,9 +30,16 @@ TODO:
 - full halt bug behavior
 - stop instruction?
 X full interrupt and STAT low -> high behavior
-- timers
+X timers
 - joypad input
-- DMA
-- blocking VRAM access during certain times etc.
+X DMA + blocking VRAM access during certain times etc.
 - proper delay of BG fetcher when transitioning back from sprites, after reset?
+- ppu OAM block during DMA transfer unimplemented 
 - before MBC: tetris, doctor mario
+
+- HMMM: This is most likely an issue with the PPU STAT register ($FF41), specifically with the PPU mode bits. Dr.
+Mario turns off the LCD and runs an infinite loop until the mode bits read zero, which should be the case
+immediately after turning off the LCD, as this resets the PPU mode to zero.
+
+- kind of going to the weeds but during the 161 mcycles of DMA, when does ppu lose access to OAM? already during
+the first setup phase? how about on last mcycle?
