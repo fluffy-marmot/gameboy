@@ -55,6 +55,19 @@ def main() -> None:
             elif event.type in [pygame.KEYDOWN, pygame.KEYUP]:
                 pass
         frame_start = perf_counter()
+
+        keys = pygame.key.get_pressed()
+        print(keys)
+        GB.update_joypad(
+            not keys[pygame.K_RETURN],
+            not keys[pygame.K_SPACE],
+            not keys[pygame.K_a],
+            not keys[pygame.K_s],
+            not keys[pygame.K_DOWN],
+            not keys[pygame.K_UP],
+            not keys[pygame.K_LEFT],
+            not keys[pygame.K_RIGHT]
+        )
         # for _ in range(456 * 154 // 4):
         #     result = GB.tick_machine_cycle()
         #     # print(f"{cpu.PC:#X}  --  {result & 0xFF:#X}")
@@ -64,7 +77,7 @@ def main() -> None:
         #         GB.dot_cycle()
         #         dot += 1
         GB.emulate_frame()
-        print(f"Frame took {perf_counter() - frame_start:.6f}")
+        # print(f"Frame took {perf_counter() - frame_start:.6f}")
 
         window_draw(screen, render_surface)
         pygame.display.flip()

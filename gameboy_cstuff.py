@@ -94,3 +94,6 @@ LCD = GB.get_lcd()
 
 GB.set_post_boot_state.argtypes = []
 GB.set_post_boot_state.restype = None
+
+GB.update_joypad.argtypes = [ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool]
+GB.update_joypad.restype = None
