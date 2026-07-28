@@ -21,7 +21,7 @@
 #define GB_DMG_BOOT_ROM_SIZE                    (256 * BYTES)
 
 // Cartridge
-#define CARTRIDGE_ROM                           "gb-test-roms/drmario.gb"
+#define CARTRIDGE_ROM                           "gb-test-roms/tetris.gb"
 #define ROM_SIZE                                (32 * KiB)
 
 // LCD Display and PPU (Picture Processing Unit)
