@@ -57,7 +57,7 @@ def main() -> None:
         frame_start = perf_counter()
 
         keys = pygame.key.get_pressed()
-        print(keys)
+        # print(keys)
         GB.update_joypad(
             not keys[pygame.K_RETURN],
             not keys[pygame.K_SPACE],

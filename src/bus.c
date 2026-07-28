@@ -83,6 +83,8 @@ select_interface(memaddr address)
     case MEMADDR_IE:                                                    return bus.interface_reg_interrupt;
 
     case MEMADDR_DMA:                                                   return bus.interface_dma;
+    
+    case MEMADDR_JOYP:                                                  return bus.interface_reg_joypad;
 
     case MEMADDR_DIV:
     case MEMADDR_TIMA:
