@@ -27,21 +27,20 @@
 #define LCDC_ENABLE_OBJ             (ppu.LCDC & LCDC_BIT_OBJ_ENABLE)
 #define LCDC_ENABLE_PRIORITY        (ppu.LCDC & LCDC_BIT_BG_WIN_PRIORITY)
 
+#define STAT_LYC_INT_SELECT         (ppu.STAT & STAT_BIT_LYC_INT_SELECT)
+#define STAT_MD2_INT_SELECT         (ppu.STAT & STAT_BIT_MD2_INT_SELECT)
+#define STAT_MD1_INT_SELECT         (ppu.STAT & STAT_BIT_MD1_INT_SELECT)
+#define STAT_MD0_INT_SELECT         (ppu.STAT & STAT_BIT_MD0_INT_SELECT)
+#define STAT_EQL                    (ppu.STAT & STAT_BIT_EQL)
+
 // 8px or 16px sprite heights
 #define OBJ_HEIGHT                  ((((ppu.LCDC & LCDC_BIT_OBJ_HEIGHT) >> 2) + 1) * 8)
 #define WIN_TILE_MAP                (((ppu.LCDC & LCDC_BIT_WIN_TILEMAP) >> 6) ? 0x9C00 : 0x9800)
 #define BG_TILE_MAP                 (((ppu.LCDC & LCDC_BIT_BG_TILE_MAP) >> 3) ? 0x9C00 : 0x9800)
 #define BG_TILE_DATA_METHOD         ((ppu.LCDC & LCDC_BIT_BG_WIN_TILES) >> 4)
 
-#define STAT_COMPARE_LYC_LY         (ppu.STAT = (ppu.STAT & (STAT_BIT_EQL ^ 0xFF)) | ((ppu.LY == ppu.LYC) << 2))
-
 #define PPU_MODE_MASK               0b00000011
 #define PPU_MODE                    (ppu.STAT & PPU_MODE_MASK)
-#define PPU_MODE_SET(mode)          (ppu.STAT = (ppu.STAT & (PPU_MODE_MASK ^ 0xFF)) | (mode))
-#define PPU_MODE_HBLANK             0b00000000
-#define PPU_MODE_VBLANK             0b00000001
-#define PPU_MODE_OAM_SCAN           0b00000010
-#define PPU_MODE_DRAWING            0b00000011
 
 // macros regarding object attribute memory and an object's flag byte
 #define OAM_FLAG_BIT_PRIORITY       0b10000000
@@ -68,6 +67,13 @@
 #define TILEMAP_W                   32
 #define LOW                         0
 #define HIGH                        1
+
+typedef enum {
+    PPU_MODE_HBLANK,
+    PPU_MODE_VBLANK,
+    PPU_MODE_OAM_SCAN,
+    PPU_MODE_DRAWING
+} ppu_mode_t;
 
 // for current status of background and object fetchers
 typedef enum {
@@ -134,13 +140,32 @@ static const uint32_t LCD_COLORS[4] = {
 
 static gb_ppu_t ppu;
 
-static void // TODO move to irq.c
-check_lyc_interrupt(void)
+static void 
+update_stat_interrupt(void)
 {
-    STAT_COMPARE_LYC_LY;
-    if (ppu.LY == ppu.LYC) {
-        ppu.irq->IF |= 2;
-    }
+    ppu.irq->update_stat_interrupt_line(
+        (STAT_LYC_INT_SELECT &&  STAT_EQL                      ) ||
+        (STAT_MD0_INT_SELECT && (PPU_MODE == PPU_MODE_HBLANK  )) ||
+        (STAT_MD1_INT_SELECT && (PPU_MODE == PPU_MODE_VBLANK  )) ||
+        (STAT_MD2_INT_SELECT && (PPU_MODE == PPU_MODE_OAM_SCAN))
+    );
+}
+
+// set bit 2 of STAT register based on LYC == LY comparison, return true if a CHANGE occurred
+static void
+stat_compare_ly_lyc(void)
+{
+    uint8_t old_val = STAT_EQL;
+    ppu.STAT = (ppu.STAT & (STAT_BIT_EQL ^ 0xFF)) | ((ppu.LY == ppu.LYC) << 2);
+    if (old_val != STAT_EQL)
+        update_stat_interrupt();
+}
+
+static void
+ppu_set_mode(ppu_mode_t mode)
+{
+    ppu.STAT = (ppu.STAT & (PPU_MODE_MASK ^ 0xFF)) | mode;
+    update_stat_interrupt();
 }
 
 static uint8_t
@@ -170,7 +195,7 @@ write_ppu_reg(memaddr address, uint8_t val)
     case MEMADDR_SCY:               ppu.SCY    = val;                                            break;
     case MEMADDR_SCX:               ppu.SCX    = val;                                            break;
     case MEMADDR_LY:                                                                             break;                                 
-    case MEMADDR_LYC:               ppu.LYC    = val; check_lyc_interrupt();                     break;
+    case MEMADDR_LYC:               ppu.LYC    = val; stat_compare_ly_lyc();                     break;
     case MEMADDR_BGP:               ppu.BGP    = val;                                            break;
     case MEMADDR_OBP0:              ppu.OBP[0] = val;                                            break;
     case MEMADDR_OBP1:              ppu.OBP[1] = val;                                            break;
@@ -412,7 +437,7 @@ dot_cycle(void)
             oam_scan_step();
         if (ppu.line_dot == SCANLINE_FINAL_OAM_SCAN_DOT) {
             transition_draw_mode();
-            PPU_MODE_SET(PPU_MODE_DRAWING);
+            ppu_set_mode(PPU_MODE_DRAWING);
         }
         break;
     case PPU_MODE_DRAWING:
@@ -422,7 +447,7 @@ dot_cycle(void)
             step_bg_fetcher();
             step_mixer();
             if (ppu.lx == LCD_WIDTH)
-                PPU_MODE_SET(PPU_MODE_HBLANK);
+                ppu_set_mode(PPU_MODE_HBLANK);
         }
         break;
     case PPU_MODE_HBLANK:
@@ -440,14 +465,14 @@ dot_cycle(void)
             bg_fetcher.window_condition = false;
             bg_fetcher.window_line = 0;
         }
-        check_lyc_interrupt();
+        stat_compare_ly_lyc();
 
         if (ppu.LY < LCD_HEIGHT) {
-            PPU_MODE_SET(PPU_MODE_OAM_SCAN);
+            ppu_set_mode(PPU_MODE_OAM_SCAN);
             if (ppu.LY == ppu.WY)
                 bg_fetcher.window_condition = true;
         } else if (ppu.LY == LCD_HEIGHT) {
-            PPU_MODE_SET(PPU_MODE_VBLANK);
+            ppu_set_mode(PPU_MODE_VBLANK);
             ppu.irq->IF |= 1;
         }
 

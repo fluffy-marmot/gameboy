@@ -4,6 +4,13 @@
 #define BIT                         0b00000001
 
 static gb_irq_handler_t irq_handler;
+static uint8_t stat_interrupt_line;
+
+// trigger STAT interrupts only on low to high transitions
+void update_stat_interrupt_line(uint8_t new_value) {
+    if (!stat_interrupt_line && (stat_interrupt_line = new_value))
+        irq_handler.IF |= (1 << INTERRUPT_STAT);
+}
 
 static interrupt_t
 check_next_enabled_and_requested(void)
@@ -57,6 +64,7 @@ static bus_interface_t bus_registers_interrupt = { read_interrupt_registers, wri
 gb_irq_handler_t *
 init_gameboy_irq(gb_bus_t *bus)
 {
+    irq_handler.update_stat_interrupt_line = update_stat_interrupt_line;
     irq_handler.check_next_enabled_and_requested = check_next_enabled_and_requested;
     irq_handler.call_interrupt = call_interrupt;
     bus->interface_reg_interrupt = &bus_registers_interrupt;
