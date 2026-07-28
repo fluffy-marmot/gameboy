@@ -28,7 +28,7 @@ test bit was setting wrong H flag, this fixes a lot...everything else
 
 TODO:
 - full halt bug behavior
-- full interrupt and STAT low -> high behavior
+X full interrupt and STAT low -> high behavior
 - timers
 - joypad input
 - DMA

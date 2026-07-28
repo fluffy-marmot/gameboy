@@ -3,6 +3,12 @@
 
 #include "bus.h"
 
+#define INTERRUPT_BIT_VBLANK        0b00000001
+#define INTERRUPT_BIT_STAT          0b00000010
+#define INTERRUPT_BIT_TIMER         0b00000100
+#define INTERRUPT_BIT_SERIAL        0b00001000
+#define INTERRUPT_BIT_JOYPAD        0b00010000
+
 typedef enum {
     INTERRUPT_VBLANK,
     INTERRUPT_STAT,

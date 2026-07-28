@@ -473,7 +473,7 @@ dot_cycle(void)
                 bg_fetcher.window_condition = true;
         } else if (ppu.LY == LCD_HEIGHT) {
             ppu_set_mode(PPU_MODE_VBLANK);
-            ppu.irq->IF |= 1;
+            ppu.irq->IF |= INTERRUPT_BIT_VBLANK;
         }
 
         ppu.line_dot = 0;
