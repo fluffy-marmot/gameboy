@@ -114,6 +114,7 @@ static struct {
     uint8_t discard;
 
     obj_pixel_t obj_pixels[8]; // TODO remove mem copy stuff, use wraparound
+    uint8_t obj_pixels_index;
     uint8_t bg_pixels[8];
     uint8_t bg_pixels_len;
 } pixel_mixer;
@@ -221,7 +222,7 @@ push_obj_pixels(void)
 {
     for (int i = 7; i >= 0; i--) {
         uint8_t oam_index = ppu.obj_buffer[obj_fetcher.buf_index];
-        uint8_t idx = OAM_XFLIP(oam_index) ? i : 7 - i;
+        uint8_t idx = ((OAM_XFLIP(oam_index) ? i : 7 - i) + pixel_mixer.obj_pixels_index) % 8;
         // Ignore this pixel if the obj pixel FIFO already has a non-transparent pixel
         if (pixel_mixer.obj_pixels[idx].color)
             continue;
@@ -368,20 +369,20 @@ step_mixer()
     if (pixel_mixer.bg_pixels_len == 0) return;
     if (pixel_mixer.discard && pixel_mixer.discard-- && pixel_mixer.bg_pixels_len--) return;
 
-    obj_pixel_t pixel = pixel_mixer.obj_pixels[0];
+    obj_pixel_t pixel = pixel_mixer.obj_pixels[pixel_mixer.obj_pixels_index];
     uint8_t bg_color_index = pixel_mixer.bg_pixels[pixel_mixer.bg_pixels_len - 1];
     uint8_t color = 0b00;
+
     if (LCDC_ENABLE_PRIORITY && (!LCDC_ENABLE_OBJ || !pixel.color || (pixel.bg_priority && bg_color_index)))
-        color = ppu.BGP >> (2 * bg_color_index);
+        color = (ppu.BGP >> (2 * bg_color_index)) & 0b11;
     else if (LCDC_ENABLE_OBJ)
-        color = ppu.OBP[pixel.palette] >> (2 * pixel.color);
+        color = (ppu.OBP[pixel.palette] >> (2 * pixel.color)) & 0b11;
 
     /*  this is where we increment ppu.lx
         lcd_index uses column-first ordering currently b/c it's usable by pygame w/o transposing */
-    uint16_t lcd_index = LCD_HEIGHT * ppu.lx++ + ppu.LY;
-    ppu.lcd[lcd_index] = LCD_COLORS[color & 0x03];
+    ppu.lcd[LCD_HEIGHT * ppu.lx++ + ppu.LY] = LCD_COLORS[color];
 
-    if (!bg_fetcher.window_active && bg_fetcher.window_condition && LCDC_ENABLE_WINDOW && ppu.lx + 7 >= ppu.WX) {
+    if (!bg_fetcher.window_active && check_window_ready()) {
         bg_fetcher.window_active = true;
         bg_fetcher.tile_map_index = 32 * (bg_fetcher.window_line / 8);
         pixel_mixer.bg_pixels_len = 0;
@@ -389,9 +390,9 @@ step_mixer()
         bg_fetcher.delay = 1;
     } else
         pixel_mixer.bg_pixels_len--;
-
-    memmove(pixel_mixer.obj_pixels, pixel_mixer.obj_pixels + 1, 7 * sizeof(obj_pixel_t));
-    memset(pixel_mixer.obj_pixels + 7, 0, sizeof(obj_pixel_t));
+        
+    pixel_mixer.obj_pixels[pixel_mixer.obj_pixels_index++].color = 0;
+    pixel_mixer.obj_pixels_index %= 8;
     obj_fetcher.mode = CHECK_OBJ_X;
     obj_fetcher.buf_index = 0;
 }
