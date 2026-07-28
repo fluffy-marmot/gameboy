@@ -13,6 +13,7 @@ boot_system (void)
     gb.cpu = init_gameboy_cpu(gb.bus, gb.irq);
     gb.ppu = init_gameboy_ppu(gb.bus, gb.irq);
     gb.dma = init_gameboy_dma(gb.bus);
+    gb.joypad = init_gameboy_joypad(gb.bus);
     gb.timers = init_gameboy_timers(gb.bus, gb.irq);
     
     if (init_bootrom(BOOT_ROM, gb.bus) == -1)
@@ -20,11 +21,9 @@ boot_system (void)
 
     if (init_cartridge(CARTRIDGE_ROM, gb.bus) == -1)
         printf("Error loading cartridge rom file: %s\n", CARTRIDGE_ROM);
-    
-    // on init - map boot ROM to 0x0000 - 0x00FF
 }
 
-// TODO better abi interface and maybe cycle methods in structs?
+// TODO better abi interface and maybe cycle methods in structs? also name convention on them
 void
 emulate_frame(void)
 {

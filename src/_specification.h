@@ -81,13 +81,15 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 
 /* --Addressable hardware registers-- */
 
+#define MEMADDR_JOYP                            0xFF00
+#define MEMADDR_DMA                             0xFF46
+
 // Interrupt flags and individual interrupt enables
 #define MEMADDR_IF                              0xFF0F
 #define MEMADDR_IE                              0xFFFF
 
 // Only writeable to unmap boot ROM from memory once
 #define MEMADDR_BOOT_ROM_LOCK                   0xFF50
-#define MEMADDR_DMA                             0xFF46
 
 // PPU registers
 #define MEMADDR_LCDC                            0xFF40

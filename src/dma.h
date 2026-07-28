@@ -3,8 +3,6 @@
 
 #include "bus.h"
 
-#include <stdint.h>
-
 typedef enum {
     DMA_TRANSFER_INACTIVE,
     DMA_TRANSFER_ACTIVE
