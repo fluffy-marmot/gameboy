@@ -63,10 +63,10 @@ def main() -> None:
             not keys[pygame.K_SPACE],
             not keys[pygame.K_a],
             not keys[pygame.K_s],
-            not keys[pygame.K_DOWN],
-            not keys[pygame.K_UP],
-            not keys[pygame.K_LEFT],
-            not keys[pygame.K_RIGHT]
+            not keys[pygame.K_k],
+            not keys[pygame.K_i],
+            not keys[pygame.K_j],
+            not keys[pygame.K_l]
         )
         # for _ in range(456 * 154 // 4):
         #     result = GB.tick_machine_cycle()
