@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+// stuff with PPU addressable registers
 #define LCDC_BIT_PPU_ENABLE         0b10000000
 #define LCDC_BIT_WIN_TILEMAP        0b01000000
 #define LCDC_BIT_WIN_ENABLE         0b00100000
@@ -21,11 +22,6 @@
 #define STAT_BIT_MD1_INT_SELECT     0b00010000
 #define STAT_BIT_MD0_INT_SELECT     0b00001000
 #define STAT_BIT_EQL                0b00000100
-
-#define OAM_FLAG_BIT_PRIORITY       0b10000000
-#define OAM_FLAG_BIT_YFLIP          0b01000000
-#define OAM_FLAG_BIT_XFLIP          0b00100000
-#define OAM_FLAG_BIT_PALETTE        0b00010000
 
 #define LCDC_ENABLE_WINDOW          (ppu.LCDC & LCDC_BIT_WIN_ENABLE)
 #define LCDC_ENABLE_OBJ             (ppu.LCDC & LCDC_BIT_OBJ_ENABLE)
@@ -47,6 +43,12 @@
 #define PPU_MODE_OAM_SCAN           0b00000010
 #define PPU_MODE_DRAWING            0b00000011
 
+// macros regarding object attribute memory and an object's flag byte
+#define OAM_FLAG_BIT_PRIORITY       0b10000000
+#define OAM_FLAG_BIT_YFLIP          0b01000000
+#define OAM_FLAG_BIT_XFLIP          0b00100000
+#define OAM_FLAG_BIT_PALETTE        0b00010000
+
 #define OAM_Y(i)                    (ppu.oam[(i) * 4])
 #define OAM_X(i)                    (ppu.oam[(i) * 4 + 1])
 #define OAM_TILE_INDEX(i)           (ppu.oam[(i) * 4 + 2])
@@ -60,11 +62,14 @@
 #define VRAM(address)               (ppu.vram[(address) - ADDR_START_VRAM])
 #define  OAM(address)               (ppu.oam [(address) - ADDR_START_OAM_MEM])
 
+// mix bit i of the high and low bytes into a 2 bit palette index
 #define MIX_HIGH_LOW(high, low, i)  ((((high & (1 << i)) >> i) << 1) | ((low & (1 << i)) >> i))
 
+#define TILEMAP_W                   32
 #define LOW                         0
 #define HIGH                        1
 
+// for current status of background and object fetchers
 typedef enum {
     GET_TILE,
     GET_DATA_LOW,
@@ -74,6 +79,7 @@ typedef enum {
     IDLE
 } fetcher_mode_t;
 
+// choose between the two addressing modes for interpreting tile data indices
 typedef enum {
     TILE_METHOD_8800,
     TILE_METHOD_8000
@@ -113,7 +119,7 @@ static struct {
     uint8_t warmup;
     uint8_t discard;
 
-    obj_pixel_t obj_pixels[8]; // TODO remove mem copy stuff, use wraparound
+    obj_pixel_t obj_pixels[8];
     uint8_t obj_pixels_index;
     uint8_t bg_pixels[8];
     uint8_t bg_pixels_len;
@@ -257,9 +263,9 @@ transition_draw_mode(void)
     bg_fetcher.delay = 5;
     bg_fetcher.window_active = check_window_ready();
     if (bg_fetcher.window_active) {
-        bg_fetcher.tile_map_index = 32 * (bg_fetcher.window_line / 8);
+        bg_fetcher.tile_map_index = TILEMAP_W * (bg_fetcher.window_line / 8);
     } else {
-        bg_fetcher.tile_map_index = 32 * (((ppu.LY + ppu.SCY) % 256) / 8) + ppu.SCX / 8;
+        bg_fetcher.tile_map_index = TILEMAP_W * (((ppu.LY + ppu.SCY) % 256) / 8) + ppu.SCX / 8;
         pixel_mixer.discard = ppu.SCX % 8;
     }
 
@@ -328,7 +334,7 @@ step_bg_fetcher(void)
             (bg_fetcher.window_active ? WIN_TILE_MAP : BG_TILE_MAP) + bg_fetcher.tile_map_index
         );
         // increment tile index but wrap to start of same row if past column 31
-        if (++bg_fetcher.tile_map_index % 32 == 0) bg_fetcher.tile_map_index -= 32;
+        if (++bg_fetcher.tile_map_index % TILEMAP_W == 0) bg_fetcher.tile_map_index -= TILEMAP_W;
         bg_fetcher.mode = GET_DATA_LOW;
         bg_fetcher.delay = 1;
         break;
@@ -384,7 +390,7 @@ step_mixer()
 
     if (!bg_fetcher.window_active && check_window_ready()) {
         bg_fetcher.window_active = true;
-        bg_fetcher.tile_map_index = 32 * (bg_fetcher.window_line / 8);
+        bg_fetcher.tile_map_index = TILEMAP_W * (bg_fetcher.window_line / 8);
         pixel_mixer.bg_pixels_len = 0;
         bg_fetcher.mode = GET_TILE;
         bg_fetcher.delay = 1;
