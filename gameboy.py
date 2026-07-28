@@ -3,6 +3,7 @@ import ctypes
 import math
 import pathlib
 import sys
+from collections import deque
 from time import perf_counter
 
 import numpy as np
@@ -43,6 +44,7 @@ def main() -> None:
     f.write(f"A:{cpu.A:02X} F:{cpu.F:02X} B:{cpu.B:02X} C:{cpu.C:02X} D:{cpu.D:02X} E:{cpu.E:02X} H:{cpu.H:02X} L:{cpu.L:02X} SP:{cpu.SP:04X} PC:{cpu.PC:04X} PCMEM:{GB.read_bus_dispatch(cpu.PC):02X},{GB.read_bus_dispatch(cpu.PC + 1):02X},{GB.read_bus_dispatch(cpu.PC +2):02X},{GB.read_bus_dispatch(cpu.PC+3):02X}\n")
     # GB.fetch_instruction()
 
+    frame_times = deque(maxlen=120)
     frame = 0
     dot = 0
     pygame.display.set_caption(f"Gameboy")
@@ -77,13 +79,16 @@ def main() -> None:
         #         GB.dot_cycle()
         #         dot += 1
         GB.emulate_frame()
-        # print(f"Frame took {perf_counter() - frame_start:.6f}")
-
+        frame_times.append(int((perf_counter() - frame_start) * 1_000_000))
+        
         window_draw(screen, render_surface)
         pygame.display.flip()
 
         clock.tick(60)
         frame += 1
+        if frame > 60 and frame % 60 == 0:
+            pygame.display.set_caption(f"Gameboy - {sum(frame_times) // len(frame_times):>5} μs/frame")
+            
 
 if __name__ == "__main__":
     main()
