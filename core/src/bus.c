@@ -13,7 +13,6 @@
 #define MASK_ECHO_RAM                           0b0001111111111111
 
 #define ADDR_BELOW(high)                        (address <= high)
-#define ADDR_RANGE(low, high)                   ((low <= address) && (address <= high))
 #define ADDRESS_FF_BUS(address)                 ((address & 0xFF00) == 0xFF00)
 
 
@@ -39,10 +38,10 @@ select_interface(memaddr address)
     if (ADDR_BELOW(ADDR_END_ROM_BOOT))
         if (bus.BOOT_ROM_LOCK == BOOT_ROM_ACTIVE)
                                                                         return bus.interface_rom_boot;
-    if (ADDR_BELOW(ADDR_END_ROM_FIXED))                                 return bus.interface_rom_fixed;
-    if (ADDR_RANGE(ADDR_START_ROM_BANK, ADDR_END_ROM_BANK))             return bus.interface_rom_bank;
+    if (ADDR_BELOW(ADDR_END_ROM_FIXED))                                 return bus.interface_cartridge;
+    if (ADDR_RANGE(ADDR_START_ROM_BANK, ADDR_END_ROM_BANK))             return bus.interface_cartridge;
     if (ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM))                     return bus.interface_vram;
-    if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) return bus.interface_wram_extern;
+    if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) return bus.interface_cartridge;
     if (ADDR_RANGE(ADDR_START_WRAM_1, ADDR_END_WRAM_1))                 return bus.interface_wram_system;
     if (ADDR_RANGE(ADDR_START_WRAM_2, ADDR_END_WRAM_2))                 return bus.interface_wram_system;
     if (ADDR_RANGE(ADDR_START_ECHO_MEM, ADDR_END_ECHO_MEM))             return bus.interface_echo;

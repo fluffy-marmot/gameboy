@@ -127,7 +127,7 @@ typedef enum {
     MBC_TYPE_MMM01_RAM                        = 0x0C,   
     MBC_TYPE_MMM01_BBRAM                      = 0x0D,
     MBC_TYPE_MBC3_RTCLOCK                     = 0x0F,   
-    MBC_TYPE_MBC3_RTCLOCK_BBRAM               = 0x01,
+    MBC_TYPE_MBC3_RTCLOCK_BBRAM               = 0x10,
     MBC_TYPE_MBC3                             = 0x11,   
     MBC_TYPE_MBC3_RAM                         = 0x12,   
     MBC_TYPE_MBC3_BBRAM                       = 0x13, 

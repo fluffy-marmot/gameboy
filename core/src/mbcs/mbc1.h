@@ -1,3 +1,15 @@
+#include "../cartridge.h"
+
+typedef struct {
+    uint8_t RAMG;                               // RAM gate register
+    uint8_t BANK1;                              // lower 5 bits of ROM bank number
+    uint8_t BANK2;                              // upper 2 bits of ROM bank number or all RAM bank number
+    uint8_t MODE;                               // mode register
+
+    gb_cart_data_t *cart;
+} gb_mbc1;
+
+void init_gameboy_mbc1(gb_cartridge_t *);
 /*
 
 A15 A14 A13   Address range        Region

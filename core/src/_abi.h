@@ -5,7 +5,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 
 typedef enum {
     GB_RETURN_OK,
@@ -13,7 +12,11 @@ typedef enum {
     GB_ERROR_MALLOC,
     GB_ERROR_BOOTROM_SIZE,
     GB_ERROR_ROM_SIZE_MINIMUM,
-    GB_ERROR_ROM_HEADER_SIZE,
+    GB_ERROR_ROM_SIZE_HEADER_MISMATCH,
+    GB_ERROR_ROM_SIZE_HEADER_INVALID,
+    GB_ERROR_RAM_SIZE_HEADER_INVALID,
+    GB_ERROR_MBC_UNIMPLEMENTED,
+    GB_ERROR_MBC_UNRECOGNIZED
 } gb_return_t;
 
 // bootrom.c

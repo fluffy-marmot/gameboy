@@ -3,7 +3,7 @@
 
 #include "_specification.h"
 
-#include <stdint.h>
+#define ADDR_RANGE(low, high)                   ((low <= address) && (address <= high))
 
 typedef struct {
     uint8_t (*read )(memaddr         );
@@ -14,11 +14,9 @@ typedef struct {
     bus_interface_t *bus_dispatcher;
 
     bus_interface_t *interface_rom_boot;
-    bus_interface_t *interface_rom_fixed;
-    bus_interface_t *interface_rom_bank;
+    bus_interface_t *interface_cartridge;
     bus_interface_t *interface_vram;
     bus_interface_t *interface_wram_system;
-    bus_interface_t *interface_wram_extern;
     bus_interface_t *interface_echo;
     bus_interface_t *interface_oam;
     bus_interface_t *interface_unusable;
