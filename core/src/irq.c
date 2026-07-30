@@ -6,7 +6,9 @@ static gb_irq_handler_t irq_handler;
 static uint8_t stat_interrupt_line;
 
 // trigger STAT interrupts only on low to high transitions
-void update_stat_interrupt_line(uint8_t new_value) {
+static void 
+update_stat_interrupt_line(uint8_t new_value)
+{
     if (!stat_interrupt_line && new_value)
         irq_handler.IF |= INTERRUPT_BIT_STAT;
     stat_interrupt_line = new_value;

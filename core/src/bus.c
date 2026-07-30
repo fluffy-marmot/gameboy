@@ -25,7 +25,9 @@ static uint8_t mem_hram[GB_DMG_HRAM_SIZE];
 static uint8_t read_bus_dispatch (memaddr);
 static void write_bus_dispatch(memaddr, uint8_t);
 
-static uint8_t nop_read(memaddr) {}
+static uint8_t nop_read(memaddr) {
+    return UNREADABLE;
+}
 static void    nop_write(memaddr, uint8_t) {}
 static  bus_interface_t bus_nop = { .read = nop_read, .write = nop_write };
 
@@ -167,7 +169,7 @@ void GB_test_memory_write(memaddr addr, uint8_t value) {
 }
 
 gb_return_t
-GB_test_memory_wipe()
+GB_test_memory_wipe(void)
 {
     if (mem_test != NULL) 
         memset(mem_test, 0, 64 * KiB);

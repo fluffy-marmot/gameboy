@@ -1,13 +1,11 @@
-#ifndef GB_ABIHDR
-#define GB_ABIHDR
+#ifndef GB_ABI
+#define GB_ABI __attribute__((visibility("default")))
 
 #include "_specification.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#define GB_ABI __attribute__((visibility("default")))
 
 typedef enum {
     GB_RETURN_OK,

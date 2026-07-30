@@ -46,4 +46,5 @@ GB_load_rom(const uint8_t *data, size_t size)
     if (!rom)
         return GB_ERROR_MALLOC;
     memcpy(rom, data, size);
+    return GB_RETURN_OK;
 }
