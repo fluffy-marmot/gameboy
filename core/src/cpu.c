@@ -1338,6 +1338,7 @@ condition()
     case MASK_CONDITION_NC: return !FLAG_C;
     case MASK_CONDITION__Z: return  FLAG_Z;
     case MASK_CONDITION__C: return  FLAG_C;
+    default: return false;
     }
 }
 

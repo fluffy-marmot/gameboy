@@ -12,6 +12,7 @@
 
 #define MASK_ECHO_RAM                           0b0001111111111111
 
+#define ADDR_BELOW(high)                        (address <= high)
 #define ADDR_RANGE(low, high)                   ((low <= address) && (address <= high))
 #define ADDRESS_FF_BUS(address)                 ((address & 0xFF00) == 0xFF00)
 
@@ -35,10 +36,10 @@ static  bus_interface_t bus_nop = { .read = nop_read, .write = nop_write };
 static bus_interface_t *
 select_interface(memaddr address)
 {
-    if (ADDR_RANGE(ADDR_START_ROM_BOOT, ADDR_END_ROM_BOOT))
+    if (ADDR_BELOW(ADDR_END_ROM_BOOT))
         if (bus.BOOT_ROM_LOCK == BOOT_ROM_ACTIVE)
                                                                         return bus.interface_rom_boot;
-    if (ADDR_RANGE(ADDR_START_ROM_FIXED, ADDR_END_ROM_FIXED))           return bus.interface_rom_fixed;
+    if (ADDR_BELOW(ADDR_END_ROM_FIXED))                                 return bus.interface_rom_fixed;
     if (ADDR_RANGE(ADDR_START_ROM_BANK, ADDR_END_ROM_BANK))             return bus.interface_rom_bank;
     if (ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM))                     return bus.interface_vram;
     if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) return bus.interface_wram_extern;

@@ -48,7 +48,7 @@
 #define ADDR_START_WRAM_2                       0xD000
 #define ADDR_END_WRAM_2                             0xDFFF
 #define ADDR_START_ECHO_MEM                     0xE000
-#define ADDR_END_ECHO_MEM                           0xFDFF
+#define ADDR_END_ECHO_MEM                           0xFDFF                                                      
 #define ADDR_START_OAM_MEM                      0xFE00
 #define ADDR_END_OAM_MEM                            0xFE9F
 #define ADDR_START_UNUSABLE                     0xFEA0

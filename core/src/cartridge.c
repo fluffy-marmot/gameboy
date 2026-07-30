@@ -47,6 +47,7 @@ init_cartridge(gb_bus_t *bus)
     bus->interface_rom_fixed = &bus_rom;
     bus->interface_rom_bank = &bus_rom;
     bus->interface_wram_extern = &bus_ram_extern;
+    return &cartridge;
 }
 
 /* ############################################################################

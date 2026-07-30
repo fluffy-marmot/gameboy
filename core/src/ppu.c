@@ -79,13 +79,19 @@ typedef enum {
 
 // for current status of background and object fetchers
 typedef enum {
-    GET_TILE,
-    GET_DATA_LOW,
-    GET_DATA_HIGH,
-    PUSH,
-    CHECK_OBJ_X,
-    IDLE
-} fetcher_mode_t;
+    BG_GET_TILE,
+    BG_GET_DATA_LOW,
+    BG_GET_DATA_HIGH,
+    BG_PUSH,
+} bg_fetcher_mode_t;
+
+typedef enum {
+    OBJ_GET_TILE,
+    OBJ_GET_DATA_LOW,
+    OBJ_GET_DATA_HIGH,
+    OBJ_CHECK_X,
+    OBJ_IDLE
+} obj_fetcher_mode_t;
 
 // choose between the two addressing modes for interpreting tile data indices
 typedef enum {
@@ -100,7 +106,7 @@ typedef struct {
 } obj_pixel_t;
 
 static struct {
-    fetcher_mode_t mode;
+    bg_fetcher_mode_t mode;
     uint8_t delay;
     uint8_t data_low;
     uint8_t data_high;
@@ -113,7 +119,7 @@ static struct {
 } bg_fetcher;
 
 static struct {
-    fetcher_mode_t mode;
+    obj_fetcher_mode_t mode;
     uint8_t delay;
     uint8_t data_low;
     uint8_t data_high;
@@ -281,12 +287,12 @@ transition_draw_mode(void)
 {
     ppu.lx = 0;
 
-    obj_fetcher.mode = CHECK_OBJ_X;
+    obj_fetcher.mode = OBJ_CHECK_X;
     obj_fetcher.buf_index = 0;
     for (int i = 0; i < SCANLINE_MAX_OBJS; i++)
         obj_fetcher.index_done[i] = (i >= ppu.obj_buffer_size);
 
-    bg_fetcher.mode = GET_TILE;
+    bg_fetcher.mode = BG_GET_TILE;
     bg_fetcher.delay = 5;
     bg_fetcher.window_active = check_window_ready();
     if (bg_fetcher.window_active) {
@@ -307,44 +313,45 @@ step_obj_fetcher(void)
     if (obj_fetcher.delay && obj_fetcher.delay--) return;
     switch (obj_fetcher.mode) {
 
-    case GET_TILE:
+    case OBJ_GET_TILE:
         obj_fetcher.tile_data_index = OAM_TILE_INDEX(ppu.obj_buffer[obj_fetcher.buf_index]);
         if (OBJ_HEIGHT == 16)
             obj_fetcher.tile_data_index &= 0xFE;
-        obj_fetcher.mode = GET_DATA_LOW;
+        obj_fetcher.mode = OBJ_GET_DATA_LOW;
         obj_fetcher.delay = 1;
         break;
 
-    case GET_DATA_LOW:
+    case OBJ_GET_DATA_LOW:
         obj_fetcher.data_low = tile_data(
             LOW, TILE_METHOD_8000, obj_fetcher.tile_data_index, obj_y_offset()
         );
-        obj_fetcher.mode = GET_DATA_HIGH;
+        obj_fetcher.mode = OBJ_GET_DATA_HIGH;
         obj_fetcher.delay = 1;
         break;
 
-    case GET_DATA_HIGH:
+    case OBJ_GET_DATA_HIGH:
         obj_fetcher.data_high = tile_data(
             HIGH, TILE_METHOD_8000, obj_fetcher.tile_data_index, obj_y_offset()
         );
 
         push_obj_pixels();
         obj_fetcher.buf_index++;
-        obj_fetcher.mode = CHECK_OBJ_X;
+        obj_fetcher.mode = OBJ_CHECK_X;
         break;
 
-    case CHECK_OBJ_X:
+    case OBJ_CHECK_X:
         for (int i = obj_fetcher.buf_index; i < SCANLINE_MAX_OBJS; i++, obj_fetcher.buf_index++) {
             if (obj_fetcher.index_done[i]) continue;
             if (OAM_X(ppu.obj_buffer[i]) <= ppu.lx + 8) {
-                obj_fetcher.mode = GET_TILE;
+                obj_fetcher.mode = OBJ_GET_TILE;
                 obj_fetcher.index_done[i] = true;
                 break;
             }
         }
         if (obj_fetcher.buf_index == SCANLINE_MAX_OBJS)
-            obj_fetcher.mode = IDLE;
+            obj_fetcher.mode = OBJ_IDLE;
         break;
+    case OBJ_IDLE:
     }
 }
 
@@ -356,39 +363,39 @@ step_bg_fetcher(void)
     if (bg_fetcher.delay && bg_fetcher.delay--) return;
     switch (bg_fetcher.mode) {
         
-    case GET_TILE:
+    case BG_GET_TILE:
         bg_fetcher.tile_data_index = VRAM(
             (bg_fetcher.window_active ? WIN_TILE_MAP : BG_TILE_MAP) + bg_fetcher.tile_map_index
         );
         // increment tile index but wrap to start of same row if past column 31
         if (++bg_fetcher.tile_map_index % TILEMAP_W == 0) bg_fetcher.tile_map_index -= TILEMAP_W;
-        bg_fetcher.mode = GET_DATA_LOW;
+        bg_fetcher.mode = BG_GET_DATA_LOW;
         bg_fetcher.delay = 1;
         break;
 
-    case GET_DATA_LOW:
+    case BG_GET_DATA_LOW:
         y_offset = bg_fetcher.window_active ? (bg_fetcher.window_line % 8) : ((ppu.LY + ppu.SCY) % 8);
         bg_fetcher.data_low = tile_data(
             LOW, BG_TILE_DATA_METHOD, bg_fetcher.tile_data_index, y_offset
         );
-        bg_fetcher.mode = GET_DATA_HIGH;
+        bg_fetcher.mode = BG_GET_DATA_HIGH;
         bg_fetcher.delay = 1;
         break;
 
-    case GET_DATA_HIGH:
+    case BG_GET_DATA_HIGH:
         y_offset = bg_fetcher.window_active ? (bg_fetcher.window_line % 8) : ((ppu.LY + ppu.SCY) % 8);
         bg_fetcher.data_high = tile_data(
             HIGH, BG_TILE_DATA_METHOD, bg_fetcher.tile_data_index, y_offset
         );
-        bg_fetcher.mode = PUSH;
+        bg_fetcher.mode = BG_PUSH;
         break;
 
-    case PUSH:
+    case BG_PUSH:
         if (pixel_mixer.bg_pixels_len == 0) {
             for (int i = 7; i >= 0; i--)
                 pixel_mixer.bg_pixels[i] = MIX_HIGH_LOW(bg_fetcher.data_high, bg_fetcher.data_low, i);
             pixel_mixer.bg_pixels_len = 8;
-            bg_fetcher.mode = GET_TILE;
+            bg_fetcher.mode = BG_GET_TILE;
             bg_fetcher.delay = 1;
         }
         break;
@@ -419,14 +426,14 @@ step_mixer()
         bg_fetcher.window_active = true;
         bg_fetcher.tile_map_index = TILEMAP_W * (bg_fetcher.window_line / 8);
         pixel_mixer.bg_pixels_len = 0;
-        bg_fetcher.mode = GET_TILE;
+        bg_fetcher.mode = BG_GET_TILE;
         bg_fetcher.delay = 1;
     } else
         pixel_mixer.bg_pixels_len--;
         
     pixel_mixer.obj_pixels[pixel_mixer.obj_pixels_index++].color = 0;
     pixel_mixer.obj_pixels_index %= 8;
-    obj_fetcher.mode = CHECK_OBJ_X;
+    obj_fetcher.mode = OBJ_CHECK_X;
     obj_fetcher.buf_index = 0;
 }
 
@@ -443,9 +450,9 @@ cycle_tcycle_ppu(void)
         }
         break;
     case PPU_MODE_DRAWING:
-        if (obj_fetcher.mode != IDLE)
+        if (obj_fetcher.mode != OBJ_IDLE)
             step_obj_fetcher();
-        if (obj_fetcher.mode == IDLE) {
+        if (obj_fetcher.mode == OBJ_IDLE) {
             step_bg_fetcher();
             step_mixer();
             if (ppu.lx == LCD_WIDTH)
