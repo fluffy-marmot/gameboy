@@ -1,8 +1,8 @@
 import ctypes
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent.resolve()
-GB = ctypes.CDLL("./gameboy.so")
+BASE_DIR = Path(__file__).parent.parent.parent.resolve()
+GB = ctypes.CDLL(BASE_DIR / "build" / "gameboy.so")
 
 class CPU(ctypes.Structure):
     B: int # can add type annotations? TODO

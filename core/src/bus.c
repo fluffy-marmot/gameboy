@@ -54,8 +54,8 @@ test_memory_mode_disable(void)
     bus.bus_dispatcher->write = write_bus_dispatch;
 }
 
-uint8_t nop_read(memaddr) {}
-void    nop_write(memaddr, uint8_t) {}
+static uint8_t nop_read(memaddr) {}
+static void    nop_write(memaddr, uint8_t) {}
 static  bus_interface_t bus_nop = { .read = nop_read, .write = nop_write };
 
 // Based on address, dispatch the request to the correct interface

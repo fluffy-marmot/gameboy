@@ -1,24 +1,25 @@
+
+# various test suites
+tests/testdata/
+
+# copyrighted roms and bootoms
+romlib/
+
+# build targets
 build/
 
-test
-test.c
-test.py
+# logs
+logs/
 
-# ignore sm83 tests for now until a better structure is decided
-sm83/
-gameboy-doctor/
-gb-test-roms/
+# python 
+__pycache__/
+*.pyc
+.venv/
 
 # an example reference
 gdb-notes.md
 
-gameboy.so
-# gameboy doctor log
-gb.log
-
-# copyrighted boot roms, may as well steer clear
-bootroms/
-
-__pycache__/
-*.pyc
-.venv/
+# just some scratch space for random short experiments
+test
+test.c
+test.py

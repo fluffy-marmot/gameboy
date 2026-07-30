@@ -1,13 +1,7 @@
-CC = gcc
-SHARED_FLAGS = -shared -fPIC -g
-SRCS = $(wildcard src/*.c)
-HDRS = $(wildcard src/*.h)
+.DEFAULT_GOAL := lib
 
-gameboy.so: $(SRCS) $(HDRS)
-	$(CC) $(SRCS) $(SHARED_FLAGS) -o gameboy.so
+run:
+	python -m clients.pygame.gameboy
 
-lib: gameboy.so
-so: gameboy.so
-
-clean:
-	rm -f gameboy.so
+%:
+	$(MAKE) -C core $@

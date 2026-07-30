@@ -9,7 +9,7 @@ from time import perf_counter
 import numpy as np
 import pygame
 
-from gameboy_cstuff import CPU, cpu, GB, LCD
+from bindings.python.gameboy_cstuff import CPU, cpu, GB, LCD
 
 SCALE = 6
 
@@ -19,6 +19,12 @@ def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
     pygame.surfarray.blit_array(render_surface, np_view)
     pygame.transform.scale(render_surface, screen.get_size(), screen)
 
+
+# for loading data py side:
+# with open(path, "rb") as f:
+#     data = f.read()
+# buf = ctypes.create_string_buffer(data, len(data))
+# lib.gb_load_rom(bus_ptr, buf, len(data))
 
 def main() -> None:
     # if len(sys.argv) != 2:
@@ -36,7 +42,7 @@ def main() -> None:
     #     print(e)
     #     sys.exit(1)
 
-    f = open("gb.log", "w")
+    f = open("logs/gb.log", "w")
     pygame.init()
     screen = pygame.display.set_mode((160 * SCALE, 144 * SCALE))
     render_surface = pygame.Surface((160, 144))
