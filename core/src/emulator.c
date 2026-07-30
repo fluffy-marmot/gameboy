@@ -16,9 +16,9 @@ boot_system (void)
     gb.dma = init_gameboy_dma(gb.bus);
     gb.joypad = init_gameboy_joypad(gb.bus, gb.irq);
     gb.timers = init_gameboy_timers(gb.bus, gb.irq);
+    gb.cartridge = init_cartridge(gb.bus);
     
     init_bootrom(gb.bus);
-    init_cartridge(gb.bus);
 }
 
 /* ############################################################################

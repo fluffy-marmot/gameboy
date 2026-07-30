@@ -5,8 +5,9 @@
 
 #include <stdint.h>
 
-#define KiB                                     1024
 #define BYTES                                   1
+#define KiB                                     1024
+#define MiB                                     1024 * KiB
 
 // DMG - Original Gameboy
 #define GB_DMG_WRAM_SIZE                        ( 8 * KiB)

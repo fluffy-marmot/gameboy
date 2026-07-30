@@ -19,8 +19,8 @@ typedef struct {
     gb_ppu_t *ppu;
     gb_joypad_t *joypad;
     gb_timers_t *timers;
-
     gb_irq_handler_t *irq;
+    gb_cartridge_t *cartridge;
 } gb_gameboy_t;
 
 #endif

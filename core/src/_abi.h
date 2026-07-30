@@ -13,6 +13,7 @@ typedef enum {
     GB_ERROR_MALLOC,
     GB_ERROR_BOOTROM_SIZE,
     GB_ERROR_ROM_SIZE_MINIMUM,
+    GB_ERROR_ROM_HEADER_SIZE,
 } gb_return_t;
 
 // bootrom.c
