@@ -1,6 +1,7 @@
 #ifndef GB_JOYPAD
 #define GB_JOYPAD
 
+#include "_specification.h"
 #include "bus.h"
 #include "irq.h"
 
@@ -24,7 +25,5 @@ typedef struct{
 } gb_joypad_t;
 
 gb_joypad_t *init_gameboy_joypad(gb_bus_t *, gb_irq_handler_t *);
-
-void update_joypad(bool, bool, bool, bool, bool, bool, bool, bool);
 
 #endif

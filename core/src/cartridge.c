@@ -1,10 +1,10 @@
-#include "_specification.h"
+#include "_abi.h"
 #include "cartridge.h"
 
-#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-
-static uint8_t rom[ROM_SIZE];
+static uint8_t *rom;
 static uint8_t ram_extern[8 * KiB];
 
 static uint8_t read_rom (memaddr address) {
@@ -21,19 +21,29 @@ static void write_ram_extern(memaddr address, uint8_t val) {
 }
 static bus_interface_t bus_ram_extern =  { .read = read_ram_extern, .write = write_ram_extern };
 
-int
-init_cartridge(char *filename, gb_bus_t *bus)
+void
+init_cartridge(gb_bus_t *bus)
 {
     bus->interface_rom_fixed = &bus_rom;
     bus->interface_rom_bank = &bus_rom;
     bus->interface_wram_extern = &bus_ram_extern;
+}
 
-    FILE *f = fopen(filename, "rb");
-    if (f == NULL)
-        return -1;
-    size_t bytes_read = fread(rom, 1, ROM_SIZE, f);
-    fclose(f);
-    if (bytes_read != ROM_SIZE)
-        return -1;
-    return 0;
+/* ############################################################################
+###############################################################################
+
+        client-facing ABI functions
+        
+###############################################################################
+############################################################################ */
+
+gb_return_t
+GB_load_rom(const uint8_t *data, size_t size)
+{
+    if (size < 32 * KiB)
+        return GB_ERROR_ROM_SIZE_MINIMUM;
+    rom = (uint8_t *) malloc(size * sizeof(uint8_t));
+    if (!rom)
+        return GB_ERROR_MALLOC;
+    memcpy(rom, data, size);
 }

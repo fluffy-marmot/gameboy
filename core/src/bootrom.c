@@ -1,7 +1,7 @@
-#include "_specification.h"
+#include "_abi.h"
 #include "bootrom.h"
 
-#include <stdio.h>
+#include <string.h>
 
 static uint8_t boot_rom[GB_DMG_BOOT_ROM_SIZE];
 
@@ -11,17 +11,23 @@ static uint8_t read_boot_rom (memaddr address) {
 static void write_boot_rom(memaddr, uint8_t) {}
 static bus_interface_t bus_boot_rom = { .read = read_boot_rom, .write = write_boot_rom };
 
-int
-init_bootrom(char *filename, gb_bus_t *bus)
-{
+void init_bootrom(gb_bus_t *bus) {
     bus->interface_rom_boot = &bus_boot_rom;
+}
 
-    FILE *f = fopen(filename, "rb");
-    if (f == NULL)
-        return -1;
-    size_t bytes_read = fread(boot_rom, 1, GB_DMG_BOOT_ROM_SIZE, f);
-    fclose(f);
-    if (bytes_read != GB_DMG_BOOT_ROM_SIZE)
-        return -1;
-    return 0;
+/* ############################################################################
+###############################################################################
+
+        client-facing ABI functions
+        
+###############################################################################
+############################################################################ */
+
+gb_return_t
+GB_load_bootrom(const uint8_t *data, size_t size)
+{
+    if (size != GB_DMG_BOOT_ROM_SIZE)
+        return GB_ERROR_BOOTROM_SIZE;
+    memcpy(boot_rom, data, GB_DMG_BOOT_ROM_SIZE);
+    return GB_RETURN_OK;
 }

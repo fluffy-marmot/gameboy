@@ -1,4 +1,4 @@
-#include "_specification.h"
+#include "_abi.h"
 #include "bus.h"
 #include "dma.h"
 
@@ -22,37 +22,8 @@ static uint8_t mem_wram[GB_DMG_WRAM_SIZE];
 static uint8_t mem_hram[GB_DMG_HRAM_SIZE];
 
 // main dispatch functions forward declaration
-uint8_t read_bus_dispatch (memaddr);
+static uint8_t read_bus_dispatch (memaddr);
 static void write_bus_dispatch(memaddr, uint8_t);
-
-// alternate dispatch functions to use while running tests with a simple memory layout
-uint8_t test_memory_read (memaddr addr) {
-    return mem_test[addr];
-}
-void test_memory_write(memaddr addr, uint8_t value) {
-    mem_test[addr] = value;
-}
-void test_memory_wipe() {
-    if (mem_test != NULL) 
-        memset(mem_test, 0, 64 * KiB);
-}
-
-void
-test_memory_mode_enable(void)
-{
-    mem_test = calloc(64 * KiB, sizeof(uint8_t));
-    bus.bus_dispatcher->read = test_memory_read;
-    bus.bus_dispatcher->write = test_memory_write;
-}
-
-void
-test_memory_mode_disable(void)
-{
-    free(mem_test);
-    mem_test = NULL;
-    bus.bus_dispatcher->read = read_bus_dispatch;
-    bus.bus_dispatcher->write = write_bus_dispatch;
-}
 
 static uint8_t nop_read(memaddr) {}
 static void    nop_write(memaddr, uint8_t) {}
@@ -108,7 +79,7 @@ select_interface(memaddr address)
 }
 
 // The main dispatcher interface using select_interface function to pass on bus requests
-uint8_t read_bus_dispatch (memaddr address) {
+static uint8_t read_bus_dispatch (memaddr address) {
     if (bus.dma->status == DMA_TRANSFER_ACTIVE && !ADDRESS_FF_BUS(address))
         return bus.dma->data;
     return select_interface(address)->read(address);
@@ -176,4 +147,50 @@ init_gameboy_bus(void)
     bus.interface_nop = &bus_nop;
 
     return &bus;
+}
+
+/* ############################################################################
+###############################################################################
+
+        client-facing ABI functions
+        
+###############################################################################
+############################################################################ */
+
+// alternate dispatch functions to use while running tests with a simple memory layout
+uint8_t GB_test_memory_read (memaddr addr) {
+    return mem_test[addr];
+}
+
+void GB_test_memory_write(memaddr addr, uint8_t value) {
+    mem_test[addr] = value;
+}
+
+gb_return_t
+GB_test_memory_wipe()
+{
+    if (mem_test != NULL) 
+        memset(mem_test, 0, 64 * KiB);
+    return GB_RETURN_OK;
+}
+
+gb_return_t
+GB_test_memory_mode_enable(void)
+{
+    mem_test = calloc(64 * KiB, sizeof(uint8_t));
+    if (!mem_test)
+        return GB_ERROR_MALLOC;
+    bus.bus_dispatcher->read = GB_test_memory_read;
+    bus.bus_dispatcher->write = GB_test_memory_write;
+    return GB_RETURN_OK;
+}
+
+gb_return_t
+GB_test_memory_mode_disable(void)
+{
+    free(mem_test);
+    mem_test = NULL;
+    bus.bus_dispatcher->read = read_bus_dispatch;
+    bus.bus_dispatcher->write = write_bus_dispatch;
+    return GB_RETURN_OK;
 }

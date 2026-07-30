@@ -1,6 +1,7 @@
 #ifndef GB_DMA
 #define GB_DMA
 
+#include "_specification.h"
 #include "bus.h"
 
 typedef enum {
@@ -19,7 +20,6 @@ typedef struct gb_dma{
 } gb_dma_t;
 
 gb_dma_t *init_gameboy_dma(gb_bus_t *);
-
 void cycle_mcycle_dma(void);
 
 #endif

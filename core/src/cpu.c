@@ -1,4 +1,3 @@
-#include "_specification.h"
 #include "cpu.h"
 
 #include <stdbool.h>
@@ -52,7 +51,7 @@
 #define HL                                      ((uint16_t) ((cpu.H << 8) | cpu.L))
 #define WZ                                      ((uint16_t) ((cpu.W << 8) | cpu.Z))
 
-gb_cpu_t cpu; // TODO make static and access from py via gb struct
+static gb_cpu_t cpu;
 
 static inline void nop      (void) {};
 static inline void invalid  (void) {};
@@ -1798,26 +1797,17 @@ fetch_instruction()
     }
 }
 
-/*
-Returns a two byte int where the lower byte is the opcode of the instruction that was executed this machine
-cycle (even if a new opcode has been loaded into IR due to a fetch) and the higher byte is the number of machine
-cycles needed to finish executing this instruction. If that is 0, the instruction has just finished executing
-and a new fetch occurred. Hopefully helpful for testing.
-*/
-uint16_t
-tick_machine_cycle()
+void
+cycle_mcycle_cpu()
 {
     if (cpu.instruction == NULL || cpu.cycle_num == cpu.instruction->cycle_count)
         fetch_instruction();
 
     cpu.instruction->cycles[cpu.cycle_num++]();
-    uint16_t result = cpu.IR + ((cpu.instruction == &____INTERRUPT_HANDLER ? 1 : ((cpu.instruction->cycle_count - cpu.cycle_num) + cpu.cb_instruction)) << 8);
 
     // Tick down the IME latch for delayed interrupt enable
     if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
         cpu.IME = 1;
-
-    return result;
 }
 
 gb_cpu_t *

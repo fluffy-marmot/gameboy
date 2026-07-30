@@ -1,1 +1,0 @@
-#define GB_ABI __attribute__((visibility("default")))

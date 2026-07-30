@@ -1,6 +1,7 @@
 #ifndef GB_IRQ
 #define GB_IRQ
 
+#include "_specification.h"
 #include "bus.h"
 
 #define INTERRUPT_BIT_VBLANK        0b00000001
@@ -28,5 +29,6 @@ typedef struct {
 } gb_irq_handler_t;
 
 gb_irq_handler_t *init_gameboy_irq(gb_bus_t *);
+void update_stat_interrupt_line(uint8_t);
 
 #endif

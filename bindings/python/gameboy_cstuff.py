@@ -53,47 +53,53 @@ class CPU(ctypes.Structure):
 
 # bus.h
 
-GB.test_memory_mode_enable.restype = None
-GB.test_memory_mode_enable.argtypes = []
+GB.GB_test_memory_mode_enable.restype = None
+GB.GB_test_memory_mode_enable.argtypes = []
 
-GB.test_memory_mode_disable.restype = None
-GB.test_memory_mode_disable.argtypes = []
+GB.GB_test_memory_mode_disable.restype = None
+GB.GB_test_memory_mode_disable.argtypes = []
 
-GB.test_memory_wipe.restype = None
-GB.test_memory_wipe.argtypes = []
+GB.GB_test_memory_wipe.restype = None
+GB.GB_test_memory_wipe.argtypes = []
 
-GB.test_memory_write.restype = None
-GB.test_memory_write.argtypes = [ctypes.c_uint16, ctypes.c_uint8]
+GB.GB_test_memory_write.restype = None
+GB.GB_test_memory_write.argtypes = [ctypes.c_uint16, ctypes.c_uint8]
 
-GB.test_memory_read.restype = ctypes.c_uint8
-GB.test_memory_read.argtypes = [ctypes.c_uint16]
+GB.GB_test_memory_read.restype = ctypes.c_uint8
+GB.GB_test_memory_read.argtypes = [ctypes.c_uint16]
 
 # cpu.h
 
-cpu = CPU.in_dll(GB, "cpu")
+# cpu = CPU.in_dll(GB, "cpu")
 
 # GB.fetch_instruction.restype = None
 # GB.fetch_instruction.argtypes = []
 
-GB.tick_machine_cycle.restype = ctypes.c_uint16
-GB.tick_machine_cycle.argtypes = []
+# GB.tick_machine_cycle.restype = ctypes.c_uint16
+# GB.tick_machine_cycle.argtypes = []
 
 # ppu.h
 
-GB.dot_cycle.restype = None
-GB.dot_cycle.argtypes = []
+# GB.dot_cycle.restype = None
+# GB.dot_cycle.argtypes = []
 
-GB.emulate_frame.restype = None
-GB.emulate_frame.argtypes = []
+GB.GB_emulate_frame.restype = None
+GB.GB_emulate_frame.argtypes = []
 
-GB.get_lcd.argtypes = []
-GB.get_lcd.restype = ctypes.POINTER(ctypes.c_uint32)
-LCD = GB.get_lcd()
+GB.GB_get_lcd.argtypes = []
+GB.GB_get_lcd.restype = ctypes.POINTER(ctypes.c_uint32)
+LCD = GB.GB_get_lcd()
 # lcd_type = ctypes.c_uint32 * (160 * 144)
 # LCD = ctypes.cast(ptr, ctypes(lcd_type)).contents
 
-GB.set_post_boot_state.argtypes = []
-GB.set_post_boot_state.restype = None
+GB.GB_set_post_boot_state.argtypes = []
+GB.GB_set_post_boot_state.restype = None
 
-GB.update_joypad.argtypes = [ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool]
-GB.update_joypad.restype = None
+GB.GB_update_joypad.argtypes = [ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool]
+GB.GB_update_joypad.restype = None
+
+GB.GB_load_bootrom.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t]
+GB.GB_load_bootrom.restype = ctypes.c_int
+
+GB.GB_load_rom.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t]
+GB.GB_load_rom.restype = ctypes.c_int

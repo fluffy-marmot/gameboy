@@ -1,4 +1,3 @@
-#include "_specification.h"
 #include "timers.h"
 
 #define USEPINS_TAC                             0b00000111

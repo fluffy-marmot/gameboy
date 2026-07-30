@@ -1,9 +1,9 @@
 #ifndef GB_BUS
 #define GB_BUS
 
-#include <stdint.h>
+#include "_specification.h"
 
-typedef uint16_t memaddr;
+#include <stdint.h>
 
 typedef struct {
     uint8_t (*read )(memaddr         );
@@ -40,15 +40,5 @@ typedef struct {
 } gb_bus_t;
 
 gb_bus_t *init_gameboy_bus(void);
-
-// ABI
-void test_memory_mode_enable(void);
-void test_memory_mode_disable(void);
-void test_memory_wipe(void);
-void test_memory_write(memaddr, uint8_t);
-uint8_t test_memory_read (memaddr);
-// TODO need a better way to access memory during testing while keeping read_dispatch static
-
-// ABI
 
 #endif

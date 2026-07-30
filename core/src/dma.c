@@ -1,4 +1,3 @@
-#include "_specification.h"
 #include "dma.h"
 
 // clear bit 5 of address high byte if we exceed max value

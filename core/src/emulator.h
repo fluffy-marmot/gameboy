@@ -1,6 +1,7 @@
-#ifndef GB_SYSTEM
-#define GB_SYSTEM
+#ifndef GB_EMULATOR
+#define GB_EMULATOR
 
+#include "_specification.h"
 #include "bootrom.h"
 #include "bus.h"
 #include "cartridge.h"
@@ -21,11 +22,5 @@ typedef struct {
 
     gb_irq_handler_t *irq;
 } gb_gameboy_t;
-
-// ABI
-void set_post_boot_state(void);
-void emulate_frame(void);
-
-// ABI
 
 #endif

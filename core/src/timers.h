@@ -1,6 +1,7 @@
 #ifndef GB_TIMERS
 #define GB_TIMERS
 
+#include "_specification.h"
 #include "bus.h"
 #include "irq.h"
 

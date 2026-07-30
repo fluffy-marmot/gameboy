@@ -1,3 +1,4 @@
+#include "_abi.h"
 #include "ppu.h"
 
 #include <stdbool.h>
@@ -430,7 +431,7 @@ step_mixer()
 }
 
 void
-dot_cycle(void)
+cycle_tcycle_ppu(void)
 {
     switch (PPU_MODE) {
     case PPU_MODE_OAM_SCAN:
@@ -482,10 +483,6 @@ dot_cycle(void)
     }
 }
 
-uint32_t * get_lcd(void) {
-    return ppu.lcd;
-}
-
 gb_ppu_t *
 init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
@@ -494,4 +491,16 @@ init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
     bus->interface_oam = &bus_oam;
     bus->interface_reg_ppu = &bus_registers_ppu;
     return &ppu;
+}
+
+/* ############################################################################
+###############################################################################
+
+        client-facing ABI functions
+        
+###############################################################################
+############################################################################ */
+
+uint32_t *GB_get_lcd(void) {
+    return ppu.lcd;
 }

@@ -9,7 +9,7 @@ from time import perf_counter
 import numpy as np
 import pygame
 
-from bindings.python.gameboy_cstuff import CPU, cpu, GB, LCD
+from bindings.python.gameboy_cstuff import GB, LCD
 
 SCALE = 6
 
@@ -46,10 +46,19 @@ def main() -> None:
     pygame.init()
     screen = pygame.display.set_mode((160 * SCALE, 144 * SCALE))
     render_surface = pygame.Surface((160, 144))
-    # GB.set_post_boot_state()
-    f.write(f"A:{cpu.A:02X} F:{cpu.F:02X} B:{cpu.B:02X} C:{cpu.C:02X} D:{cpu.D:02X} E:{cpu.E:02X} H:{cpu.H:02X} L:{cpu.L:02X} SP:{cpu.SP:04X} PC:{cpu.PC:04X} PCMEM:{GB.read_bus_dispatch(cpu.PC):02X},{GB.read_bus_dispatch(cpu.PC + 1):02X},{GB.read_bus_dispatch(cpu.PC +2):02X},{GB.read_bus_dispatch(cpu.PC+3):02X}\n")
+    GB.GB_set_post_boot_state()
+    # f.write(f"A:{cpu.A:02X} F:{cpu.F:02X} B:{cpu.B:02X} C:{cpu.C:02X} D:{cpu.D:02X} E:{cpu.E:02X} H:{cpu.H:02X} L:{cpu.L:02X} SP:{cpu.SP:04X} PC:{cpu.PC:04X} PCMEM:{GB.read_bus_dispatch(cpu.PC):02X},{GB.read_bus_dispatch(cpu.PC + 1):02X},{GB.read_bus_dispatch(cpu.PC +2):02X},{GB.read_bus_dispatch(cpu.PC+3):02X}\n")
     # GB.fetch_instruction()
+    # with open("romlib/bootroms/dmg_boot.bin", "rb") as f:
+    #     bootrom_data = f.read()
+    # buf = (ctypes.c_uint8 * len(bootrom_data)).from_buffer_copy(bootrom_data)
+    # GB.GB_load_bootrom(buf, len(bootrom_data))
 
+    with open("romlib/drmario.gb", "rb") as f:
+        rom_data = f.read()
+        buf = (ctypes.c_uint8 * len(rom_data)).from_buffer_copy(rom_data)
+        GB.GB_load_rom(buf, len(rom_data))
+    
     frame_times = deque(maxlen=120)
     frame = 0
     dot = 0
@@ -66,7 +75,7 @@ def main() -> None:
 
         keys = pygame.key.get_pressed()
         # print(keys)
-        GB.update_joypad(
+        GB.GB_update_joypad(
             not keys[pygame.K_RETURN],
             not keys[pygame.K_SPACE],
             not keys[pygame.K_a],
@@ -84,7 +93,7 @@ def main() -> None:
         #     for _ in range(4):
         #         GB.dot_cycle()
         #         dot += 1
-        GB.emulate_frame()
+        GB.GB_emulate_frame()
         frame_times.append(int((perf_counter() - frame_start) * 1_000_000))
         
         window_draw(screen, render_surface)

@@ -1,8 +1,9 @@
 #ifndef GB_CARTRIDGE
 #define GB_CARTRIDGE
 
+#include "_specification.h"
 #include "bus.h"
 
-int init_cartridge(char *filename, gb_bus_t *);
+void init_cartridge(gb_bus_t *);
 
 #endif

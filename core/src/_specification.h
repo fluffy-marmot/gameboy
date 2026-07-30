@@ -3,6 +3,8 @@
 #ifndef GB_SPECIFICATION
 #define GB_SPECIFICATION
 
+#include <stdint.h>
+
 #define KiB                                     1024
 #define BYTES                                   1
 
@@ -11,18 +13,11 @@
 #define GB_DMG_VRAM_SIZE                        ( 8 * KiB)
 #define GB_DMG_HRAM_SIZE                        (127 * BYTES)
 #define GB_DMG_OAM_SIZE                         (160 * BYTES)
+#define GB_DMG_BOOT_ROM_SIZE                    (256 * BYTES)
 
 // CGB - Color Game Boy
 #define GB_CGB_WRAM_SIZE                        (32 * KiB)
 #define GB_CGB_VRAM_SIZE                        (16 * KiB)
-
-// Boot ROM
-#define BOOT_ROM                                "romlib/bootroms/dmg_boot.bin"
-#define GB_DMG_BOOT_ROM_SIZE                    (256 * BYTES)
-
-// Cartridge
-#define CARTRIDGE_ROM                           "romlib/drmario.gb"
-#define ROM_SIZE                                (32 * KiB)
 
 // LCD Display and PPU (Picture Processing Unit)
 #define LCD_WIDTH                               160
@@ -116,6 +111,8 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 #define CARTRIDGE_HEADER_ROM_SIZE               0x0148
 #define CARTRIDGE_HEADER_RAM_SIZE               0x0149
 
+typedef uint16_t memaddr;
+
 typedef enum {
     MBC_TYPE_NONE_PLAIN_ROM                   = 0x00,
     MBC_TYPE_MBC1                             = 0x01,   
@@ -159,8 +156,8 @@ typedef enum {
     MBC_ROM_SIZE_4MiB                         = 0x07,               // 256 banks
     MBC_ROM_SIZE_8MiB                         = 0x08,               // 512 banks
     MBC_ROM_SIZE_1152KiB                      = 0x52,               //  72 banks
-    MBC_ROM_SIZE_1280KiB                      = 0x52,               //  80 banks
-    MBC_ROM_SIZE_1536KiB                      = 0x52                //  96 banks
+    MBC_ROM_SIZE_1280KiB                      = 0x53,               //  80 banks
+    MBC_ROM_SIZE_1536KiB                      = 0x54                //  96 banks
 } mbc_rom_size_t;
 
 typedef enum {

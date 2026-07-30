@@ -42,10 +42,6 @@ typedef struct {
 
 gb_ppu_t *init_gameboy_ppu(gb_bus_t *, gb_irq_handler_t *);
 
-// ABI
-
-void dot_cycle(void);
-uint32_t *get_lcd(void);
-// ABI
+void cycle_tcycle_ppu(void);
 
 #endif

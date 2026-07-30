@@ -1,4 +1,4 @@
-#include "_specification.h"
+#include "_abi.h"
 #include "joypad.h"
 
 #include <stdio.h>
@@ -69,8 +69,24 @@ write_joypad_reg(memaddr address, uint8_t val)
 }
 static bus_interface_t bus_reg_joypad = { .read = read_joypad_reg, .write = write_joypad_reg };
 
-void
-update_joypad(bool start, bool select, bool b, bool a, bool down, bool up, bool left, bool right)
+gb_joypad_t *
+init_gameboy_joypad(gb_bus_t *bus, gb_irq_handler_t *irq)
+{
+    joypad.irq = irq;
+    bus->interface_reg_joypad = &bus_reg_joypad;
+    return &joypad;
+}
+
+/* ############################################################################
+###############################################################################
+
+        client-facing ABI functions
+        
+###############################################################################
+############################################################################ */
+
+gb_return_t
+GB_update_joypad(bool start, bool select, bool b, bool a, bool down, bool up, bool left, bool right)
 {
     joypad.BUTTON_START  = start;
     joypad.BUTTON_SELECT = select;
@@ -81,12 +97,5 @@ update_joypad(bool start, bool select, bool b, bool a, bool down, bool up, bool 
     joypad.BUTTON_LEFT   = left;
     joypad.BUTTON_RIGHT  = right;
     update_joyp_register();
-}
-
-gb_joypad_t *
-init_gameboy_joypad(gb_bus_t *bus, gb_irq_handler_t *irq)
-{
-    joypad.irq = irq;
-    bus->interface_reg_joypad = &bus_reg_joypad;
-    return &joypad;
+    return GB_RETURN_OK;
 }

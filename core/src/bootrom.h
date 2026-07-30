@@ -1,8 +1,9 @@
 #ifndef GB_BOOTROM
 #define GB_BOOTROM
 
+#include "_specification.h"
 #include "bus.h"
 
-int init_bootrom(char *filename, gb_bus_t *);
+void init_bootrom(gb_bus_t *);
 
 #endif

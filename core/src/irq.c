@@ -1,4 +1,3 @@
-#include "_specification.h"
 #include "irq.h"
 
 #define BIT                         0b00000001
