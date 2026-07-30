@@ -32,7 +32,7 @@ read_bus_mbc1(memaddr address)
             return mbc1.cart->rom[(mbc1.BANK2 << 19) | address];
     }
     if (ADDR_RANGE(ADDR_START_ROM_BANK, ADDR_END_ROM_BANK)) {
-        return mbc1.cart->rom[(mbc1.BANK2 << 19) | (mbc1.BANK1 << 14) | address];
+        return mbc1.cart->rom[(mbc1.BANK2 << 19) | (mbc1.BANK1 << 14) | (address - ADDR_START_ROM_BANK)];
     }
     if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) {
         if (mbc1.RAMG != RAMG_ENABLE_ACCESSS)
@@ -42,7 +42,7 @@ read_bus_mbc1(memaddr address)
         if (mbc1.MODE == 0)
             resolved_addr = address - ADDR_START_WRAM_CARTRIDGE;
         else
-            resolved_addr = ((mbc1.BANK2 << 13) | address) - ADDR_START_WRAM_CARTRIDGE;
+            resolved_addr = (mbc1.BANK2 << 13) | (address - ADDR_START_WRAM_CARTRIDGE);
 
         if (resolved_addr < mbc1.cart->ram_size)
             return mbc1.cart->ram[resolved_addr];
@@ -65,14 +65,14 @@ write_bus_mbc1(memaddr address, uint8_t val)
     }
 
     else if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) {
-        if (mbc1.RAMG & USEPINS_RAMG != RAMG_ENABLE_ACCESSS)
+        if (mbc1.RAMG != RAMG_ENABLE_ACCESSS)
             return;
 
         memaddr resolved_addr;
         if (mbc1.MODE == 0)
             resolved_addr = address - ADDR_START_WRAM_CARTRIDGE;
         else
-            resolved_addr = ((mbc1.BANK2 << 13) | address) - ADDR_START_WRAM_CARTRIDGE;
+            resolved_addr = (mbc1.BANK2 << 13) | (address - ADDR_START_WRAM_CARTRIDGE);
         
         if (resolved_addr < mbc1.cart->ram_size)
             mbc1.cart->ram[resolved_addr] = val;

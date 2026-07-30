@@ -27,8 +27,8 @@ def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
 # lib.gb_load_rom(bus_ptr, buf, len(data))
 
 def main() -> None:
-    # if len(sys.argv) != 2:
-    #     sys.exit(f"Usage: python {sys.argv[0]} <.ch8 program>")
+    if len(sys.argv) != 2:
+        sys.exit(f"Usage: python {sys.argv[0]} <gb rom>")
     # elif not pathlib.Path(sys.argv[1]).exists():
     #     sys.exit(f"Cannot find file {sys.argv[1]}")
     # try:
@@ -46,15 +46,20 @@ def main() -> None:
     pygame.init()
     screen = pygame.display.set_mode((160 * SCALE, 144 * SCALE))
     render_surface = pygame.Surface((160, 144))
-    # GB.GB_set_post_boot_state()
     # f.write(f"A:{cpu.A:02X} F:{cpu.F:02X} B:{cpu.B:02X} C:{cpu.C:02X} D:{cpu.D:02X} E:{cpu.E:02X} H:{cpu.H:02X} L:{cpu.L:02X} SP:{cpu.SP:04X} PC:{cpu.PC:04X} PCMEM:{GB.read_bus_dispatch(cpu.PC):02X},{GB.read_bus_dispatch(cpu.PC + 1):02X},{GB.read_bus_dispatch(cpu.PC +2):02X},{GB.read_bus_dispatch(cpu.PC+3):02X}\n")
     # GB.fetch_instruction()
+
+
     with open("romlib/bootroms/dmg_boot.bin", "rb") as f:
         bootrom_data = f.read()
     buf = (ctypes.c_uint8 * len(bootrom_data)).from_buffer_copy(bootrom_data)
-    GB.GB_load_bootrom(buf, len(bootrom_data))
+    
+    GB.GB_set_post_boot_state()
+    # GB.GB_load_bootrom(buf, len(bootrom_data))
 
-    with open("romlib/prehistorik.gb", "rb") as f:
+    rom = sys.argv[1]
+    if rom[-3:] != ".gb": rom += ".gb"
+    with open(f"romlib/{rom}", "rb") as f:
         rom_data = f.read()
         buf = (ctypes.c_uint8 * len(rom_data)).from_buffer_copy(rom_data)
         GB.GB_load_rom(buf, len(rom_data))
