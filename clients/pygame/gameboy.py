@@ -54,12 +54,12 @@ def main() -> None:
         bootrom_data = f.read()
     buf = (ctypes.c_uint8 * len(bootrom_data)).from_buffer_copy(bootrom_data)
 
-    # GB.GB_set_post_boot_state()
-    GB.GB_load_bootrom(buf, len(bootrom_data))
+    GB.GB_set_post_boot_state()
+    # GB.GB_load_bootrom(buf, len(bootrom_data))
 
     rom = sys.argv[1]
     if rom[-3:] != ".gb": rom += ".gb"
-    with open(f"romlib/{rom}", "rb") as f:
+    with open(rom, "rb") as f:
         rom_data = f.read()
         buf = (ctypes.c_uint8 * len(rom_data)).from_buffer_copy(rom_data)
         GB.GB_load_rom(buf, len(rom_data))

@@ -124,13 +124,12 @@ static struct {
     uint8_t data_low;
     uint8_t data_high;
     uint16_t tile_data_index;
-
+    
     uint8_t buf_index;
     bool index_done[10];
 } obj_fetcher;
 
 static struct {
-    uint8_t warmup;
     uint8_t discard;
 
     obj_pixel_t obj_pixels[8];
@@ -231,7 +230,7 @@ static bus_interface_t bus_oam = { .read = read_oam, .write = write_oam };
 
 // Check whether BG fetcher should transition to window mode
 static inline bool check_window_ready(void) {
-    return bg_fetcher.window_condition && LCDC_ENABLE_WINDOW && ppu.lx + 7 >= ppu.WX;
+    return bg_fetcher.window_condition && LCDC_ENABLE_WINDOW && (ppu.lx - 8) + 7 >= ppu.WX;
 }
 
 // Get y offset of currently processed sprite object to decide which row of data to load, checking Y-flip
@@ -259,8 +258,8 @@ tile_data(uint8_t byte, tile_data_addressing_mode_t addressing, uint8_t tile_dat
 static void
 push_obj_pixels(void)
 {
+    uint8_t oam_index = ppu.obj_buffer[obj_fetcher.buf_index];
     for (int i = 7; i >= 0; i--) {
-        uint8_t oam_index = ppu.obj_buffer[obj_fetcher.buf_index];
         uint8_t idx = ((OAM_XFLIP(oam_index) ? i : 7 - i) + pixel_mixer.obj_pixels_index) % 8;
         // Ignore this pixel if the obj pixel FIFO already has a non-transparent pixel
         if (pixel_mixer.obj_pixels[idx].color)
@@ -285,6 +284,7 @@ oam_scan_step(void)
 static void
 transition_draw_mode(void)
 {
+    // start 8 off-screen, helps with processing sprites that start off-screen
     ppu.lx = 0;
 
     obj_fetcher.mode = OBJ_CHECK_X;
@@ -295,15 +295,14 @@ transition_draw_mode(void)
     bg_fetcher.mode = BG_GET_TILE;
     bg_fetcher.delay = 5;
     bg_fetcher.window_active = check_window_ready();
-    if (bg_fetcher.window_active) {
+    if (bg_fetcher.window_active)
         bg_fetcher.tile_map_index = TILEMAP_W * (bg_fetcher.window_line / 8);
-    } else {
+    else
         bg_fetcher.tile_map_index = TILEMAP_W * (((ppu.LY + ppu.SCY) % 256) / 8) + ppu.SCX / 8;
-        pixel_mixer.discard = ppu.SCX % 8;
-    }
 
-    pixel_mixer.warmup = 12;
-    pixel_mixer.bg_pixels_len = 0;
+    // delay of 12 at start of scanline comes from 4 + outputting 8 garbage pixels off-screen
+    obj_fetcher.delay = 4;
+    pixel_mixer.bg_pixels_len = 8;
     memset(pixel_mixer.obj_pixels, 0, sizeof(pixel_mixer.obj_pixels));
 }
 
@@ -342,7 +341,7 @@ step_obj_fetcher(void)
     case OBJ_CHECK_X:
         for (int i = obj_fetcher.buf_index; i < SCANLINE_MAX_OBJS; i++, obj_fetcher.buf_index++) {
             if (obj_fetcher.index_done[i]) continue;
-            if (OAM_X(ppu.obj_buffer[i]) <= ppu.lx + 8) {
+            if (OAM_X(ppu.obj_buffer[i]) <= (ppu.lx + 8) - 8) {
                 obj_fetcher.mode = OBJ_GET_TILE;
                 obj_fetcher.index_done[i] = true;
                 break;
@@ -405,7 +404,6 @@ step_bg_fetcher(void)
 static void
 step_mixer()
 {
-    if (pixel_mixer.warmup && pixel_mixer.warmup--) return;
     if (pixel_mixer.bg_pixels_len == 0) return;
     if (pixel_mixer.discard && pixel_mixer.discard-- && pixel_mixer.bg_pixels_len--) return;
 
@@ -418,9 +416,12 @@ step_mixer()
     else if (LCDC_ENABLE_OBJ)
         color = (ppu.OBP[pixel.palette] >> (2 * pixel.color)) & 0b11;
 
-    /*  this is where we increment ppu.lx
+    /*  screen starts at ppu.lx value of 8, do BG discard there
         lcd_index uses column-first ordering currently b/c it's usable by pygame w/o transposing */
-    ppu.lcd[LCD_HEIGHT * ppu.lx++ + ppu.LY] = LCD_COLORS[color];
+    if (ppu.lx >= 8)
+        ppu.lcd[LCD_HEIGHT * (ppu.lx - 8) + ppu.LY] = LCD_COLORS[color];
+    if (++ppu.lx == 8)
+        pixel_mixer.discard = ppu.SCX % 8;
 
     if (!bg_fetcher.window_active && check_window_ready()) {
         bg_fetcher.window_active = true;
@@ -455,7 +456,7 @@ cycle_tcycle_ppu(void)
         if (obj_fetcher.mode == OBJ_IDLE) {
             step_bg_fetcher();
             step_mixer();
-            if (ppu.lx == LCD_WIDTH)
+            if (ppu.lx - 8 == LCD_WIDTH)
                 ppu_set_mode(PPU_MODE_HBLANK);
         }
         break;
@@ -464,7 +465,7 @@ cycle_tcycle_ppu(void)
     }
 
     // Check whether scanline finished
-    if (++ppu.line_dot == SCANLINE_FINAL_DOT) {
+    if (ppu.line_dot++ == SCANLINE_FINAL_DOT) {
         if (bg_fetcher.window_active)
             bg_fetcher.window_line++;
 

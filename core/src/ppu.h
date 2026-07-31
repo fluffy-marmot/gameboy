@@ -32,7 +32,7 @@ typedef struct {
     uint32_t lcd[LCD_WIDTH * LCD_HEIGHT];
     
     /* -- PPU internal data -- */
-    uint8_t lx;                                 // x coordinate within scanline
+    uint8_t lx;                                 // x coordinate + 8 within scanline (starts off screen)
     scanline_dot_t line_dot;                    // dot number of current scanline (first is 0)
     uint8_t obj_buffer[SCANLINE_MAX_OBJS];      // obj indexes stored by OAM scan
     uint8_t obj_buffer_size;
