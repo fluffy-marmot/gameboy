@@ -11,7 +11,7 @@ import pygame
 
 from bindings.python.gameboy_cstuff import GB, LCD
 
-SCALE = 6
+SCALE = 6.5
 
 def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
     np_view = np.ctypeslib.as_array(LCD, shape=(160, 144))
@@ -53,9 +53,9 @@ def main() -> None:
     with open("romlib/bootroms/dmg_boot.bin", "rb") as f:
         bootrom_data = f.read()
     buf = (ctypes.c_uint8 * len(bootrom_data)).from_buffer_copy(bootrom_data)
-    
-    GB.GB_set_post_boot_state()
-    # GB.GB_load_bootrom(buf, len(bootrom_data))
+
+    # GB.GB_set_post_boot_state()
+    GB.GB_load_bootrom(buf, len(bootrom_data))
 
     rom = sys.argv[1]
     if rom[-3:] != ".gb": rom += ".gb"
