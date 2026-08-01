@@ -236,28 +236,6 @@ class gb_gameboy_t(struct):
         ("cartridge", pointer(gb_cartridge_t)),
     ]
 
-
-    # def load_test(self, test):
-    #     for key in test:
-    #         if key == "ram": continue
-    #         self.__setattr__(key.upper(), test[key])
-    #     self.IR = 0
-    #     self.Z = 0
-    #     self.W = 0
-    #     self.IME_latch = 0
-
-    # def test_final(self, test):
-    #     ok = True
-    #     for key in test:
-    #         if key in ["ram", "ei"]: continue
-    #         if getattr(self, key.upper()) != test[key]:
-    #             print(f"\t\t{key}, actual: {getattr(self, key.upper()):08b}, expected: {test[key]:08b}")
-    #             ok = False
-    #     if not ok:
-    #         print()
-    #     return ok
-# bus.h
-
 GB.GB_test_memory_mode_enable.restype = None
 GB.GB_test_memory_mode_enable.argtypes = []
 
@@ -282,7 +260,8 @@ GB.GB_get_lcd.restype = ct.POINTER(uint32)
 GB.GB_set_post_boot_state.argtypes = []
 GB.GB_set_post_boot_state.restype = None
 
-GB.GB_update_joypad.argtypes = [ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool]
+GB.GB_update_joypad.argtypes = [
+    ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool]
 GB.GB_update_joypad.restype = None
 
 GB.GB_load_bootrom.argtypes = [ct.POINTER(uint8), ct.c_size_t]
@@ -291,4 +270,5 @@ GB.GB_load_bootrom.restype = ct.c_int
 GB.GB_load_rom.argtypes = [ct.POINTER(uint8), ct.c_size_t]
 GB.GB_load_rom.restype = ct.c_int
 
-LCD = GB.GB_get_lcd()
+LCD = ct.cast(GB.GB_get_lcd(), ct.POINTER(uint32 * (LCD_WIDTH * LCD_HEIGHT))).contents
+gb = gb_gameboy_t.in_dll(GB, "gb")

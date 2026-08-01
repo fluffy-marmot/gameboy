@@ -138,11 +138,12 @@ static struct {
     uint8_t bg_pixels_len;
 } pixel_mixer;
 
+// Ordered as ARGB as written, but as BGRA as little endian
 static const uint32_t LCD_COLORS[4] = {
-    0x00F4FFBF,
-    0x009AD941,
-    0x00608057,
-    0x00002B40
+    0xFFF4FFBF,
+    0xFF9AD941,
+    0xFF608057,
+    0xFF002B40
 };
 
 static gb_ppu_t ppu;
@@ -416,10 +417,9 @@ step_mixer()
     else if (LCDC_ENABLE_OBJ)
         color = (ppu.OBP[pixel.palette] >> (2 * pixel.color)) & 0b11;
 
-    /*  screen starts at ppu.lx value of 8, do BG discard there
-        lcd_index uses column-first ordering currently b/c it's usable by pygame w/o transposing */
+    // increment ppu.lx here, screen starts at ppu.lx value of 8, do BG discard there
     if (ppu.lx >= 8)
-        ppu.lcd[LCD_HEIGHT * (ppu.lx - 8) + ppu.LY] = LCD_COLORS[color];
+        ppu.lcd[ppu.LY * LCD_WIDTH + (ppu.lx - 8)] = LCD_COLORS[color];
     if (++ppu.lx == 8)
         pixel_mixer.discard = ppu.SCX % 8;
 

@@ -19,8 +19,6 @@ boot_system (void)
     gb.cartridge = init_cartridge(gb.bus);
     
     init_bootrom(gb.bus);
-
-    gb.bus->bus_dispatcher->write(MEMADDR_JOYP, 0x3F);
 }
 
 /* ############################################################################
