@@ -3,6 +3,7 @@
 
 #include "_specification.h"
 
+#define ADDR_BELOW(high)                        (address <= high)
 #define ADDR_RANGE(low, high)                   ((low <= address) && (address <= high))
 
 typedef struct {

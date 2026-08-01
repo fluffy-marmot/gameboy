@@ -14,9 +14,9 @@ read_cart (memaddr address)
     if (cartridge.mbc_bus)
         return cartridge.mbc_bus->read(address);
     
-    if ADDR_RANGE(ADDR_START_ROM_FIXED, ADDR_END_ROM_BANK)
+    if ADDR_BELOW(ADDR_END_ROM_BANK)
         return cartridge.data.rom[address];
-    else if (address - ADDR_START_WRAM_CARTRIDGE < cartridge.data.ram_size)
+    else if ((size_t) (address - ADDR_START_WRAM_CARTRIDGE) < cartridge.data.ram_size)
         // this is purely defensive, cartridges with no MBC aren't known to use external RAM
         return cartridge.data.ram[address - ADDR_START_WRAM_CARTRIDGE];
     else
@@ -28,7 +28,7 @@ write_cart(memaddr address, uint8_t val)
 {
     if (cartridge.mbc_bus)
         cartridge.mbc_bus->write(address, val);
-    else if (address - ADDR_START_WRAM_CARTRIDGE < cartridge.data.ram_size)
+    else if ((size_t) (address - ADDR_START_WRAM_CARTRIDGE) < cartridge.data.ram_size)
         cartridge.data.ram[address - ADDR_START_WRAM_CARTRIDGE] = val;
 }
 
@@ -66,7 +66,7 @@ validate_header_ram_size(void)
     case MBC_RAM_SIZE_2KiB:                     cartridge.data.ram_size =   2 * KiB;            break;
     case MBC_RAM_SIZE_8KiB:                     cartridge.data.ram_size =   8 * KiB;            break;
     case MBC_RAM_SIZE_32KiB:                    cartridge.data.ram_size =  32 * KiB;            break;
-    case MBC_RAM_SIZE_128KiB:                   cartridge.data.ram_size - 128 * KiB;            break;
+    case MBC_RAM_SIZE_128KiB:                   cartridge.data.ram_size = 128 * KiB;            break;
     case MBC_RAM_SIZE_64KiB:                    cartridge.data.ram_size =  64 * KiB;            break;
     default:
         return GB_ERROR_RAM_SIZE_HEADER_INVALID;
@@ -74,7 +74,7 @@ validate_header_ram_size(void)
     if (cartridge.data.ram_size > 0)
         cartridge.data.ram = calloc(cartridge.data.ram_size, sizeof(uint8_t));
     
-    printf("%d\n", cartridge.data.ram_size);
+    printf("%zu\n", cartridge.data.ram_size);
     return GB_RETURN_OK;
 }
 

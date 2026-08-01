@@ -25,7 +25,7 @@ static uint8_t
 read_bus_mbc1(memaddr address)
 {
     // TODO probably add check against rom size
-    if (ADDR_RANGE(ADDR_START_ROM_FIXED, ADDR_END_ROM_FIXED)) {
+    if (ADDR_BELOW(ADDR_END_ROM_FIXED)) {
         if (mbc1.MODE == 0)
             return mbc1.cart->rom[address];
         else
@@ -46,15 +46,13 @@ read_bus_mbc1(memaddr address)
 
         if (resolved_addr < mbc1.cart->ram_size)
             return mbc1.cart->ram[resolved_addr];
-        else
-            return UNREADABLE;
     } 
-
+    return UNREADABLE;
 }
 static void
 write_bus_mbc1(memaddr address, uint8_t val)
 {
-    if (ADDR_RANGE(RAMG_WRITE_ACCESS_LOW, RAMG_WRITE_ACCESS_HIGH)) {
+    if (ADDR_BELOW(RAMG_WRITE_ACCESS_HIGH)) {
         mbc1.RAMG = val & USEPINS_RAMG;
     } else if (ADDR_RANGE(BANK1_WRITE_ACCESS_LOW, BANK1_WRITE_ACCESS_HIGH)) {
         mbc1.BANK1 = (val == 0 ? BANK1_INITIAL : val & USEPINS_BANK1);

@@ -12,7 +12,6 @@
 
 #define MASK_ECHO_RAM                           0b0001111111111111
 
-#define ADDR_BELOW(high)                        (address <= high)
 #define ADDRESS_FF_BUS(address)                 ((address & 0xFF00) == 0xFF00)
 
 
