@@ -2,77 +2,9 @@ import ctypes
 import json
 from pathlib import Path
 
+from bindings.python.gb_c_definitions import GB, gb
+
 BASE_DIR = Path(__file__).parent.resolve()
-
-gb = ctypes.CDLL("./gameboy.so")
-
-class CPU(ctypes.Structure):
-    _fields_ = [
-        ("B", ctypes.c_uint8),
-        ("C", ctypes.c_uint8),
-        ("D", ctypes.c_uint8),
-        ("E", ctypes.c_uint8),
-        ("H", ctypes.c_uint8),
-        ("L", ctypes.c_uint8),
-        ("F", ctypes.c_uint8),
-        ("A", ctypes.c_uint8),
-        ("PC", ctypes.c_uint16),
-        ("SP", ctypes.c_uint16),
-        ("IR", ctypes.c_uint8),
-        ("_pad0", ctypes.c_uint8),  # oops thats due to not defining the union python side, alignment issues
-        ("Z", ctypes.c_uint8),
-        ("W", ctypes.c_uint8),
-        ("IME", ctypes.c_uint8),
-        ("IME_latch", ctypes.c_uint8),
-        ("bus", ctypes.c_void_p),
-        ("irq", ctypes.c_void_p),
-        ("cycle_num", ctypes.c_uint8),
-        ("cb_instruction", ctypes.c_uint8),
-        ("instruction", ctypes.c_void_p),
-    ]
-
-    def load_test(self, test):
-        for key in test:
-            if key == "ram": continue
-            self.__setattr__(key.upper(), test[key])
-        self.IR = 0
-        self.Z = 0
-        self.W = 0
-        self.IME_latch = 0
-
-    def test_final(self, test):
-        ok = True
-        for key in test:
-            if key in ["ram", "ei"]: continue
-            if getattr(self, key.upper()) != test[key]:
-                print(f"\t\t{key}, actual: {getattr(self, key.upper()):08b}, expected: {test[key]:08b}")
-                ok = False
-        if not ok:
-            print()
-        return ok
-                
-# gb.main()
-
-cpu = CPU.in_dll(gb, "cpu")
-
-gb.fetch_instruction.restype = None
-gb.fetch_instruction.argtypes = []
-
-gb.tick_machine_cycle.restype = ctypes.c_uint16
-gb.tick_machine_cycle.argtypes = []
-
-gb.test_memory_read.restype = ctypes.c_uint8
-gb.test_memory_read.argtypes = [ctypes.c_uint16]
-
-gb.test_memory_write.restype = None
-gb.test_memory_write.argtypes = [ctypes.c_uint16, ctypes.c_uint8]
-
-gb.test_memory_wipe.restype = None
-gb.test_memory_wipe.argtypes = []
-
-gb.test_memory_mode_enable.restype = None
-gb.test_memory_mode_enable.argtypes = []
-gb.test_memory_mode_enable()
 
 SM83_DIR = BASE_DIR / "sm83" / "v1"
 

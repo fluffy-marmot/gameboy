@@ -254,6 +254,9 @@ GB.GB_test_memory_read.argtypes = [uint16]
 GB.GB_emulate_frame.restype = None
 GB.GB_emulate_frame.argtypes = []
 
+GB.GB_test_single_instruction.restype = None
+GB.GB_test_single_instruction.argtypes = []
+
 GB.GB_get_lcd.argtypes = []
 GB.GB_get_lcd.restype = ct.POINTER(uint32)
 

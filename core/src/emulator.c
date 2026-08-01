@@ -62,3 +62,11 @@ GB_emulate_frame(void)
     }
     return GB_RETURN_OK;
 }
+
+gb_return_t
+GB_test_single_instruction(void)
+{
+    do {
+        cycle_mcycle_cpu();
+    } while (gb.cpu->cb_instruction || gb.cpu->cycle_num != gb.cpu->instruction->cycle_count);
+}
