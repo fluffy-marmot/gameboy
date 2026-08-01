@@ -230,7 +230,7 @@ static bus_interface_t bus_oam = { .read = read_oam, .write = write_oam };
 
 // Check whether BG fetcher should transition to window mode
 static inline bool check_window_ready(void) {
-    return bg_fetcher.window_condition && LCDC_ENABLE_WINDOW && (ppu.lx - 8) + 7 >= ppu.WX;
+    return bg_fetcher.window_condition && LCDC_ENABLE_WINDOW && ppu.lx + 7 >= ppu.WX + 8;
 }
 
 // Get y offset of currently processed sprite object to decide which row of data to load, checking Y-flip
@@ -294,7 +294,7 @@ transition_draw_mode(void)
 
     bg_fetcher.mode = BG_GET_TILE;
     bg_fetcher.delay = 5;
-    bg_fetcher.window_active = check_window_ready();
+    bg_fetcher.window_active = false;
     if (bg_fetcher.window_active)
         bg_fetcher.tile_map_index = TILEMAP_W * (bg_fetcher.window_line / 8);
     else
@@ -424,6 +424,7 @@ step_mixer()
         pixel_mixer.discard = ppu.SCX % 8;
 
     if (!bg_fetcher.window_active && check_window_ready()) {
+        pixel_mixer.discard = 0;
         bg_fetcher.window_active = true;
         bg_fetcher.tile_map_index = TILEMAP_W * (bg_fetcher.window_line / 8);
         pixel_mixer.bg_pixels_len = 0;
@@ -456,7 +457,7 @@ cycle_tcycle_ppu(void)
         if (obj_fetcher.mode == OBJ_IDLE) {
             step_bg_fetcher();
             step_mixer();
-            if (ppu.lx - 8 == LCD_WIDTH)
+            if (ppu.lx == LCD_WIDTH + 8)
                 ppu_set_mode(PPU_MODE_HBLANK);
         }
         break;
