@@ -6,8 +6,8 @@ typedef struct {
     uint8_t BANK2;                              // upper 2 bits of ROM bank number or all RAM bank number
     uint8_t MODE;                               // mode register
 
-    gb_cart_data_t *cart;
-} gb_mbc1;
+    cart_data_t *cart;
+} gb_mbc1_t;
 
 void init_gameboy_mbc1(gb_cartridge_t *);
 /*

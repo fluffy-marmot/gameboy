@@ -21,7 +21,6 @@ typedef struct{
 
     bus_interface_t *bus;
     gb_irq_handler_t *irq;                      // direct access to interrupts data
-
 } gb_joypad_t;
 
 gb_joypad_t *init_gameboy_joypad(gb_bus_t *, gb_irq_handler_t *);

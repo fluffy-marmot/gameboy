@@ -11,7 +11,7 @@ typedef struct {
     uint8_t *ram;
     size_t rom_size;
     size_t ram_size;
-} gb_cart_data_t;
+} cart_data_t;
 
 typedef struct {
     struct {
@@ -20,7 +20,7 @@ typedef struct {
         mbc_ram_size_t ram_size_id;
     } header;
 
-    gb_cart_data_t data;
+    cart_data_t data;
     bus_interface_t *mbc_bus;
 } gb_cartridge_t;
 

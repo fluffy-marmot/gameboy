@@ -23,4 +23,6 @@ typedef struct {
     gb_cartridge_t *cartridge;
 } gb_gameboy_t;
 
+GB_ABI extern gb_gameboy_t gb;
+
 #endif

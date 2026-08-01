@@ -19,7 +19,7 @@
 #define MODE_WRITE_ACCESS_LOW                   0x6000
 #define MODE_WRITE_ACCESS_HIGH                  0x7FFF
 
-gb_mbc1 mbc1;
+gb_mbc1_t mbc1;
 
 static uint8_t
 read_bus_mbc1(memaddr address)

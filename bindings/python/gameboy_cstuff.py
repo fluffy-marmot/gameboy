@@ -1,56 +1,255 @@
-import ctypes
+import ctypes as ct
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent.parent.resolve()
-GB = ctypes.CDLL(BASE_DIR / "build" / "gameboy.so")
+GB = ct.CDLL(BASE_DIR / "build" / "gameboy.so")
 
-class CPU(ctypes.Structure):
-    B: int # can add type annotations? TODO
-    _fields_ = [
-        ("B", ctypes.c_uint8),
-        ("C", ctypes.c_uint8),
-        ("D", ctypes.c_uint8),
-        ("E", ctypes.c_uint8),
-        ("H", ctypes.c_uint8),
-        ("L", ctypes.c_uint8),
-        ("F", ctypes.c_uint8),
-        ("A", ctypes.c_uint8),
-        ("PC", ctypes.c_uint16),
-        ("SP", ctypes.c_uint16),
-        ("IR", ctypes.c_uint8),
-        ("_pad0", ctypes.c_uint8),  # oops thats due to not defining the union python side, alignment issues
-        ("Z", ctypes.c_uint8),
-        ("W", ctypes.c_uint8),
-        ("IME", ctypes.c_uint8),
-        ("IME_latch", ctypes.c_uint8),
-        ("bus", ctypes.c_void_p),
-        ("irq", ctypes.c_void_p),
-        ("cycle_num", ctypes.c_uint8),
-        ("cb_instruction", ctypes.c_uint8),
-        ("instruction", ctypes.c_void_p),
-    ]
+MAX_MCYCLE_INSTRUCTION = 6
+
+GB_DMG_VRAM_SIZE = 8 * 1024
+GB_DMG_HRAM_SIZE = 127
+GB_DMG_OAM_SIZE = 160
+LCD_WIDTH = 160
+LCD_HEIGHT = 144
+
+c_bool = ct.c_bool
+c_int = ct.c_int
+uint8 = ct.c_uint8
+uint16 = ct.c_uint16
+uint32 = ct.c_uint32
+pointer = ct.POINTER
+void_p = ct.c_void_p
+struct = ct.Structure
+function = ct.CFUNCTYPE
+size_t = ct.c_size_t
+
+memaddr = uint16
+
+# can add type annotations? TODO
+
+bus_read_func = function(uint8, memaddr)
+bus_write_func = function(None, memaddr, uint8)
+
+cycle_func = function(None)
+
+check_next_func = function(c_int)
+call_interrupt_func = function(memaddr, c_int)
+update_stat_func = function(None, uint8)
+
+class bus_interface_t(struct):
+    pass
+class cart_data_t(struct):
+    pass
+class cartridge_header(struct):
+    pass
+class instruction(struct):
+    pass
+class gb_bus_t(struct):
+    pass
+class gb_cartridge_t(struct):
+    pass
+class gb_cpu_t(struct):
+    pass
+class gb_dma_t(struct):
+    pass
+class gb_gameboy_t(struct):
+    pass
+class gb_irq_handler_t(struct):
+    pass
+class gb_joypad_t(struct):
+    pass
+class gb_ppu_t(struct):
+    pass
+class gb_timers_t(struct):
+    pass
+
+bus_interface_t._fields_ = [
+    ("read", bus_read_func),
+    ("write", bus_write_func),
+]
+
+cart_data_t._fields_ = [
+    ("rom", pointer(uint8)),
+    ("ram", pointer(uint8)),
+    ("rom_size", size_t),
+    ("ram_size", size_t),
+]
+
+cartridge_header._fields_ = [
+    ("mbc_type", c_int),
+    ("rom_size_id", c_int),
+    ("ram_size_id", c_int),
+]
+
+instruction._fields_ = [
+    ("cycles", cycle_func * MAX_MCYCLE_INSTRUCTION),
+    ("cycle_count", uint8),
+]
+
+gb_cartridge_t._fields_ = [
+    ("header", cartridge_header),
+
+    ("data", cart_data_t),
+    ("mbc_bus", pointer(gb_bus_t)),
+]
+
+gb_bus_t._fields_ = [
+    ("bus_dispatcher", pointer(bus_interface_t)),
+
+    ("interface_rom_boot", pointer(bus_interface_t)),
+    ("interface_cartridge", pointer(bus_interface_t)),
+    ("interface_vram", pointer(bus_interface_t)),
+    ("interface_wram_system", pointer(bus_interface_t)),
+    ("interface_echo", pointer(bus_interface_t)),
+    ("interface_oam", pointer(bus_interface_t)),
+    ("interface_unusable", pointer(bus_interface_t)),
+    ("interface_hram", pointer(bus_interface_t)),
+
+    ("interface_reg_bootlock", pointer(bus_interface_t)),
+    ("interface_reg_ppu", pointer(bus_interface_t)),
+    ("interface_reg_interrupt", pointer(bus_interface_t)),
+    ("interface_reg_timers", pointer(bus_interface_t)),
+    ("interface_reg_joypad", pointer(bus_interface_t)),
+
+    ("interface_dma", pointer(bus_interface_t)),
+
+    ("interface_nop", pointer(bus_interface_t)),
+
+    ("BOOT_ROM_LOCK", uint8),
+    ("dma", pointer(gb_dma_t)),
+]
+
+gb_dma_t._fields_ = [
+    ("DMA", uint8),
+
+    ("cycles_active", uint8),
+    ("data", uint8),
+    ("status", c_int),
+
+    ("bus", pointer(bus_interface_t)),
+]
+
+gb_cpu_t._fields_ = [
+    ("B", uint8),
+    ("C", uint8),
+    ("D", uint8),
+    ("E", uint8),
+    ("H", uint8),
+    ("L", uint8),
+    ("F", uint8),
+    ("A", uint8),
+
+    ("PC", uint16),
+    ("SP", uint16),
+    ("IR", uint8),
+
+    ("Z", uint8),
+    ("W", uint8),
     
-    def load_test(self, test):
-        for key in test:
-            if key == "ram": continue
-            self.__setattr__(key.upper(), test[key])
-        self.IR = 0
-        self.Z = 0
-        self.W = 0
-        self.IME_latch = 0
+    ("IME", uint8),
+    ("IME_latch", uint8),
 
-    def test_final(self, test):
-        ok = True
-        for key in test:
-            if key in ["ram", "ei"]: continue
-            if getattr(self, key.upper()) != test[key]:
-                print(f"\t\t{key}, actual: {getattr(self, key.upper()):08b}, expected: {test[key]:08b}")
-                ok = False
-        if not ok:
-            print()
-        return ok
+    ("bus", pointer(bus_interface_t)),
+    ("irq", pointer(gb_irq_handler_t)),
+
+    ("cycle_num", uint8),
+    ("cb_instruction", uint8),
+    ("instruction", pointer(instruction)),
+]
+
+gb_irq_handler_t._fields_ = [
+    ("IE", uint8),
+    ("IF", uint8),
+    ("check_next", check_next_func),
+    ("call_interrupt", call_interrupt_func),
+    ("update_stat", update_stat_func),
+]
+
+gb_joypad_t._fields_ = [
+    ("JOYP", uint8),
+
+    ("BUTTON_SELECT", c_bool),
+    ("BUTTON_START", c_bool),
+    ("BUTTON_B", c_bool),
+    ("BUTTON_A", c_bool),
+    ("BUTTON_DOWN", c_bool),
+    ("BUTTON_UP", c_bool),
+    ("BUTTON_LEFT", c_bool),
+    ("BUTTON_RIGHT", c_bool),
+
+    ("bus", pointer(bus_interface_t)),
+    ("irq", pointer(gb_irq_handler_t)),
+]
+
+gb_ppu_t._fields_ = [
+    ("LCDC", uint8),
+    ("STAT", uint8),
+    ("SCY", uint8),
+    ("SCX", uint8),
+    ("LY", uint8),
+    ("LYC", uint8),
+    
+    ("BGP", uint8),
+    ("OBP", uint8 * 2),
+    ("WY", uint8),
+    ("WX", uint8),
+
+    ("vram", uint8 * GB_DMG_VRAM_SIZE),
+    ("oam", uint8 * GB_DMG_OAM_SIZE),
+    ("lcd", uint32 * (LCD_HEIGHT * LCD_WIDTH)),
+    
+    ("lx", uint8),
+    ("line_dot", c_int),
+    ("obj_buffer", uint8 * 10),
+    ("obj_buffer_size", uint8 ),  
+
+    ("irq", pointer(gb_irq_handler_t)),
+]
+
+gb_timers_t._fields_ = [
+    ("DIV", uint16),
+    ("TIMA", uint8),
+    ("TMA", uint8),
+    ("TAC", uint8),
+
+    ("timer_operation_stored", uint8),
+    ("tima_overflow_cycles", uint8),
+
+    ("irq", pointer(gb_irq_handler_t)),
+]
+    
+gb_gameboy_t._fields_ = [
+    ("cpu", pointer(gb_cpu_t)),
+    ("bus", pointer(gb_bus_t)),
+    ("dma", pointer(gb_dma_t)),
+    ("ppu", pointer(gb_ppu_t)),
+    ("joypad", pointer(gb_joypad_t)),
+    ("timers", pointer(gb_timers_t)),
+    ("irq", pointer(gb_irq_handler_t)),
+    ("cartridge", pointer(gb_cartridge_t)),
+]
 
 
+
+    # def load_test(self, test):
+    #     for key in test:
+    #         if key == "ram": continue
+    #         self.__setattr__(key.upper(), test[key])
+    #     self.IR = 0
+    #     self.Z = 0
+    #     self.W = 0
+    #     self.IME_latch = 0
+
+    # def test_final(self, test):
+    #     ok = True
+    #     for key in test:
+    #         if key in ["ram", "ei"]: continue
+    #         if getattr(self, key.upper()) != test[key]:
+    #             print(f"\t\t{key}, actual: {getattr(self, key.upper()):08b}, expected: {test[key]:08b}")
+    #             ok = False
+    #     if not ok:
+    #         print()
+    #     return ok
 # bus.h
 
 GB.GB_test_memory_mode_enable.restype = None
@@ -63,43 +262,28 @@ GB.GB_test_memory_wipe.restype = None
 GB.GB_test_memory_wipe.argtypes = []
 
 GB.GB_test_memory_write.restype = None
-GB.GB_test_memory_write.argtypes = [ctypes.c_uint16, ctypes.c_uint8]
+GB.GB_test_memory_write.argtypes = [uint16, uint8]
 
-GB.GB_test_memory_read.restype = ctypes.c_uint8
-GB.GB_test_memory_read.argtypes = [ctypes.c_uint16]
-
-# cpu.h
-
-# cpu = CPU.in_dll(GB, "cpu")
-
-# GB.fetch_instruction.restype = None
-# GB.fetch_instruction.argtypes = []
-
-# GB.tick_machine_cycle.restype = ctypes.c_uint16
-# GB.tick_machine_cycle.argtypes = []
-
-# ppu.h
-
-# GB.dot_cycle.restype = None
-# GB.dot_cycle.argtypes = []
+GB.GB_test_memory_read.restype = uint8
+GB.GB_test_memory_read.argtypes = [uint16]
 
 GB.GB_emulate_frame.restype = None
 GB.GB_emulate_frame.argtypes = []
 
 GB.GB_get_lcd.argtypes = []
-GB.GB_get_lcd.restype = ctypes.POINTER(ctypes.c_uint32)
+GB.GB_get_lcd.restype = ct.POINTER(uint32)
 LCD = GB.GB_get_lcd()
-# lcd_type = ctypes.c_uint32 * (160 * 144)
-# LCD = ctypes.cast(ptr, ctypes(lcd_type)).contents
+# lcd_type = ct.c_uint32 * (160 * 144)
+# LCD = ct.cast(ptr, ct(lcd_type)).contents
 
 GB.GB_set_post_boot_state.argtypes = []
 GB.GB_set_post_boot_state.restype = None
 
-GB.GB_update_joypad.argtypes = [ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool, ctypes.c_bool]
+GB.GB_update_joypad.argtypes = [ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool]
 GB.GB_update_joypad.restype = None
 
-GB.GB_load_bootrom.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t]
-GB.GB_load_bootrom.restype = ctypes.c_int
+GB.GB_load_bootrom.argtypes = [ct.POINTER(uint8), ct.c_size_t]
+GB.GB_load_bootrom.restype = ct.c_int
 
-GB.GB_load_rom.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t]
-GB.GB_load_rom.restype = ctypes.c_int
+GB.GB_load_rom.argtypes = [ct.POINTER(uint8), ct.c_size_t]
+GB.GB_load_rom.restype = ct.c_int
