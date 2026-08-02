@@ -10,6 +10,7 @@
 #include "irq.h"
 #include "joypad.h"
 #include "ppu.h"
+#include "serial.h"
 #include "timers.h"
 
 typedef struct {
@@ -18,7 +19,9 @@ typedef struct {
     gb_dma_t *dma;
     gb_ppu_t *ppu;
     gb_joypad_t *joypad;
+    gb_serial_t *serial;
     gb_timers_t *timers;
+
     gb_irq_handler_t *irq;
     gb_cartridge_t *cartridge;
 } gb_gameboy_t;

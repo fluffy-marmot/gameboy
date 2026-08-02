@@ -68,6 +68,13 @@ class lcd(struct):
         ("colors", uint32 * 4),
     ]
 
+class serial_buffer_t(struct):
+    _fields_ = [
+        ("size", uint16),
+        ("capacity", uint16),
+        ("data", pointer(uint8)),
+    ]
+
 class gb_irq_handler_t(struct):
     _fields_ = [
         ("IE", uint8),
@@ -231,6 +238,16 @@ class gb_timers_t(struct):
         ("irq", pointer(gb_irq_handler_t)),
     ]
 
+class gb_serial_t(struct):
+    _fields_ = [
+        ("SB", uint8),
+        ("SC", uint8),
+
+        ("current_bit", uint8),
+        ("buffer", serial_buffer_t),
+        ("irq", pointer(gb_irq_handler_t)),
+    ]
+
 class gb_gameboy_t(struct):
     _fields_ = [
         ("cpu", pointer(gb_cpu_t)),
@@ -238,6 +255,7 @@ class gb_gameboy_t(struct):
         ("dma", pointer(gb_dma_t)),
         ("ppu", pointer(gb_ppu_t)),
         ("joypad", pointer(gb_joypad_t)),
+        ("serial", pointer(gb_serial_t)),
         ("timers", pointer(gb_timers_t)),
         ("irq", pointer(gb_irq_handler_t)),
         ("cartridge", pointer(gb_cartridge_t)),
@@ -274,7 +292,7 @@ GB.GB_test_single_instruction.restype = None
 GB.GB_test_single_instruction.argtypes = [c_int]
 
 GB.GB_get_lcd.argtypes = []
-GB.GB_get_lcd.restype = ct.POINTER(uint32)
+GB.GB_get_lcd.restype = pointer(uint32)
 
 GB.GB_set_lcd_colors.argtypes = [4 * uint32]
 GB.GB_set_lcd_colors.restype = None
@@ -286,11 +304,14 @@ GB.GB_update_joypad.argtypes = [
     ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool]
 GB.GB_update_joypad.restype = None
 
-GB.GB_load_bootrom.argtypes = [ct.POINTER(uint8), ct.c_size_t]
+GB.GB_load_bootrom.argtypes = [pointer(uint8), ct.c_size_t]
 GB.GB_load_bootrom.restype = ct.c_int
 
-GB.GB_load_rom.argtypes = [ct.POINTER(uint8), ct.c_size_t]
+GB.GB_load_rom.argtypes = [pointer(uint8), ct.c_size_t]
 GB.GB_load_rom.restype = ct.c_int
 
-LCD = ct.cast(GB.GB_get_lcd(), ct.POINTER(uint32 * (LCD_WIDTH * LCD_HEIGHT))).contents
+GB.GB_serial_buffer_flush.argtypes = []
+GB.GB_serial_buffer_flush.restype = pointer(uint8)
+
+LCD = ct.cast(GB.GB_get_lcd(), pointer(uint32 * (LCD_WIDTH * LCD_HEIGHT))).contents
 gb = gb_gameboy_t.in_dll(GB, "gb")

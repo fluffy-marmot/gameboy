@@ -518,4 +518,5 @@ uint32_t *GB_get_lcd(void) {
 
 gb_return_t GB_set_lcd_colors(uint32_t colors[4]) {
     memcpy(ppu.lcd.colors, colors, 4 * sizeof(uint32_t));
+    return GB_RETURN_OK;
 }

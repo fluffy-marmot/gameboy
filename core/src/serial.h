@@ -6,9 +6,9 @@
 #include "irq.h"
 
 typedef struct {
-    uint8_t *data;
     uint16_t size;
     uint16_t capacity;
+    uint8_t *data;
 } serial_buffer_t;
 
 typedef struct{

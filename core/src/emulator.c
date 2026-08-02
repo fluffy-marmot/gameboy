@@ -8,9 +8,10 @@ gb_gameboy_t gb;
 static void
 emulate_machine_cycle(void)
 {
+    cycle_mcycle_serial();
     cycle_mcycle_dma();
     cycle_mcycle_cpu();
-    for (int tcycle = 0; tcycle < 4; tcycle++) {
+    for (int tcycle = 0; tcycle < DOTS_PER_MACHINE_CYCLE; tcycle++) {
         cycle_tcycle_timers();
         cycle_tcycle_ppu();
     }
@@ -34,10 +35,12 @@ GB_reboot_system(void)
     gb.ppu = init_gameboy_ppu(gb.bus, gb.irq);
     gb.dma = init_gameboy_dma(gb.bus);
     gb.joypad = init_gameboy_joypad(gb.bus, gb.irq);
+    gb.serial = init_gameboy_serial(gb.bus, gb.irq);
     gb.timers = init_gameboy_timers(gb.bus, gb.irq);
     gb.cartridge = init_cartridge(gb.bus);
     
     init_bootrom(gb.bus);
+    return GB_RETURN_OK;
 }
 
 // reach post-boot state without needing to load a boot ROM

@@ -23,3 +23,11 @@ def GB_emulate_until_opcode(opcode: int) -> None:
 
 def GB_reboot_system() -> None:
     GB.GB_reboot_system()
+
+def GB_serial_buffer_flush() -> str | None:
+    buffer_size = gb.serial.contents.buffer.size
+    if not buffer_size:
+        return None
+    # return ct.cast(GB.GB_serial_buffer_flush(), pointer(uint8 * buffer_size)).contents
+    raw = ct.string_at(GB.GB_serial_buffer_flush(), buffer_size)
+    return raw.decode('ascii', errors='backslashreplace')

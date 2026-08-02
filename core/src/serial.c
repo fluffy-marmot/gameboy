@@ -1,3 +1,4 @@
+#include "_abi.h"
 #include "serial.h"
 
 #include <limits.h>
@@ -14,6 +15,7 @@
 #define CLOCK_SELECT                            (serial.SC & CLOCK_ENABLE_BIT   )
 
 #define BUFFER_OUT_INITIAL_SIZE                 (64 * BYTES)
+#define MIN(x, y)                               ((x < y) ? (x) : (y))
 
 static gb_serial_t serial;
 
@@ -32,41 +34,30 @@ write_serial_reg(memaddr address, uint8_t val)
     switch (address) {
     case MEMADDR_SB:
         serial.SB = val;
+        break;
     case MEMADDR_SC:
         serial.SC = (val & USEPINS_SC) | (USEPINS_SC ^ 0xFF);
+        break;
     }
 }
 static bus_interface_t bus_registers_serial = { .read = read_serial_reg, .write = write_serial_reg };
-
-
-// from MC project, good model for increasing size of buffer as needed:
-// void nbt_append(NbtBuilder *nbt, const char *new_data, unsigned int new_data_len) {
-//     if (nbt->length + new_data_len > nbt->capacity) {
-//         do {
-//             nbt->capacity *= 2;
-//         } while (nbt->length + new_data_len > nbt->capacity);
-
-//         nbt->data = (char *) realloc(nbt->data, nbt->capacity);
-//     }
-
-//     memcpy(nbt->data + nbt->length, new_data, new_data_len);
-//     nbt->length += new_data_len;
-// }
-
 // TODO: also add ctypes for serial
 
 void
 cycle_mcycle_serial(void)
 {
     if (TRANSFER_ENABLED && serial.buffer.size < UINT16_MAX) {
-        serial.buffer.data[serial.buffer.size] << 1;
+        serial.buffer.data[serial.buffer.size] <<= 1;
         serial.buffer.data[serial.buffer.size] |= (serial.SB >> 7);
         serial.SB = (serial.SB << 1) | (0xFF & MASK_BIT_L);
 
         if (++serial.current_bit == 8) {
             if (++serial.buffer.size == serial.buffer.capacity && serial.buffer.capacity < UINT16_MAX) {
-                
+                serial.buffer.capacity = MIN(UINT16_MAX, serial.buffer.capacity * 2);
+                serial.buffer.data = (uint8_t *) realloc(serial.buffer.data, serial.buffer.capacity);
             }
+            serial.current_bit = 0;
+            serial.irq->IF |= INTERRUPT_BIT_SERIAL;
         }
     }
 }
@@ -81,4 +72,21 @@ init_gameboy_serial(gb_bus_t *bus, gb_irq_handler_t *irq)
     serial.irq = irq;
     bus->interface_reg_serial = &bus_registers_serial;
     return &serial;
+}
+
+/* ############################################################################
+###############################################################################
+
+        client-facing ABI functions
+        
+###############################################################################
+############################################################################ */
+
+// caller should read size of buffer before flushing it, as it will be set to 0
+uint8_t *
+GB_serial_buffer_flush(void)
+{
+    serial.buffer.size = 0;
+    return serial.buffer.data;
+
 }
