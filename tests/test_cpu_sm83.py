@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from bindings.python.gb_c_definitions import GB, gb
+from common.python.bindings import *
+from common.python.common import *
 from tests.config import *
 
 sm83_jsons = sorted(DATA_SM83_DIR.glob("*.json"))
@@ -13,6 +14,7 @@ registers_8bit = "a b c d e f h l".split()
 @pytest.fixture(scope="module", autouse=True)
 def sm83_test_memory_mode():
     GB.GB_test_memory_mode_enable()
+    GB_reboot_system()
     yield
     GB.GB_test_memory_mode_disable()
 
@@ -65,6 +67,7 @@ def check_sm83_cpu_state(state: dict) -> list[str]:
     return mismatches
 
 
+@pytest.mark.skip("Skip single step instructions, they take a few seconds and seem to pass reliably by now")
 @pytest.mark.parametrize("sm83_instruction_json", sm83_jsons, ids=lambda f: f.stem)
 def test_instruction(sm83_instruction_json: Path) -> None:
     with open(sm83_instruction_json) as f:

@@ -5,9 +5,28 @@
 
 gb_gameboy_t gb;
 
-__attribute__((constructor))
 static void
-boot_system (void)
+emulate_machine_cycle(void)
+{
+    cycle_mcycle_dma();
+    cycle_mcycle_cpu();
+    for (int tcycle = 0; tcycle < 4; tcycle++) {
+        cycle_tcycle_timers();
+        cycle_tcycle_ppu();
+    }
+}
+
+/* ############################################################################
+###############################################################################
+
+        client-facing ABI functions
+        
+###############################################################################
+############################################################################ */
+
+__attribute__((constructor))
+gb_return_t
+GB_reboot_system(void)
 {
     gb.bus = init_gameboy_bus();
     gb.irq = init_gameboy_irq(gb.bus);
@@ -20,14 +39,6 @@ boot_system (void)
     
     init_bootrom(gb.bus);
 }
-
-/* ############################################################################
-###############################################################################
-
-        client-facing ABI functions
-        
-###############################################################################
-############################################################################ */
 
 // reach post-boot state without needing to load a boot ROM
 gb_return_t
@@ -52,14 +63,9 @@ GB_set_post_boot_state(void)
 gb_return_t
 GB_emulate_frame(void)
 {
-    for (int mcycle = 0; mcycle < MACHINE_CYCLES_PER_FRAME; mcycle++) {
-        cycle_mcycle_dma();
-        cycle_mcycle_cpu();
-        for (int tcycle = 0; tcycle < 4; tcycle++) {
-            cycle_tcycle_timers();
-            cycle_tcycle_ppu();
-        }
-    }
+    for (int mcycle = 0; mcycle < MACHINE_CYCLES_PER_FRAME; mcycle++)
+        emulate_machine_cycle();
+    
     return GB_RETURN_OK;
 }
 
@@ -72,5 +78,15 @@ GB_test_single_instruction(int max_mcycles)
         i++;
     } while (i < max_mcycles &&
              (gb.cpu->cb_instruction || gb.cpu->cycle_num != gb.cpu->instruction->cycle_count));
+    return GB_RETURN_OK;
+}
+
+// useful for mealybug tests which check generated LCD image using LD B, B opcode as breakpoint
+gb_return_t
+GB_emulate_until_opcode(uint8_t opcode)
+{
+    while (gb.cpu->instruction == NULL || gb.cpu->cb_instruction || gb.cpu->IR != opcode)
+        emulate_machine_cycle();
+
     return GB_RETURN_OK;
 }

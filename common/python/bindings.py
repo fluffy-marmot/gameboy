@@ -260,14 +260,23 @@ GB.GB_test_memory_write.argtypes = [uint16, uint8]
 GB.GB_test_memory_read.restype = uint8
 GB.GB_test_memory_read.argtypes = [uint16]
 
+GB.GB_reboot_system.restype = None
+GB.GB_reboot_system.argtypes = []
+
 GB.GB_emulate_frame.restype = None
 GB.GB_emulate_frame.argtypes = []
+
+GB.GB_emulate_until_opcode.restype = None
+GB.GB_emulate_until_opcode.argtypes = [uint8]
 
 GB.GB_test_single_instruction.restype = None
 GB.GB_test_single_instruction.argtypes = [c_int]
 
 GB.GB_get_lcd.argtypes = []
 GB.GB_get_lcd.restype = ct.POINTER(uint32)
+
+GB.GB_set_lcd_colors.argtypes = [4 * uint32]
+GB.GB_set_lcd_colors.restype = None
 
 GB.GB_set_post_boot_state.argtypes = []
 GB.GB_set_post_boot_state.restype = None

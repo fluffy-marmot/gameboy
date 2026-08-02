@@ -8,7 +8,8 @@ from time import perf_counter
 
 import pygame
 
-from bindings.python.gb_c_definitions import GB, LCD, LCD_WIDTH, LCD_HEIGHT, uint8
+from common.python.bindings import GB, LCD, LCD_WIDTH, LCD_HEIGHT, uint8, uint32
+from common.python.common import *
 
 BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 SCALE = 6.5
@@ -42,7 +43,7 @@ def load_bootrom() -> None:
         except FileNotFoundError:
             print("Config asks to use bootrom, but could not find file, please edit config.ini. Skipping bootrom")
     if not bootrom:
-        GB.GB_set_post_boot_state()
+        GB_set_post_boot_state()x
 
 
 def load_rom() -> None:
@@ -53,10 +54,7 @@ def load_rom() -> None:
         sys.exit("Please set a location for rom library using romlib in config.ini")
     rom = sys.argv[1] if sys.argv[1].endswith("gb") else f"{sys.argv[1]}.gb"
     try:
-        with open(BASE_DIR / romlib / rom, "rb") as f:
-            rom_data = f.read()
-            buf = (uint8 * len(rom_data)).from_buffer_copy(rom_data)
-            GB.GB_load_rom(buf, len(rom_data))
+        GB_load_rom((BASE_DIR / romlib / rom).resolve())
     except FileNotFoundError:
         sys.exit(f"Couldn't find ROM file: {romlib}/{rom}")
         
@@ -77,7 +75,7 @@ def main() -> None:
     load_keybinds()
     load_bootrom()
     load_rom()
-    
+    GB_set_lcd_colors()
     frame_times = deque(maxlen=120)
     frame = 0
     pygame.display.set_caption(f"Gameboy")
@@ -102,7 +100,7 @@ def main() -> None:
             not keys[KEYBINDS["right"]]
         )
 
-        GB.GB_emulate_frame()
+        GB_emulate_frame()
         
         window_draw(screen, render_surface)
         pygame.display.flip()

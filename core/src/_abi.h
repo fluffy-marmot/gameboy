@@ -36,8 +36,10 @@ GB_ABI     uint8_t GB_test_memory_read (memaddr address);
 GB_ABI gb_return_t GB_load_rom(const uint8_t *data, size_t size);
 
 // emulator.c
+GB_ABI gb_return_t GB_reboot_system(void);
 GB_ABI gb_return_t GB_set_post_boot_state(void);
 GB_ABI gb_return_t GB_emulate_frame(void);
+GB_ABI gb_return_t GB_emulate_until_opcode(uint8_t opcode);
 
 GB_ABI gb_return_t GB_test_single_instruction(int mcycles);
 
@@ -49,5 +51,6 @@ GB_ABI gb_return_t GB_update_joypad(bool start, bool select, bool b,    bool a,
 // ppu.c
 // get display data for LCD screen
 GB_ABI uint32_t *GB_get_lcd(void);
+GB_ABI gb_return_t GB_set_lcd_colors(uint32_t colors[4]);
 
 #endif

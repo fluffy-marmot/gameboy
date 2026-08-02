@@ -2,6 +2,9 @@
 # various test suites
 tests/testdata/
 
+# image output for LCD comparison tests
+tests/output/
+
 # copyrighted roms and bootoms
 romlib/
 

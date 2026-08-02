@@ -2,6 +2,7 @@
 #include "joypad.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #define USEPINS_JOYP                            0b00111111
 #define WRITEABLE_JOYP                          0b00110000
@@ -72,6 +73,7 @@ static bus_interface_t bus_reg_joypad = { .read = read_joypad_reg, .write = writ
 gb_joypad_t *
 init_gameboy_joypad(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
+    memset(&joypad, 0, sizeof(gb_joypad_t));
     joypad.irq = irq;
     bus->interface_reg_joypad = &bus_reg_joypad;
     return &joypad;

@@ -1,5 +1,7 @@
 #include "timers.h"
 
+#include <string.h>
+
 #define USEPINS_TAC                             0b00000111
 
 #define TAC_ENABLE_BIT                          0b00000100
@@ -71,6 +73,7 @@ cycle_tcycle_timers(void)
 gb_timers_t *
 init_gameboy_timers(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
+    memset(&timers, 0, sizeof(gb_timers_t));
     timers.irq = irq;
     bus->interface_reg_timers = &bus_registers_timers;
     return &timers;

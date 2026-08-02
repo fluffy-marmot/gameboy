@@ -74,7 +74,7 @@ validate_header_ram_size(void)
     if (cartridge.data.ram_size > 0)
         cartridge.data.ram = calloc(cartridge.data.ram_size, sizeof(uint8_t));
     
-    printf("%zu\n", cartridge.data.ram_size);
+    // printf("%zu\n", cartridge.data.ram_size);
     return GB_RETURN_OK;
 }
 
@@ -118,6 +118,9 @@ select_mbc_controller(void)
 gb_cartridge_t *
 init_cartridge(gb_bus_t *bus)
 {
+    free(cartridge.data.rom);
+    free(cartridge.data.ram);
+    memset(&cartridge, 0, sizeof(gb_cartridge_t));
     bus->interface_cartridge = &bus_cart;
     return &cartridge;
 }
@@ -146,7 +149,7 @@ GB_load_rom(const uint8_t *data, size_t size)
     cartridge.header.rom_size_id = cartridge.data.rom[CARTRIDGE_HEADER_ROM_SIZE];
     cartridge.header.ram_size_id = cartridge.data.rom[CARTRIDGE_HEADER_RAM_SIZE];
 
-    printf("ROM header: %X %X %X\n", cartridge.header.mbc_type, cartridge.header.rom_size_id, cartridge.header.ram_size_id);
+    // printf("ROM header: %X %X %X\n", cartridge.header.mbc_type, cartridge.header.rom_size_id, cartridge.header.ram_size_id);
 
     size_t rom_size = reported_header_rom_size();
     if (rom_size == 0)

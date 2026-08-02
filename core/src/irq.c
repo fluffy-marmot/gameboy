@@ -1,5 +1,7 @@
 #include "irq.h"
 
+#include <string.h>
+
 #define BIT                         0b00000001
 
 static gb_irq_handler_t irq_handler;
@@ -66,6 +68,7 @@ static bus_interface_t bus_registers_interrupt = { read_interrupt_registers, wri
 gb_irq_handler_t *
 init_gameboy_irq(gb_bus_t *bus)
 {
+    memset(&irq_handler, 0, sizeof(gb_irq_handler_t));
     irq_handler.update_stat_interrupt_line = update_stat_interrupt_line;
     irq_handler.check_next_enabled_and_requested = check_next_enabled_and_requested;
     irq_handler.call_interrupt = call_interrupt;

@@ -495,8 +495,9 @@ cycle_tcycle_ppu(void)
 gb_ppu_t *
 init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
+    memset(&ppu, 0, sizeof(gb_ppu_t));
     ppu.irq = irq;
-    memcpy(ppu.lcd.colors, DEFAULT_LCD_COLORS, 4 * sizeof(uint32_t));
+    GB_set_lcd_colors((uint32_t *) DEFAULT_LCD_COLORS);
     bus->interface_vram = &bus_vram;
     bus->interface_oam = &bus_oam;
     bus->interface_reg_ppu = &bus_registers_ppu;
@@ -513,4 +514,8 @@ init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
 
 uint32_t *GB_get_lcd(void) {
     return ppu.lcd.pixels;
+}
+
+gb_return_t GB_set_lcd_colors(uint32_t colors[4]) {
+    memcpy(ppu.lcd.colors, colors, 4 * sizeof(uint32_t));
 }

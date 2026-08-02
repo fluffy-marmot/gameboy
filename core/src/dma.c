@@ -1,5 +1,7 @@
 #include "dma.h"
 
+#include <string.h>
+
 // clear bit 5 of address high byte if we exceed max value
 #define DMA_MAX_VALUE                           0xDF
 #define DMA_MAX_VALUE_OVERFLOW_MASK             0b11101111
@@ -38,6 +40,7 @@ cycle_mcycle_dma(void)
 gb_dma_t *
 init_gameboy_dma(gb_bus_t *bus)
 {
+    memset(&dma, 0, sizeof(gb_dma_t));
     dma.bus = bus->bus_dispatcher;
     bus->interface_dma = &bus_dma;
     bus->dma = &dma;

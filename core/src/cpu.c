@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #define MASK_BYTE                               0b11111111
 #define MASK_NIBBLE_L                           0b00001111
@@ -1814,6 +1815,7 @@ cycle_mcycle_cpu()
 gb_cpu_t *
 init_gameboy_cpu(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
+    memset(&cpu, 0, sizeof(gb_cpu_t));
     cpu.bus = bus->bus_dispatcher;
     cpu.irq = irq;
     return &cpu;

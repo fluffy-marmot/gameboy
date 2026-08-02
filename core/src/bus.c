@@ -138,6 +138,7 @@ static bus_interface_t bus_unusable = { .read = read_unusable, .write = write_un
 gb_bus_t *
 init_gameboy_bus(void)
 {
+    memset(&bus, 0, sizeof(gb_bus_t));
     bus.bus_dispatcher = &bus_dispatcher;
     bus.interface_wram_system = &bus_wram;
     bus.interface_echo = &bus_echo;
