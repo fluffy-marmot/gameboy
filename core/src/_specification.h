@@ -106,6 +106,10 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 #define MEMADDR_TMA                             0xFF06
 #define MEMADDR_TAC                             0xFF07
 
+// Serial registers
+#define MEMADDR_SB                              0xFF01
+#define MEMADDR_SC                              0xFF02
+
 /* -- Various conventions relating to cartridge header and MBC -- */
 
 #define CARTRIDGE_HEADER_MBC_TYPE               0x0147

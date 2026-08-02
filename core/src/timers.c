@@ -26,7 +26,7 @@ read_timers_reg(memaddr address)
     case MEMADDR_TIMA:                          return timers.TIMA;
     case MEMADDR_TMA:                           return timers.TMA;
     case MEMADDR_TAC:                           return timers.TAC | (USEPINS_TAC ^ 0xFF);
-    default:                                    return 0xFF;
+    default:                                    return UNREADABLE;
     }       
 }
 static void

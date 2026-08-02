@@ -106,6 +106,7 @@ class gb_bus_t(struct):
         ("interface_reg_interrupt", pointer(bus_interface_t)),
         ("interface_reg_timers", pointer(bus_interface_t)),
         ("interface_reg_joypad", pointer(bus_interface_t)),
+        ("interface_reg_serial", pointer(bus_interface_t)),
 
         ("interface_dma", pointer(bus_interface_t)),
 
@@ -187,7 +188,7 @@ class gb_joypad_t(struct):
         ("BUTTON_LEFT", c_bool),
         ("BUTTON_RIGHT", c_bool),
 
-        ("bus", pointer(bus_interface_t)),
+        # ("bus", pointer(bus_interface_t)),
         ("irq", pointer(gb_irq_handler_t)),
     ]
 
