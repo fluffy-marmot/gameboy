@@ -27,10 +27,7 @@ typedef struct {
 
     uint8_t vram[GB_DMG_VRAM_SIZE];             // video RAM - tile data for 384 tiles and two 32x32 tile maps
     uint8_t  oam[GB_DMG_OAM_SIZE];              // object attribute memory
-
-    /* -- holding actual LCD color data that will be drawn on the screen */
-    uint32_t lcd[LCD_WIDTH * LCD_HEIGHT];
-    
+   
     /* -- PPU internal data -- */
     uint8_t lx;                                 // x coordinate + 8 within scanline (starts off screen)
     scanline_dot_t line_dot;                    // dot number of current scanline (first is 0)
@@ -38,6 +35,12 @@ typedef struct {
     uint8_t obj_buffer_size;
         
     gb_irq_handler_t *irq;                      // direct access to interrupts data
+
+    /* -- holding actual LCD color data that will be drawn on the screen */
+    struct {
+        uint32_t pixels[LCD_WIDTH * LCD_HEIGHT];
+        uint32_t colors[4];
+    } lcd;
 } gb_ppu_t;
 
 gb_ppu_t *init_gameboy_ppu(gb_bus_t *, gb_irq_handler_t *);

@@ -139,7 +139,7 @@ static struct {
 } pixel_mixer;
 
 // Ordered as ARGB as written, but as BGRA as little endian
-static const uint32_t LCD_COLORS[4] = {
+static const uint32_t DEFAULT_LCD_COLORS[4] = {
     0xFFF4FFBF,
     0xFF9AD941,
     0xFF608057,
@@ -419,7 +419,7 @@ step_mixer()
 
     // increment ppu.lx here, screen starts at ppu.lx value of 8, do BG discard there
     if (ppu.lx >= 8)
-        ppu.lcd[ppu.LY * LCD_WIDTH + (ppu.lx - 8)] = LCD_COLORS[color];
+        ppu.lcd.pixels[ppu.LY * LCD_WIDTH + (ppu.lx - 8)] = ppu.lcd.colors[color];
     if (++ppu.lx == 8)
         pixel_mixer.discard = ppu.SCX % 8;
 
@@ -496,6 +496,7 @@ gb_ppu_t *
 init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
     ppu.irq = irq;
+    memcpy(ppu.lcd.colors, DEFAULT_LCD_COLORS, 4 * sizeof(uint32_t));
     bus->interface_vram = &bus_vram;
     bus->interface_oam = &bus_oam;
     bus->interface_reg_ppu = &bus_registers_ppu;
@@ -511,5 +512,5 @@ init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
 ############################################################################ */
 
 uint32_t *GB_get_lcd(void) {
-    return ppu.lcd;
+    return ppu.lcd.pixels;
 }

@@ -62,6 +62,12 @@ class instruction(struct):
         ("cycle_count", uint8),
     ]
 
+class lcd(struct):
+    _fields_ = [
+        ("pixels", uint32 * (LCD_HEIGHT * LCD_WIDTH)),
+        ("colors", uint32 * 4),
+    ]
+
 class gb_irq_handler_t(struct):
     _fields_ = [
         ("IE", uint8),
@@ -201,7 +207,6 @@ class gb_ppu_t(struct):
 
         ("vram", uint8 * GB_DMG_VRAM_SIZE),
         ("oam", uint8 * GB_DMG_OAM_SIZE),
-        ("lcd", uint32 * (LCD_HEIGHT * LCD_WIDTH)),
 
         ("lx", uint8),
         ("line_dot", c_int),
@@ -209,6 +214,7 @@ class gb_ppu_t(struct):
         ("obj_buffer_size", uint8),
 
         ("irq", pointer(gb_irq_handler_t)),
+        ("lcd", lcd),
     ]
 
 class gb_timers_t(struct):

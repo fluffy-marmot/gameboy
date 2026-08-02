@@ -79,7 +79,7 @@ def test_instruction(sm83_instruction_json: Path) -> None:
             failures.append(f"steptest {i} ({steptest['name']}):\n    " + "\n    ".join(mismatches))
 
     if failures:
-        shown = failures[:20]
+        shown = failures[:5]
         summary = f"{len(failures)}/{len(steptests)} steptests failed"
         if len(failures) > len(shown):
             summary += f" (showing first {len(shown)})"
