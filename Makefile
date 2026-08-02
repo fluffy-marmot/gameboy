@@ -7,7 +7,7 @@ run:
 	python -m clients.pygame.gameboy $(ROM)
 
 test:
-	python -m clients.pygame.gameboy $(TEST_PATH)/$(ROM)
+	python -m pytest 
 
 %:
 	$(MAKE) -C core $@

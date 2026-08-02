@@ -11,12 +11,12 @@ import pygame
 from bindings.python.gb_c_definitions import GB, LCD, LCD_WIDTH, LCD_HEIGHT, uint8
 
 BASE_DIR = Path(__file__).parent.parent.parent.resolve()
-print(BASE_DIR)
 SCALE = 6.5
 KEYBINDS = {}
 
 CONFIG = configparser.ConfigParser()
 CONFIG.read(BASE_DIR / "clients" / "pygame" / "config.ini")
+
 
 def load_keybinds() -> None:
     keybinds = CONFIG["keybinds"]

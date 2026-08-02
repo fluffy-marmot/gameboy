@@ -16,10 +16,5 @@ __pycache__/
 *.pyc
 .venv/
 
-# an example reference
-gdb-notes.md
-
 # just some scratch space for random short experiments
-test
-test.c
-test.py
+scratchpad/

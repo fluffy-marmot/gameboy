@@ -236,6 +236,9 @@ class gb_gameboy_t(struct):
         ("cartridge", pointer(gb_cartridge_t)),
     ]
 
+# a lot of the return types have changed but I'm a bit lazy, oh well
+# not using much of this for now
+
 GB.GB_test_memory_mode_enable.restype = None
 GB.GB_test_memory_mode_enable.argtypes = []
 
@@ -255,7 +258,7 @@ GB.GB_emulate_frame.restype = None
 GB.GB_emulate_frame.argtypes = []
 
 GB.GB_test_single_instruction.restype = None
-GB.GB_test_single_instruction.argtypes = []
+GB.GB_test_single_instruction.argtypes = [c_int]
 
 GB.GB_get_lcd.argtypes = []
 GB.GB_get_lcd.restype = ct.POINTER(uint32)

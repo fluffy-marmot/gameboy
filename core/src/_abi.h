@@ -39,7 +39,7 @@ GB_ABI gb_return_t GB_load_rom(const uint8_t *data, size_t size);
 GB_ABI gb_return_t GB_set_post_boot_state(void);
 GB_ABI gb_return_t GB_emulate_frame(void);
 
-GB_ABI gb_return_t GB_test_single_instruction(void);
+GB_ABI gb_return_t GB_test_single_instruction(int mcycles);
 
 // joypad.c
 // allow client to update states of joypad controller's 8 buttons (false means pressed button)
