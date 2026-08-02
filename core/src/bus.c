@@ -63,6 +63,9 @@ select_interface(memaddr address)
     case MEMADDR_TMA:
     case MEMADDR_TAC:                                                   return bus.interface_reg_timers;
 
+    case MEMADDR_SB:
+    case MEMADDR_SC:                                                    return bus.interface_reg_serial;
+
     case MEMADDR_LCDC:
     case MEMADDR_STAT:
     case MEMADDR_SCY:

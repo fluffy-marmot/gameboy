@@ -49,12 +49,17 @@ def load_bootrom() -> None:
 def load_rom() -> None:
     if len(sys.argv) != 2:
         sys.exit(f"Usage: python {sys.argv[0]} <gb rom>")
-    romlib = CONFIG["rom"].get("romlib", "")
-    if not romlib:
-        sys.exit("Please set a location for rom library using romlib in config.ini")
     rom = sys.argv[1] if sys.argv[1].endswith("gb") else f"{sys.argv[1]}.gb"
+
+    if not (BASE_DIR / rom).exists():
+        romlib = CONFIG["rom"].get("romlib", "")
+        if not romlib:
+            sys.exit("Please set a location for rom library using romlib in config.ini")
+        rom = (BASE_DIR / romlib / rom).resolve()
+    else:
+        rom = (BASE_DIR / rom).resolve()
     try:
-        GB_load_rom((BASE_DIR / romlib / rom).resolve())
+        GB_load_rom(rom)
     except FileNotFoundError:
         sys.exit(f"Couldn't find ROM file: {romlib}/{rom}")
         
@@ -101,9 +106,9 @@ def main() -> None:
         )
 
         GB_emulate_frame()
-        output = GB_serial_buffer_flush()
-        if output:
-            print(f"Serial output: {output}")
+        # output = GB_serial_buffer_flush()
+        # if output:
+        #     print(f"Serial output: {output}")
         
         window_draw(screen, render_surface)
         pygame.display.flip()

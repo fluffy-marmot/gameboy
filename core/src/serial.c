@@ -57,6 +57,7 @@ cycle_mcycle_serial(void)
                 serial.buffer.data = (uint8_t *) realloc(serial.buffer.data, serial.buffer.capacity);
             }
             serial.current_bit = 0;
+            serial.SC ^= TRANSFER_ENABLE_BIT;
             serial.irq->IF |= INTERRUPT_BIT_SERIAL;
         }
     }
