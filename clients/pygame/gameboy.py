@@ -43,7 +43,7 @@ def load_bootrom() -> None:
         except FileNotFoundError:
             print("Config asks to use bootrom, but could not find file, please edit config.ini. Skipping bootrom")
     if not bootrom:
-        GB_set_post_boot_state()x
+        GB_set_post_boot_state()
 
 
 def load_rom() -> None:
@@ -75,7 +75,7 @@ def main() -> None:
     load_keybinds()
     load_bootrom()
     load_rom()
-    GB_set_lcd_colors()
+    
     frame_times = deque(maxlen=120)
     frame = 0
     pygame.display.set_caption(f"Gameboy")
