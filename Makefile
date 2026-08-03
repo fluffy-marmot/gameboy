@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := lib
 
-TEST_ROM = tests/testdata/gb-test-roms/cpu_instrs/individual/01-special.gb
+TEST_ROM = tests/testdata/blargg/cpu_instrs/individual/01-special.gb
 
 run:
 	python -m clients.pygame.gameboy $(ROM)

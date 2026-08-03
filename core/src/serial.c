@@ -1,7 +1,7 @@
 #include "_abi.h"
 #include "serial.h"
 
-#include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,9 +12,13 @@
 #define CLOCK_SELECT_BIT                        0b00000001
 
 #define TRANSFER_ENABLED                        (serial.SC & TRANSFER_ENABLE_BIT)
-#define CLOCK_SELECT                            (serial.SC & CLOCK_ENABLE_BIT   )
+#define CLOCK_SELECT                            (serial.SC & CLOCK_SELECT_BIT   )
 
-#define BUFFER_OUT_INITIAL_SIZE                 (64 * BYTES)
+#define CLOCK_EXTERNAL                          (CLOCK_SELECT == 0b0)
+#define CLOCK_INTERNAL                          (CLOCK_SELECT == 0b1)
+
+#define BUFFER_OUT_SIZE_INITIAL                 (64 * BYTES)
+#define BUFFER_OUT_SIZE_MAX                     ( 4 * KiB)
 #define MIN(x, y)                               ((x < y) ? (x) : (y))
 
 static gb_serial_t serial;
@@ -41,22 +45,27 @@ write_serial_reg(memaddr address, uint8_t val)
     }
 }
 static bus_interface_t bus_registers_serial = { .read = read_serial_reg, .write = write_serial_reg };
-// TODO: also add ctypes for serial
 
 void
-cycle_mcycle_serial(void)
+cycle_serial(void)
 {
-    if (TRANSFER_ENABLED && serial.buffer.size < UINT16_MAX) {
-        serial.buffer.data[serial.buffer.size] <<= 1;
-        serial.buffer.data[serial.buffer.size] |= (serial.SB >> 7);
-        serial.SB = (serial.SB << 1) | (0xFF & MASK_BIT_L);
+    // if (serial.buf.size == UINT16_MAX)
+    //     printf("Serial buffer at max size\n");
+    if (TRANSFER_ENABLED && CLOCK_INTERNAL) {
+        // if we've reached max buffer size, assume client doesn't read serial and discard
+        if (serial.buf.size == BUFFER_OUT_SIZE_MAX)
+            serial.buf.size = 0;
+        serial.buf.byte <<= 1;
+        serial.buf.byte |= (serial.SB >> 7);
+        serial.SB = (serial.SB << 1) | MASK_BIT_L;
 
-        if (++serial.current_bit == 8) {
-            if (++serial.buffer.size == serial.buffer.capacity && serial.buffer.capacity < UINT16_MAX) {
-                serial.buffer.capacity = MIN(UINT16_MAX, serial.buffer.capacity * 2);
-                serial.buffer.data = (uint8_t *) realloc(serial.buffer.data, serial.buffer.capacity);
+        if (++serial.buf.bit == 8) {
+            serial.buf.data[serial.buf.size] = serial.buf.byte;
+            if (++serial.buf.size == serial.buf.capacity) {
+                serial.buf.capacity = MIN(BUFFER_OUT_SIZE_MAX, serial.buf.capacity * 2);
+                serial.buf.data = (uint8_t *) realloc(serial.buf.data, serial.buf.capacity);
             }
-            serial.current_bit = 0;
+            serial.buf.bit = 0;
             serial.SC ^= TRANSFER_ENABLE_BIT;
             serial.irq->IF |= INTERRUPT_BIT_SERIAL;
         }
@@ -66,10 +75,10 @@ cycle_mcycle_serial(void)
 gb_serial_t *
 init_gameboy_serial(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
-    free(serial.buffer.data);
+    free(serial.buf.data);
     memset(&serial, 0, sizeof(gb_serial_t));
-    serial.buffer.capacity = BUFFER_OUT_INITIAL_SIZE;
-    serial.buffer.data = (uint8_t *) malloc(serial.buffer.capacity * sizeof(uint8_t));
+    serial.buf.capacity = BUFFER_OUT_SIZE_INITIAL;
+    serial.buf.data = (uint8_t *) malloc(serial.buf.capacity * sizeof(uint8_t));
     serial.irq = irq;
     bus->interface_reg_serial = &bus_registers_serial;
     return &serial;
@@ -83,11 +92,11 @@ init_gameboy_serial(gb_bus_t *bus, gb_irq_handler_t *irq)
 ###############################################################################
 ############################################################################ */
 
-// caller should read size of buffer before flushing it, as it will be set to 0
+// caller should read size of buf before flushing it, as it will be set to 0
 uint8_t *
 GB_serial_buffer_flush(void)
 {
-    serial.buffer.size = 0;
-    return serial.buffer.data;
+    serial.buf.size = 0;
+    return serial.buf.data;
 
 }

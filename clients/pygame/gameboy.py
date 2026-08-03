@@ -106,9 +106,9 @@ def main() -> None:
         )
 
         GB_emulate_frame()
-        # output = GB_serial_buffer_flush()
-        # if output:
-        #     print(f"Serial output: {output}")
+        output = GB_serial_buffer_flush()
+        if output:
+            print(f"Serial output: {output}")
         
         window_draw(screen, render_surface)
         pygame.display.flip()

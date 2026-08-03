@@ -8,11 +8,12 @@ gb_gameboy_t gb;
 static void
 emulate_machine_cycle(void)
 {
-    cycle_mcycle_serial();
     cycle_mcycle_dma();
     cycle_mcycle_cpu();
     for (int tcycle = 0; tcycle < DOTS_PER_MACHINE_CYCLE; tcycle++) {
         cycle_tcycle_timers();
+        if (gb.timers->serial_falling_edge)
+            cycle_serial();
         cycle_tcycle_ppu();
     }
 }

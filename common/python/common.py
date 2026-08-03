@@ -25,7 +25,7 @@ def GB_reboot_system() -> None:
     GB.GB_reboot_system()
 
 def GB_serial_buffer_flush() -> str | None:
-    buffer_size = gb.serial.contents.buffer.size
+    buffer_size = gb.serial.contents.buf.size
     if not buffer_size:
         return None
     # return ct.cast(GB.GB_serial_buffer_flush(), pointer(uint8 * buffer_size)).contents

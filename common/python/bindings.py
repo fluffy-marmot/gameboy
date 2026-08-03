@@ -73,6 +73,9 @@ class serial_buffer_t(struct):
         ("size", uint16),
         ("capacity", uint16),
         ("data", pointer(uint8)),
+
+        ("byte", uint8),
+        ("bit", uint8),
     ]
 
 class gb_irq_handler_t(struct):
@@ -234,6 +237,7 @@ class gb_timers_t(struct):
 
         ("timer_operation_stored", uint8),
         ("tima_overflow_cycles", uint8),
+        ("serial_falling_edge", uint8),
 
         ("irq", pointer(gb_irq_handler_t)),
     ]
@@ -243,8 +247,7 @@ class gb_serial_t(struct):
         ("SB", uint8),
         ("SC", uint8),
 
-        ("current_bit", uint8),
-        ("buffer", serial_buffer_t),
+        ("buf", serial_buffer_t),
         ("irq", pointer(gb_irq_handler_t)),
     ]
 

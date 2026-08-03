@@ -13,6 +13,7 @@ typedef struct {
 
     uint8_t timer_operation_stored;
     uint8_t tima_overflow_cycles;
+    uint8_t serial_falling_edge;
 
     gb_irq_handler_t *irq;                      // direct access to interrupts data
 } gb_timers_t;
