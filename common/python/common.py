@@ -19,7 +19,7 @@ def GB_emulate_frame() -> None:
     GB.GB_emulate_frame()
 
 def GB_emulate_until_opcode(opcode: int, max_mcycles=0) -> None:
-    GB.GB_emulate_until_opcode(opcode, max_mcycles)
+    return GB.GB_emulate_until_opcode(opcode, max_mcycles)
 
 def GB_reboot_system() -> None:
     GB.GB_reboot_system()

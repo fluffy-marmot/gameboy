@@ -289,7 +289,7 @@ GB.GB_reboot_system.argtypes = []
 GB.GB_emulate_frame.restype = None
 GB.GB_emulate_frame.argtypes = []
 
-GB.GB_emulate_until_opcode.restype = None
+GB.GB_emulate_until_opcode.restype = c_int
 GB.GB_emulate_until_opcode.argtypes = [uint8, uint32]
 
 GB.GB_test_single_instruction.restype = None

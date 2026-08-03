@@ -104,6 +104,5 @@ GB_emulate_until_opcode(uint8_t opcode, uint32_t max_mcycles)
         if (!--max_mcycles)
             return GB_RETURN_OPCODE_BREAKPOINT_TIMEOUT;
     }
-
     return GB_RETURN_OK;
 }
