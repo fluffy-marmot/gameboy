@@ -1,4 +1,4 @@
-.DEFAULT_GOAL := lib
+.DEFAULT_GOAL := debug
 
 TEST_ROM = tests/testdata/mealybug/m2_win_en_toggle.gb
 
@@ -10,6 +10,10 @@ testrom:
 
 test:
 	python -m pytest
+
+.PHONY: tests
+tests:
+	test
 
 testv:
 	python -m pytest -v

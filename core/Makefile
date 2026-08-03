@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = --shared -fPIC -Wmissing-prototypes -fvisibility=hidden
+CFLAGS = --shared -fPIC -Wmissing-prototypes -fvisibility=hidden -g
 DEBUG_FLAGS = -Wall -Wextra -Werror
 
 LIB = gameboy.so

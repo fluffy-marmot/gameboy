@@ -350,6 +350,13 @@ step_obj_fetcher(void)
         push_obj_pixels();
         obj_fetcher.buf_index++;
         obj_fetcher.mode = OBJ_CHECK_X;
+        // attempt to create the post-sprite fetch delay in bg fetcher, unsure of this
+        switch (bg_fetcher.mode) {
+        case BG_GET_TILE:                       bg_fetcher.delay = 1; break;
+        case BG_GET_DATA_LOW:                   bg_fetcher.delay = 3; break;
+        case BG_GET_DATA_HIGH:                  bg_fetcher.delay = 5; break;
+        case BG_PUSH:                           bg_fetcher.delay = 6; break;
+        }
         break;
 
     case OBJ_CHECK_X:
