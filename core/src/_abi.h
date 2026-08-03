@@ -5,6 +5,7 @@
 
 typedef enum {
     GB_RETURN_OK,
+    GB_RETURN_RESYNC_VBLANK,
     GB_ERROR,
     GB_ERROR_MALLOC,
     GB_ERROR_BOOTROM_SIZE,

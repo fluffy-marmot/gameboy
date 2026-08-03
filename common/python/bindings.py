@@ -66,6 +66,7 @@ class lcd(struct):
     _fields_ = [
         ("pixels", uint32 * (LCD_HEIGHT * LCD_WIDTH)),
         ("colors", uint32 * 4),
+        ("blank_frames", uint8),
     ]
 
 class serial_buffer_t(struct):

@@ -65,11 +65,14 @@ def load_rom() -> None:
         
 
 def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
-    render_surface = pygame.image.frombuffer(LCD, (LCD_WIDTH, LCD_HEIGHT), "BGRA")
-    dest_rect = render_surface.get_rect().fit(screen.get_rect())
-    scaled = pygame.transform.scale(render_surface, dest_rect.size)
     screen.fill((0, 0, 0))
-    screen.blit(scaled, dest_rect)
+    dest_rect = render_surface.get_rect().fit(screen.get_rect())
+    if not check_blank_frame():
+        render_surface = pygame.image.frombuffer(LCD, (LCD_WIDTH, LCD_HEIGHT), "BGRA")
+        scaled = pygame.transform.scale(render_surface, dest_rect.size)
+        screen.blit(scaled, dest_rect)
+    else:
+        screen.fill(color="white", rect=dest_rect)
 
 
 def main() -> None:

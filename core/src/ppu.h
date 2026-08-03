@@ -40,6 +40,7 @@ typedef struct {
     struct {
         uint32_t pixels[LCD_WIDTH * LCD_HEIGHT];
         uint32_t colors[4];
+        uint8_t blank_frames;
     } lcd;
 } gb_ppu_t;
 

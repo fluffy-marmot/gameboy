@@ -3,17 +3,21 @@
 
 gb_gameboy_t gb;
 
-static void
+// returns true if a vblank occured during this period, using this in
+// emulate_frame to return early to help resync display after LCD off / on
+static bool
 emulate_machine_cycle(void)
 {
+    bool encountered_vblank = false;
     cycle_mcycle_dma();
     cycle_mcycle_cpu();
     for (int tcycle = 0; tcycle < DOTS_PER_MACHINE_CYCLE; tcycle++) {
         cycle_tcycle_timers();
         if (gb.timers->serial_falling_edge)
             cycle_serial();
-        cycle_tcycle_ppu();
+        encountered_vblank |= cycle_tcycle_ppu();
     }
+    return encountered_vblank;
 }
 
 /* ############################################################################
@@ -37,8 +41,8 @@ GB_reboot_system(void)
     gb.serial = init_gameboy_serial(gb.bus, gb.irq);
     gb.timers = init_gameboy_timers(gb.bus, gb.irq);
     gb.cartridge = init_cartridge(gb.bus);
-    
     init_bootrom(gb.bus);
+
     return GB_RETURN_OK;
 }
 
@@ -56,7 +60,9 @@ GB_set_post_boot_state(void)
     gb.cpu->L = 0x4D;
     gb.cpu->SP = 0xFFFE;
     gb.cpu->PC = 0x0100;
-    gb.bus->bus_dispatcher->write(0xFF50, 1); // lock boot ROM
+    gb.bus->bus_dispatcher->write(MEMADDR_LCDC, 0x91);              // LCDC - enable 
+    gb.bus->bus_dispatcher->write(MEMADDR_BGP, 0xFC);               // BGP - set palette as bootrom
+    gb.bus->bus_dispatcher->write(MEMADDR_BOOT_ROM_LOCK, 1);        // lock boot ROM
 
     return GB_RETURN_OK;
 }
@@ -65,9 +71,15 @@ GB_set_post_boot_state(void)
 gb_return_t
 GB_emulate_frame(void)
 {
-    for (int mcycle = 0; mcycle < MACHINE_CYCLES_PER_FRAME; mcycle++)
-        emulate_machine_cycle();
-    
+    for (int mcycle = 0; mcycle < MACHINE_CYCLES_PER_FRAME; mcycle++) {
+        // emulate a machine cycle and check whether a vblank occurred
+        // in which case, this should return early to resync w/ PPU
+        // (otherwise LCD when drawn may contain data from two different frames)
+        if (emulate_machine_cycle() && mcycle != MACHINE_CYCLES_PER_FRAME - 1) {
+            printf("Early resync return after %d machine cycles\n", mcycle);
+            return GB_RETURN_RESYNC_VBLANK;
+        }
+    }
     return GB_RETURN_OK;
 }
 

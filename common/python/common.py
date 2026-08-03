@@ -31,3 +31,6 @@ def GB_serial_buffer_flush() -> str | None:
     # return ct.cast(GB.GB_serial_buffer_flush(), pointer(uint8 * buffer_size)).contents
     raw = ct.string_at(GB.GB_serial_buffer_flush(), buffer_size)
     return raw.decode('ascii', errors='backslashreplace')
+
+def check_blank_frame() -> bool:
+    return gb.ppu.contents.lcd.blank_frames > 0

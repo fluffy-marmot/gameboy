@@ -190,7 +190,7 @@ read_ppu_reg(memaddr address)
     case MEMADDR_OBP1:              return ppu.OBP[1];
     case MEMADDR_WY:                return ppu.WY;
     case MEMADDR_WX:                return ppu.WX;
-    default:                        return 0xFF;
+    default:                        return UNREADABLE;
     }       
 }
 static void
@@ -202,9 +202,14 @@ write_ppu_reg(memaddr address, uint8_t val)
         ppu.LCDC   = val;
 
         if (ppu_enabled_before && !PPU_ENABLED) {
-            // turn off
+            ppu.irq->update_stat_interrupt_line(0);
+            ppu_set_mode(PPU_MODE_HBLANK);
+            ppu.LY = 0;
+            ppu.line_dot = 0;
+            ppu.lcd.blank_frames = 1;
         } else if (!ppu_enabled_before && PPU_ENABLED) {
-            // turn on
+            stat_compare_ly_lyc();
+            ppu_set_mode(PPU_MODE_OAM_SCAN);
         }
         break;
     case MEMADDR_STAT:              ppu.STAT   = (WRITEABLE_STAT & val) | (READONLY_STAT & ppu.STAT); break;
@@ -447,7 +452,7 @@ step_mixer()
     obj_fetcher.buf_index = 0;
 }
 
-void
+bool
 cycle_tcycle_ppu(void)
 {
     if (!PPU_ENABLED) return false;
@@ -484,8 +489,12 @@ cycle_tcycle_ppu(void)
             ppu.LY = 0;
             bg_fetcher.window_condition = false;
             bg_fetcher.window_line = 0;
+            ppu.lcd.blank_frames = 0;
         }
         stat_compare_ly_lyc();
+
+        ppu.line_dot = 0;
+        ppu.obj_buffer_size = 0;
 
         if (ppu.LY < LCD_HEIGHT) {
             ppu_set_mode(PPU_MODE_OAM_SCAN);
@@ -493,12 +502,12 @@ cycle_tcycle_ppu(void)
                 bg_fetcher.window_condition = true;
         } else if (ppu.LY == LCD_HEIGHT) {
             ppu_set_mode(PPU_MODE_VBLANK);
+            // signal a vblank transition to both interrupts and emulation
             ppu.irq->IF |= INTERRUPT_BIT_VBLANK;
+            return true;
         }
-
-        ppu.line_dot = 0;
-        ppu.obj_buffer_size = 0;
     }
+    return false;
 }
 
 gb_ppu_t *

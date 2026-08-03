@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := lib
 
-TEST_ROM = tests/testdata/blargg/oam_bug/oam_bug.gb
+TEST_ROM = tests/testdata/mealybug/m2_win_en_toggle.gb
 
 run:
 	python -m clients.pygame.gameboy $(ROM)
