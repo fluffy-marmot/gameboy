@@ -9,3 +9,9 @@ def ppu_test_conditions():
     GB_reboot_system()
     GB_set_post_boot_state()
     GB_set_lcd_colors()
+
+@pytest.fixture(scope="module")
+def total_pixels():
+    tracker = {"total": 0}
+    yield tracker
+    print(f"TOTAL PIXEL DIFF for mealybug tests: {tracker['total']}")

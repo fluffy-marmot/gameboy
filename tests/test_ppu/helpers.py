@@ -5,7 +5,7 @@ from tests.config import *
 from PIL import Image, ImageChops
 import pytest
 
-def run_image_test(testrom: Path):
+def run_image_test(testrom: Path, total_pixels: dict | None):
     GB_load_rom(testrom)
     GB_emulate_until_opcode(0x40)
 
@@ -31,6 +31,8 @@ def run_image_test(testrom: Path):
                 r, _, _, a = output.getpixel((x, y))
                 output.putpixel((x, y), (r, 0, 0, a))
     output.save(output_path)
+    if total_pixels:
+        total_pixels["total"] += diff_count
 
     bbox = diff.getbbox(alpha_only=False)
     if diff_count != 0:
