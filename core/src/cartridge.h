@@ -4,8 +4,6 @@
 #include "_specification.h"
 #include "bus.h"
 
-#include <stddef.h>
-
 typedef struct {
     uint8_t *rom;
     uint8_t *ram;

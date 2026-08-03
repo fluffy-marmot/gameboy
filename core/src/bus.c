@@ -2,10 +2,6 @@
 #include "bus.h"
 #include "dma.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #define BOOT_ROM_ACTIVE                         0b00000000
 #define BOOT_ROM_DISABLED                       0b00000001
 #define USEPINS_BOOT_ROM_LOCK                   0b00000001

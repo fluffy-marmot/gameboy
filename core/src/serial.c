@@ -1,10 +1,6 @@
 #include "_abi.h"
 #include "serial.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #define MASK_BIT_L                              0b00000001
 
 #define USEPINS_SC                              0b10000001

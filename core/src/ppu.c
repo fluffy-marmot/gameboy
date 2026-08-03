@@ -1,10 +1,6 @@
 #include "_abi.h"
 #include "ppu.h"
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-
 // stuff with PPU addressable registers
 #define LCDC_BIT_PPU_ENABLE         0b10000000
 #define LCDC_BIT_WIN_TILEMAP        0b01000000
@@ -43,6 +39,7 @@
 
 #define PPU_MODE_MASK               0b00000011
 #define PPU_MODE                    (ppu.STAT & PPU_MODE_MASK)
+#define PPU_ENABLED                 (ppu.LCDC & LCDC_BIT_PPU_ENABLE)
 
 // macros regarding object attribute memory and an object's flag byte
 #define OAM_FLAG_BIT_PRIORITY       0b10000000
@@ -151,12 +148,14 @@ static gb_ppu_t ppu;
 static void 
 update_stat_interrupt(void)
 {
-    ppu.irq->update_stat_interrupt_line(
-        (STAT_LYC_INT_SELECT &&  STAT_EQL                      ) ||
-        (STAT_MD0_INT_SELECT && (PPU_MODE == PPU_MODE_HBLANK  )) ||
-        (STAT_MD1_INT_SELECT && (PPU_MODE == PPU_MODE_VBLANK  )) ||
-        (STAT_MD2_INT_SELECT && (PPU_MODE == PPU_MODE_OAM_SCAN))
-    );
+    if (PPU_ENABLED) {
+        ppu.irq->update_stat_interrupt_line(
+            (STAT_LYC_INT_SELECT &&  STAT_EQL                      ) ||
+            (STAT_MD0_INT_SELECT && (PPU_MODE == PPU_MODE_HBLANK  )) ||
+            (STAT_MD1_INT_SELECT && (PPU_MODE == PPU_MODE_VBLANK  )) ||
+            (STAT_MD2_INT_SELECT && (PPU_MODE == PPU_MODE_OAM_SCAN))
+        );
+    }
 }
 
 // set bit 2 of STAT register based on LYC == LY comparison, return true if a CHANGE occurred
@@ -198,7 +197,16 @@ static void
 write_ppu_reg(memaddr address, uint8_t val)
 {
     switch (address) {
-    case MEMADDR_LCDC:              ppu.LCDC   = val;                                                 break;
+    case MEMADDR_LCDC:
+        uint8_t ppu_enabled_before = PPU_ENABLED;
+        ppu.LCDC   = val;
+
+        if (ppu_enabled_before && !PPU_ENABLED) {
+            // turn off
+        } else if (!ppu_enabled_before && PPU_ENABLED) {
+            // turn on
+        }
+        break;
     case MEMADDR_STAT:              ppu.STAT   = (WRITEABLE_STAT & val) | (READONLY_STAT & ppu.STAT); break;
     case MEMADDR_SCY:               ppu.SCY    = val;                                                 break;
     case MEMADDR_SCX:               ppu.SCX    = val;                                                 break;
@@ -442,6 +450,7 @@ step_mixer()
 void
 cycle_tcycle_ppu(void)
 {
+    if (!PPU_ENABLED) return false;
     switch (PPU_MODE) {
     case PPU_MODE_OAM_SCAN:
         if (ppu.line_dot % 2 == 0 && ppu.obj_buffer_size < SCANLINE_MAX_OBJS)

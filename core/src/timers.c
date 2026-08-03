@@ -1,7 +1,5 @@
 #include "timers.h"
 
-#include <string.h>
-
 #define USEPINS_TAC                             0b00000111
 
 #define TAC_ENABLE_BIT                          0b00000100

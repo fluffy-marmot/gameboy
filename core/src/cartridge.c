@@ -2,10 +2,6 @@
 #include "cartridge.h"
 #include "mbcs/mbc1.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 static gb_cartridge_t cartridge;
 
 static uint8_t 

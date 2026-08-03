@@ -1,7 +1,5 @@
 #include "irq.h"
 
-#include <string.h>
-
 #define BIT                         0b00000001
 
 static gb_irq_handler_t irq_handler;

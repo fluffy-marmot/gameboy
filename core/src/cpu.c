@@ -1,9 +1,5 @@
 #include "cpu.h"
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-
 #define MASK_BYTE                               0b11111111
 #define MASK_NIBBLE_L                           0b00001111
 #define MASK_NIBBLE_H                           0b11110000

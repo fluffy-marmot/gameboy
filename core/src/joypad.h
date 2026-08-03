@@ -5,8 +5,6 @@
 #include "bus.h"
 #include "irq.h"
 
-#include <stdbool.h>
-
 typedef struct{
     uint8_t JOYP;                               // P1 / Joypad register
 

@@ -3,7 +3,12 @@
 #ifndef GB_SPECIFICATION
 #define GB_SPECIFICATION
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define BYTES                                   1
 #define KiB                                     1024

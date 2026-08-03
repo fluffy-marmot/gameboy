@@ -3,9 +3,6 @@
 
 #include "_specification.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-
 typedef enum {
     GB_RETURN_OK,
     GB_ERROR,

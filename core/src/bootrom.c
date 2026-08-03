@@ -1,8 +1,6 @@
 #include "_abi.h"
 #include "bootrom.h"
 
-#include <string.h>
-
 static uint8_t boot_rom[GB_DMG_BOOT_ROM_SIZE];
 
 static uint8_t read_boot_rom (memaddr address) {

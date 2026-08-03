@@ -1,8 +1,6 @@
 #include "_abi.h"
 #include "emulator.h"
 
-#include <stdio.h>
-
 gb_gameboy_t gb;
 
 static void

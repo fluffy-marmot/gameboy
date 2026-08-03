@@ -1,9 +1,6 @@
 #include "_abi.h"
 #include "joypad.h"
 
-#include <stdio.h>
-#include <string.h>
-
 #define USEPINS_JOYP                            0b00111111
 #define WRITEABLE_JOYP                          0b00110000
 #define READONLY_JOYP                           0b00001111

@@ -45,6 +45,8 @@ typedef struct {
 
 gb_ppu_t *init_gameboy_ppu(gb_bus_t *, gb_irq_handler_t *);
 
-void cycle_tcycle_ppu(void);
+// return true only if just entered a vblank this dot, helpful to resync emulate_frame with
+// full frames being drawn after a program toggles ppu off then back on
+bool cycle_tcycle_ppu(void);
 
 #endif
