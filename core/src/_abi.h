@@ -6,6 +6,7 @@
 typedef enum {
     GB_RETURN_OK,
     GB_RETURN_RESYNC_VBLANK,
+    GB_RETURN_OPCODE_BREAKPOINT_TIMEOUT,
     GB_ERROR,
     GB_ERROR_MALLOC,
     GB_ERROR_BOOTROM_SIZE,
@@ -37,7 +38,7 @@ GB_ABI gb_return_t GB_load_rom(const uint8_t *data, size_t size);
 GB_ABI gb_return_t GB_reboot_system(void);
 GB_ABI gb_return_t GB_set_post_boot_state(void);
 GB_ABI gb_return_t GB_emulate_frame(void);
-GB_ABI gb_return_t GB_emulate_until_opcode(uint8_t opcode);
+GB_ABI gb_return_t GB_emulate_until_opcode(uint8_t opcode, uint32_t max_mcycles);
 
 GB_ABI gb_return_t GB_test_single_instruction(int mcycles);
 

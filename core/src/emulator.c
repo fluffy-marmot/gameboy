@@ -76,7 +76,7 @@ GB_emulate_frame(void)
         // in which case, this should return early to resync w/ PPU
         // (otherwise LCD when drawn may contain data from two different frames)
         if (emulate_machine_cycle() && mcycle != MACHINE_CYCLES_PER_FRAME - 1) {
-            printf("Early resync return after %d machine cycles\n", mcycle);
+            // printf("Early resync return after %d machine cycles\n", mcycle);
             return GB_RETURN_RESYNC_VBLANK;
         }
     }
@@ -97,10 +97,13 @@ GB_test_single_instruction(int max_mcycles)
 
 // useful for mealybug tests which check generated LCD image using LD B, B opcode as breakpoint
 gb_return_t
-GB_emulate_until_opcode(uint8_t opcode)
+GB_emulate_until_opcode(uint8_t opcode, uint32_t max_mcycles)
 {
-    while (gb.cpu->instruction == NULL || gb.cpu->cb_instruction || gb.cpu->IR != opcode)
+    while (gb.cpu->instruction == NULL || gb.cpu->cb_instruction || gb.cpu->IR != opcode) {
         emulate_machine_cycle();
+        if (!--max_mcycles)
+            return GB_RETURN_OPCODE_BREAKPOINT_TIMEOUT;
+    }
 
     return GB_RETURN_OK;
 }

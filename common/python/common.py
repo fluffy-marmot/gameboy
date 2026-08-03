@@ -18,8 +18,8 @@ def GB_set_lcd_colors(clr0: int=0xFFFFFFFF, clr1:int=0xFFAAAAAA, clr2:int=0xFF55
 def GB_emulate_frame() -> None:
     GB.GB_emulate_frame()
 
-def GB_emulate_until_opcode(opcode: int) -> None:
-    GB.GB_emulate_until_opcode(opcode)
+def GB_emulate_until_opcode(opcode: int, max_mcycles=0) -> None:
+    GB.GB_emulate_until_opcode(opcode, max_mcycles)
 
 def GB_reboot_system() -> None:
     GB.GB_reboot_system()

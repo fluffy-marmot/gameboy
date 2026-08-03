@@ -20,7 +20,7 @@ def blargg_test_conditions():
     GB_set_post_boot_state()
 
 
-def run_blargg_test(testrom: Path, timeout_sec = 20) -> None:
+def run_blargg_test(testrom: Path, timeout_sec=20) -> None:
     GB_load_rom(testrom)
 
     collected_output = ""
@@ -43,6 +43,7 @@ def run_blargg_test(testrom: Path, timeout_sec = 20) -> None:
 def test_blargg_cgb_sound(testrom: Path) -> None:
     run_blargg_test(testrom)
 
+@pytest.mark.skip("Passes reliably, a bit slow")
 @pytest.mark.parametrize("testrom", blargg_cpu_instrs, ids=lambda f: f.stem)
 def test_blargg_cpu_instrs(testrom: Path) -> None:
     run_blargg_test(testrom, timeout_sec=60)

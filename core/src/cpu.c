@@ -1489,12 +1489,12 @@ static void halt() {
     cpu.cycle_num = (cpu.irq->IE & cpu.irq->IF & 0x1F) ? 1 : 0;
 }
 
-static void        set_carry_flag () { CLR_N; CLR_H; SET_C;                }
-static void complement_carry_flag () { CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C; }
-static void complement_accumulator() { SET_N; SET_H; cpu.A ^= MASK_BYTE;   }
-static void     disable_interrupts() { cpu.IME = 0;  cpu.IME_latch = 0;    }
-static void      enable_interrupts() { cpu.IME_latch = 2;                  }
-static void                 prefix() { cpu.cb_instruction = 1;             }
+static void        set_carry_flag () { CLR_N; CLR_H; SET_C;                   }
+static void complement_carry_flag () { CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C;    }
+static void complement_accumulator() { SET_N; SET_H; cpu.A ^= MASK_BYTE;      }
+static void     disable_interrupts() { cpu.IME = 0;  cpu.IME_latch = 0;       }
+static void      enable_interrupts() { if (!cpu.IME_latch) cpu.IME_latch = 2; }   // TODO double check behavior
+static void                 prefix() { cpu.cb_instruction = 1;                }
 
 // INSTRUCTIONS ###############################################################
 

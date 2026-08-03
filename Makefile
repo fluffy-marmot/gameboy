@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/mealybug/m2_win_en_toggle.gb
+TEST_ROM = tests/testdata/mooneye/misc/boot_div-A.gb
 
 run:
 	python -m clients.pygame.gameboy $(ROM)

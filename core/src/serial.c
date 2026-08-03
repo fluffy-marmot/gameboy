@@ -33,6 +33,7 @@ write_serial_reg(memaddr address, uint8_t val)
 {
     switch (address) {
     case MEMADDR_SB:
+        // printf("Written to SB: %d\n", val);
         serial.SB = val;
         break;
     case MEMADDR_SC:
@@ -57,6 +58,7 @@ cycle_serial(void)
 
         if (++serial.buf.bit == 8) {
             serial.buf.data[serial.buf.size] = serial.buf.byte;
+            // printf("Serial sent out: %d\n", serial.buf.byte);
             if (++serial.buf.size == serial.buf.capacity) {
                 serial.buf.capacity = MIN(BUFFER_OUT_SIZE_MAX, serial.buf.capacity * 2);
                 serial.buf.data = (uint8_t *) realloc(serial.buf.data, serial.buf.capacity);
