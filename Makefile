@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := lib
 
-TEST_ROM = tests/testdata/blargg/cpu_instrs/individual/01-special.gb
+TEST_ROM = tests/testdata/blargg/oam_bug/oam_bug.gb
 
 run:
 	python -m clients.pygame.gameboy $(ROM)
@@ -10,6 +10,9 @@ testrom:
 
 test:
 	python -m pytest
+
+testv:
+	python -m pytest -v
 
 %:
 	$(MAKE) -C core $@
