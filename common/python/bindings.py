@@ -9,6 +9,7 @@ MAX_MCYCLE_INSTRUCTION = 6
 GB_DMG_VRAM_SIZE = 8 * 1024
 GB_DMG_HRAM_SIZE = 127
 GB_DMG_OAM_SIZE = 160
+GB_DMG_WAVERAM_SIZE = 16
 SCANLINE_MAX_OBJS = 10
 LCD_WIDTH = 160
 LCD_HEIGHT = 144
@@ -248,6 +249,7 @@ class gb_timers_t(struct):
         ("timer_operation_stored", uint8),
         ("tima_overflow_cycles", uint8),
         ("serial_falling_edge", uint8),
+        ("apu_falling_edge", uint8),
 
         ("irq", pointer(gb_irq_handler_t)),
     ]
@@ -261,12 +263,46 @@ class gb_serial_t(struct):
         ("irq", pointer(gb_irq_handler_t)),
     ]
 
+class gb_apu_t(struct):
+    _fields_ = [
+        ("NR52", uint8),
+        ("NR51", uint8),
+        ("NR50", uint8),
+
+        ("NR10", uint8),
+        ("NR11", uint8),
+        ("NR12", uint8),
+        ("NR13", uint8),
+        ("NR14", uint8),
+
+        ("NR21", uint8),
+        ("NR22", uint8),
+        ("NR23", uint8),
+        ("NR24", uint8),
+
+        ("NR30", uint8),
+        ("NR31", uint8),
+        ("NR32", uint8),
+        ("NR33", uint8),
+        ("NR34", uint8),
+
+        ("NR41", uint8),
+        ("NR42", uint8),
+        ("NR43", uint8),
+        ("NR44", uint8),
+
+        ("DIV_APU", uint8),
+
+        ("waveram", uint8 * GB_DMG_WAVERAM_SIZE),
+    ]
+
 class gb_gameboy_t(struct):
     _fields_ = [
         ("cpu", pointer(gb_cpu_t)),
         ("bus", pointer(gb_bus_t)),
         ("dma", pointer(gb_dma_t)),
         ("ppu", pointer(gb_ppu_t)),
+        ("apu", pointer(gb_apu_t)),
         ("joypad", pointer(gb_joypad_t)),
         ("serial", pointer(gb_serial_t)),
         ("timers", pointer(gb_timers_t)),

@@ -96,5 +96,4 @@ GB_serial_buffer_flush(void)
 {
     serial.buf.size = 0;
     return serial.buf.data;
-
 }

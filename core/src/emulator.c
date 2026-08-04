@@ -15,6 +15,8 @@ emulate_machine_cycle(void)
         cycle_tcycle_timers();
         if (gb.timers->serial_falling_edge)
             cycle_serial();
+        if (gb.timers->apu_falling_edge)
+            cycle_512hz_apu();
         encountered_vblank |= cycle_tcycle_ppu();
     }
     return encountered_vblank;

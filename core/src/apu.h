@@ -31,10 +31,13 @@ typedef struct {
     uint8_t NR43;                               // channel 4 frequency & randomness
     uint8_t NR44;                               // channel 4 control
 
+    uint8_t DIV_APU;                            // counter driving the APU
+
     uint8_t waveram[GB_DMG_WAVERAM_SIZE];       // 16 bytes of RAM for channel 3 samples
 } gb_apu_t;
 
 gb_apu_t *init_gameboy_apu(gb_bus_t *);
+void cycle_512hz_apu(void);
 
 #endif
 

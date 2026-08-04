@@ -9,6 +9,7 @@
 #define TAC_CLOCK_SELECT                        (timers.TAC & TAC_CLOCK_SELECT_BITS)
 
 #define DIV_BIT_FOR_SERIAL                      0b100000000
+#define DIV_BIT_FOR_APU                         0b10000
 
 static const uint16_t DIV_BIT_USED[] = {        0b1000000000,
                                                 0b0000001000,
@@ -53,10 +54,10 @@ static bus_interface_t bus_registers_timers = { .read = read_timers_reg, .write 
 void
 cycle_tcycle_timers(void)
 {
-    // TODO change this to properly use the weirder bits 7 + 2 (seems more complex, mostly unnecessary)
-    uint16_t serial_bit_before = timers.DIV & DIV_BIT_FOR_SERIAL;
-    timers.DIV++;
-    timers.serial_falling_edge = (serial_bit_before && !(timers.DIV & DIV_BIT_FOR_SERIAL));
+    // TODO for serial use the weirder bits 7 + 2 ? (seems more complex, mostly unnecessary?)
+    uint16_t div_before = timers.DIV++;
+    timers.serial_falling_edge = ((div_before & DIV_BIT_FOR_SERIAL) && !(timers.DIV & DIV_BIT_FOR_SERIAL));
+    timers.apu_falling_edge = ((div_before & DIV_BIT_FOR_APU) && !(timers.DIV & DIV_BIT_FOR_APU));
 
     uint8_t timer_operation = TAC_ENABLED && (timers.DIV & DIV_BIT_USED[TAC_CLOCK_SELECT]);
 

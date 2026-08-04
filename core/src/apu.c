@@ -158,7 +158,6 @@
 #define NR44_BIT_TRIGGER                        0b10000000
 #define NR44_BIT_LENGTH_ENABLE                  0b01000000
 
-
 gb_apu_t apu;
 
 static uint8_t 
@@ -185,12 +184,26 @@ write_apu_reg(memaddr address, uint8_t val)
 
 static bus_interface_t bus_registers_apu =  { .read = read_apu_reg, .write = write_apu_reg };
 
+void
+cycle_512hz_apu(void)
+{
+    apu.DIV_APU++;
+    if (apu.DIV_APU % 8 == 0) {
+        // envelope sweep - 64 Hz
+    }
+
+    if (apu.DIV_APU % 2 == 0) {
+        // sound length - 256 Hz
+    }
+
+    if (apu.DIV_APU % 4 == 0) {
+        // channel 1 frequency sweep - 128 Hz
+    }
+}
+
 gb_apu_t *
 init_gameboy_apu(gb_bus_t *bus)
 {
     bus->interface_reg_apu = &bus_registers_apu;
     return &apu;
 }
-
-// TODO DIV-APU counter - increased on every falling edge of DIV bit 4
-// Affects: Envelope sweep (8 DIV-APU ticks), sound length (2 ticks), CH1 freq. sweep (4 ticks)
