@@ -62,6 +62,13 @@ class instruction(struct):
         ("cycle_count", uint8),
     ]
 
+class obj_buffer(struct):
+    _fields_ = [
+        ("oam_index", uint8),
+        ("x", uint8),
+        ("y", uint8),
+    ]
+
 class lcd(struct):
     _fields_ = [
         ("pixels", uint32 * (LCD_HEIGHT * LCD_WIDTH)),
@@ -222,11 +229,12 @@ class gb_ppu_t(struct):
 
         ("lx", uint8),
         ("line_dot", c_int),
-        ("obj_buffer", uint8 * SCANLINE_MAX_OBJS),
+
+        ("obj_buffer", obj_buffer * SCANLINE_MAX_OBJS),
         ("obj_buffer_size", uint8),
 
-        ("irq", pointer(gb_irq_handler_t)),
         ("lcd", lcd),
+        ("irq", pointer(gb_irq_handler_t)),
     ]
 
 class gb_timers_t(struct):

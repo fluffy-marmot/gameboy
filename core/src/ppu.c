@@ -252,8 +252,8 @@ static inline uint8_t
 obj_y_offset(void)
 {
     uint8_t sprite_height = OBJ_HEIGHT;
-    uint8_t y_offset = (ppu.LY - OAM_Y(ppu.obj_buffer[obj_fetcher.buf_index]) + 16) % sprite_height;
-    if (OAM_YFLIP(ppu.obj_buffer[obj_fetcher.buf_index]))
+    uint8_t y_offset = (ppu.LY - ppu.obj_buffer[obj_fetcher.buf_index].y + 16) % sprite_height;
+    if (OAM_YFLIP(ppu.obj_buffer[obj_fetcher.buf_index].oam_index))
         y_offset = sprite_height - 1 - y_offset;
     return y_offset;
 }
@@ -272,7 +272,7 @@ tile_data(uint8_t byte, tile_data_addressing_mode_t addressing, uint8_t tile_dat
 static void
 push_obj_pixels(void)
 {
-    uint8_t oam_index = ppu.obj_buffer[obj_fetcher.buf_index];
+    uint8_t oam_index = ppu.obj_buffer[obj_fetcher.buf_index].oam_index;
     for (int i = 7; i >= 0; i--) {
         uint8_t idx = ((OAM_XFLIP(oam_index) ? i : 7 - i) + pixel_mixer.obj_pixels_index) % 8;
         // Ignore this pixel if the obj pixel FIFO already has a non-transparent pixel
@@ -291,8 +291,12 @@ oam_scan_step(void)
     uint8_t oam_index = ppu.line_dot / 2;
     // dont add objs with X 0, or do? references seem to disagree on this point TODO
     // if (OAM_X(oam_index) == 0) return;
-    if (OAM_Y(oam_index) <= ppu.LY + 16 && ppu.LY + 16 < OAM_Y(oam_index) + OBJ_HEIGHT)
-        ppu.obj_buffer[ppu.obj_buffer_size++] = oam_index;
+    uint8_t oam_y = OAM_Y(oam_index);
+    if (oam_y <= ppu.LY + 16 && ppu.LY + 16 < oam_y + OBJ_HEIGHT) {
+        ppu.obj_buffer[ppu.obj_buffer_size].y = oam_y;
+        ppu.obj_buffer[ppu.obj_buffer_size].x = OAM_X(oam_index);
+        ppu.obj_buffer[ppu.obj_buffer_size++].oam_index = oam_index;
+    }
 }
 
 static void
@@ -327,7 +331,7 @@ step_obj_fetcher(void)
     switch (obj_fetcher.mode) {
 
     case OBJ_GET_TILE:
-        obj_fetcher.tile_data_index = OAM_TILE_INDEX(ppu.obj_buffer[obj_fetcher.buf_index]);
+        obj_fetcher.tile_data_index = OAM_TILE_INDEX(ppu.obj_buffer[obj_fetcher.buf_index].oam_index);
         if (OBJ_HEIGHT == 16)
             obj_fetcher.tile_data_index &= 0xFE;
         obj_fetcher.mode = OBJ_GET_DATA_LOW;
@@ -362,7 +366,7 @@ step_obj_fetcher(void)
     case OBJ_CHECK_X:
         for (int i = obj_fetcher.buf_index; i < SCANLINE_MAX_OBJS; i++, obj_fetcher.buf_index++) {
             if (obj_fetcher.index_done[i]) continue;
-            if (OAM_X(ppu.obj_buffer[i]) <= (ppu.lx + 8) - 8) {
+            if (ppu.obj_buffer[i].x <= (ppu.lx + 8) - 8) {
                 obj_fetcher.mode = OBJ_GET_TILE;
                 obj_fetcher.index_done[i] = true;
                 break;

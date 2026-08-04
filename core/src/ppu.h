@@ -31,17 +31,21 @@ typedef struct {
     /* -- PPU internal data -- */
     uint8_t lx;                                 // x coordinate + 8 within scanline (starts off screen)
     scanline_dot_t line_dot;                    // dot number of current scanline (first is 0)
-    uint8_t obj_buffer[SCANLINE_MAX_OBJS];      // obj indexes stored by OAM scan
+    struct {
+        uint8_t oam_index;
+        uint8_t x;
+        uint8_t y;
+    } obj_buffer[SCANLINE_MAX_OBJS];             // obj indexes stored by OAM scan
     uint8_t obj_buffer_size;
         
-    gb_irq_handler_t *irq;                      // direct access to interrupts data
-
     /* -- holding actual LCD color data that will be drawn on the screen */
     struct {
         uint32_t pixels[LCD_WIDTH * LCD_HEIGHT];
         uint32_t colors[4];
         uint8_t blank_frames;
     } lcd;
+
+    gb_irq_handler_t *irq;                      // direct access to interrupts data
 } gb_ppu_t;
 
 gb_ppu_t *init_gameboy_ppu(gb_bus_t *, gb_irq_handler_t *);
