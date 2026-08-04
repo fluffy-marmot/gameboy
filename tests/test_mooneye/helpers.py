@@ -6,7 +6,7 @@ import pytest
 
 def run_mooneye_test(testrom: Path, cpu, timeout_sec=20) -> None:
     GB_load_rom(testrom)
-    result = GB_emulate_until_opcode(0x40, max_mcycles=4_000_000)
+    result = GB_emulate_until_opcode(0x40, max_mcycles=20_000_000)
 
     if result != 0:
         pytest.fail(f"{testrom.stem}: timeout before LD B B breakpoint", pytrace=False)

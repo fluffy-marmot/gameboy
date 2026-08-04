@@ -1,6 +1,7 @@
 .DEFAULT_GOAL := debug
 
 TEST_ROM = tests/testdata/mooneye/misc/boot_div-A.gb
+K =
 
 run:
 	python -m clients.pygame.gameboy $(ROM)
@@ -9,7 +10,7 @@ testrom:
 	python -m clients.pygame.gameboy $(TEST_ROM)
 
 test:
-	python -m pytest
+	python -m pytest -k "$(K)"
 
 .PHONY: tests
 tests:

@@ -289,8 +289,8 @@ static void
 oam_scan_step(void)
 {
     uint8_t oam_index = ppu.line_dot / 2;
-    // dont add objs with X 0
-    if (OAM_X(oam_index) == 0) return;      
+    // dont add objs with X 0, or do? references seem to disagree on this point TODO
+    // if (OAM_X(oam_index) == 0) return;
     if (OAM_Y(oam_index) <= ppu.LY + 16 && ppu.LY + 16 < OAM_Y(oam_index) + OBJ_HEIGHT)
         ppu.obj_buffer[ppu.obj_buffer_size++] = oam_index;
 }
