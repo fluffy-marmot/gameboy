@@ -42,6 +42,7 @@ select_interface(memaddr address)
     if (ADDR_RANGE(ADDR_START_ECHO_MEM, ADDR_END_ECHO_MEM))             return bus.interface_echo;
     if (ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_OAM_MEM))               return bus.interface_oam;
     if (ADDR_RANGE(ADDR_START_UNUSABLE, ADDR_END_UNUSABLE))             return bus.interface_unusable;
+    if (ADDR_RANGE(ADDR_START_APU, ADDR_END_APU))                       return bus.interface_reg_apu;
     if (ADDR_RANGE(ADDR_START_HRAM, ADDR_END_HRAM))                     return bus.interface_hram;
 
     switch (address) {
@@ -73,8 +74,6 @@ select_interface(memaddr address)
     case MEMADDR_OBP1:
     case MEMADDR_WY:
     case MEMADDR_WX:                                                    return bus.interface_reg_ppu;
-
-    case MEMADDR_NR52:                                                  return bus.interface_reg_apu;
 
     default:                                                            return bus.interface_nop;
     }    

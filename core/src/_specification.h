@@ -17,9 +17,10 @@
 // DMG - Original Gameboy
 #define GB_DMG_WRAM_SIZE                        ( 8 * KiB)
 #define GB_DMG_VRAM_SIZE                        ( 8 * KiB)
-#define GB_DMG_HRAM_SIZE                        (127 * BYTES)
-#define GB_DMG_OAM_SIZE                         (160 * BYTES)
 #define GB_DMG_BOOT_ROM_SIZE                    (256 * BYTES)
+#define GB_DMG_OAM_SIZE                         (160 * BYTES)
+#define GB_DMG_HRAM_SIZE                        (127 * BYTES)
+#define GB_DMG_WAVERAM_SIZE                     ( 16 * BYTES)
 
 // CGB - Color Game Boy
 #define GB_CGB_WRAM_SIZE                        (32 * KiB)
@@ -60,6 +61,10 @@
 #define ADDR_END_UNUSABLE                           0xFEFF
 #define ADDR_START_IO                           0xFF00
 #define ADDR_END_IO                                 0xFF7F
+#define ADDR_START_APU                          0xFF10
+#define ADDR_END_APU                                0xFF3F
+#define ADDR_START_WAVERAM                      0xFF30
+#define ADDR_END_WAVERAM                            0xFF3F
 #define ADDR_START_HRAM                         0xFF80
 #define ADDR_END_HRAM                                0xFFFE
 
@@ -80,17 +85,32 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 #define ADDR_TILE_MAP_0                         0x9800
 #define ADDR_TILE_MAP_1                         0x9C00
 
+//////////////////////////////////////////////////////
 /* --Addressable hardware registers-- */
+//////////////////////////////////////////////////////
 
+// Joypad 
 #define MEMADDR_JOYP                            0xFF00
-#define MEMADDR_DMA                             0xFF46
+
+// Serial registers
+#define MEMADDR_SB                              0xFF01
+#define MEMADDR_SC                              0xFF02
+
+// Timer registers
+#define MEMADDR_DIV                             0xFF04
+#define MEMADDR_TIMA                            0xFF05
+#define MEMADDR_TMA                             0xFF06
+#define MEMADDR_TAC                             0xFF07
 
 // Interrupt flags and individual interrupt enables
 #define MEMADDR_IF                              0xFF0F
 #define MEMADDR_IE                              0xFFFF
 
-// Only writeable ONCE to unmap boot ROM from memory
-#define MEMADDR_BOOT_ROM_LOCK                   0xFF50
+// APU registers
+
+#define MEMADDR_NR52                            0xFF26
+#define MEMADDR_NR51                            0xFF25
+#define MEMADDR_NR50                            0xFF24
 
 // PPU registers
 #define MEMADDR_LCDC                            0xFF40
@@ -105,21 +125,15 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 #define MEMADDR_WY                              0xFF4A
 #define MEMADDR_WX                              0xFF4B
 
-// APU registers
-#define MEMADDR_NR52                            0xFF26
+// Register for triggering DMA transfer
+#define MEMADDR_DMA                             0xFF46
 
+// Only writeable ONCE to unmap boot ROM from memory
+#define MEMADDR_BOOT_ROM_LOCK                   0xFF50
 
-// Timer registers
-#define MEMADDR_DIV                             0xFF04
-#define MEMADDR_TIMA                            0xFF05
-#define MEMADDR_TMA                             0xFF06
-#define MEMADDR_TAC                             0xFF07
-
-// Serial registers
-#define MEMADDR_SB                              0xFF01
-#define MEMADDR_SC                              0xFF02
-
+//////////////////////////////////////////////////////
 /* -- Various conventions relating to cartridge header and MBC -- */
+//////////////////////////////////////////////////////
 
 #define CARTRIDGE_HEADER_MBC_TYPE               0x0147
 #define CARTRIDGE_HEADER_ROM_SIZE               0x0148

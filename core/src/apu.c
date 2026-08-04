@@ -24,6 +24,7 @@ read_apu_reg (memaddr address)
 {
     switch (address) {
     case MEMADDR_NR52:                          return apu.NR52 | (USEPINS_NR52 ^ 0xFF);
+    case MEMADDR_NR51:                          return apu.NR51;
     default:                                    return UNREADABLE;
     }
 }
@@ -33,8 +34,10 @@ write_apu_reg(memaddr address, uint8_t val)
 {
     switch (address) {
     case MEMADDR_NR52:
+        // TODO turning off clears all APU registers and makes them readonly, except for NR52
         apu.NR52   = (WRITEABLE_NR52 & val) | (READONLY_NR52 & apu.NR52) | (USEPINS_NR52 ^ 0xFF);
         break;
+    case MEMADDR_NR51:                          apu.NR51 = val;                                     break;
     }
 }
 
@@ -46,3 +49,6 @@ init_gameboy_apu(gb_bus_t *bus)
     bus->interface_reg_apu = &bus_registers_apu;
     return &apu;
 }
+
+// TODO DIV-APU counter - increased on every falling edge of DIV bit 4
+// Affects: Envelope sweep (8 DIV-APU ticks), sound length (2 ticks), CH1 freq. sweep (4 ticks)
