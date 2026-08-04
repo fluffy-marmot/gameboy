@@ -105,6 +105,10 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 #define MEMADDR_WY                              0xFF4A
 #define MEMADDR_WX                              0xFF4B
 
+// APU registers
+#define MEMADDR_NR52                            0xFF26
+
+
 // Timer registers
 #define MEMADDR_DIV                             0xFF04
 #define MEMADDR_TIMA                            0xFF05

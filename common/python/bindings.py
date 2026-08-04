@@ -121,6 +121,7 @@ class gb_bus_t(struct):
 
         ("interface_reg_bootlock", pointer(bus_interface_t)),
         ("interface_reg_ppu", pointer(bus_interface_t)),
+        ("interface_reg_apu", pointer(bus_interface_t)),
         ("interface_reg_interrupt", pointer(bus_interface_t)),
         ("interface_reg_timers", pointer(bus_interface_t)),
         ("interface_reg_joypad", pointer(bus_interface_t)),

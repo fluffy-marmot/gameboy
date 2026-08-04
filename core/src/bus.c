@@ -74,6 +74,8 @@ select_interface(memaddr address)
     case MEMADDR_WY:
     case MEMADDR_WX:                                                    return bus.interface_reg_ppu;
 
+    case MEMADDR_NR52:                                                  return bus.interface_reg_apu;
+
     default:                                                            return bus.interface_nop;
     }    
 }
