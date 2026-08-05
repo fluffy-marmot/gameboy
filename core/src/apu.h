@@ -4,6 +4,7 @@
 #include "_specification.h"
 #include "bus.h"
 
+// TODO bindings
 typedef struct {
     uint8_t NR52;                               // audio master control
     uint8_t NR51;                               // sound panning
@@ -30,6 +31,37 @@ typedef struct {
     uint8_t NR42;                               // channel 4 volume & envelope
     uint8_t NR43;                               // channel 4 frequency & randomness
     uint8_t NR44;                               // channel 4 control
+    
+    struct {
+        uint16_t freq_timer;
+        uint8_t period_timer;
+        uint8_t len_timer;
+        uint8_t current_vol;
+        uint8_t wave_duty_pos;
+
+        uint16_t shadow_frequency;
+        uint8_t sweep_enabled;
+        uint8_t sweep_timer;
+
+    } ch1;
+
+    struct {
+        uint16_t freq_timer;
+        uint8_t period_timer;
+        uint8_t len_timer;
+        uint8_t current_vol;
+        uint8_t wave_duty_pos;
+    } ch2;
+
+    struct {
+        uint8_t len_timer
+    } ch3;
+
+    struct {
+        uint8_t current_vol;
+        uint8_t len_timer;
+        uint8_t period_timer;
+    } ch4;
 
     uint8_t DIV_APU;                            // counter driving the APU
 

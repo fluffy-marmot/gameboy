@@ -9,7 +9,7 @@
 #define TAC_CLOCK_SELECT                        (timers.TAC & TAC_CLOCK_SELECT_BITS)
 
 #define DIV_BIT_FOR_SERIAL                      0b100000000
-#define DIV_BIT_FOR_APU                         0b10000
+#define DIV_BIT_FOR_APU                         0b1000000000000
 
 static const uint16_t DIV_BIT_USED[] = {        0b1000000000,
                                                 0b0000001000,
