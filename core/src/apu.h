@@ -4,6 +4,32 @@
 #include "_specification.h"
 #include "bus.h"
 
+typedef uint8_t digital;
+typedef float analog;
+
+typedef struct {
+    analog left;
+    analog right;
+} stereo_sample_t;
+
+typedef struct {
+    uint8_t timer;
+    uint8_t volume;
+    uint8_t *reg;
+} envelope_data_t;
+
+typedef struct {
+    uint8_t timer;
+    uint16_t shadow_frequency;
+    uint8_t enabled;
+} sweep_data_t;
+
+typedef struct {
+    uint8_t timer;
+    uint8_t cycle;
+    uint8_t *reg;
+} waveduty_data_t;
+
 // TODO bindings
 typedef struct {
     uint8_t NR52;                               // audio master control
@@ -33,39 +59,34 @@ typedef struct {
     uint8_t NR44;                               // channel 4 control
     
     struct {
-        uint16_t freq_timer;
-        uint8_t period_timer;
+        waveduty_data_t waveduty;
+        envelope_data_t envelope;
+        sweep_data_t sweep;
+
         uint8_t len_timer;
-        uint8_t current_vol;
-        uint8_t wave_duty_pos;
-
-        uint16_t shadow_frequency;
-        uint8_t sweep_enabled;
-        uint8_t sweep_timer;
-
     } ch1;
 
     struct {
-        uint16_t freq_timer;
-        uint8_t period_timer;
+        waveduty_data_t waveduty;
+        envelope_data_t envelope;
+
         uint8_t len_timer;
-        uint8_t current_vol;
-        uint8_t wave_duty_pos;
     } ch2;
 
     struct {
-        uint8_t len_timer
+        uint16_t len_timer;
+
+        uint8_t waveram[GB_DMG_WAVERAM_SIZE];       // 16 bytes of RAM for channel 3 samples
     } ch3;
 
     struct {
-        uint8_t current_vol;
+        envelope_data_t envelope;
+
         uint8_t len_timer;
-        uint8_t period_timer;
     } ch4;
 
     uint8_t DIV_APU;                            // counter driving the APU
 
-    uint8_t waveram[GB_DMG_WAVERAM_SIZE];       // 16 bytes of RAM for channel 3 samples
 } gb_apu_t;
 
 gb_apu_t *init_gameboy_apu(gb_bus_t *);

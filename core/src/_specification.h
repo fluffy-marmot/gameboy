@@ -107,10 +107,31 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 #define MEMADDR_IE                              0xFFFF
 
 // APU registers
-
 #define MEMADDR_NR52                            0xFF26
 #define MEMADDR_NR51                            0xFF25
 #define MEMADDR_NR50                            0xFF24
+
+#define MEMADDR_NR10                            0xFF10
+#define MEMADDR_NR11                            0xFF11
+#define MEMADDR_NR12                            0xFF12
+#define MEMADDR_NR13                            0xFF13
+#define MEMADDR_NR14                            0xFF14
+
+#define MEMADDR_NR21                            0xFF16
+#define MEMADDR_NR22                            0xFF17
+#define MEMADDR_NR23                            0xFF18
+#define MEMADDR_NR24                            0xFF19
+
+#define MEMADDR_NR30                            0xFF1A
+#define MEMADDR_NR31                            0xFF1B
+#define MEMADDR_NR32                            0xFF1C
+#define MEMADDR_NR33                            0xFF1D
+#define MEMADDR_NR34                            0xFF1E
+
+#define MEMADDR_NR41                            0xFF20
+#define MEMADDR_NR42                            0xFF21
+#define MEMADDR_NR43                            0xFF22
+#define MEMADDR_NR44                            0xFF23
 
 // PPU registers
 #define MEMADDR_LCDC                            0xFF40
