@@ -461,7 +461,7 @@ apu_power_off(void)
     uint8_t ch4_len_timer = CH4_INIT_LENGTH_TIMER;
 
     // zero out everything except waveram, DIV_APU, and NR52
-    memset(&apu.NR51, 0x00, sizeof(gb_apu_t) - offsetof(gb_apu_t, NR51));
+    memset(&apu.NR52, 0x00, sizeof(gb_apu_t) - offsetof(gb_apu_t, NR52));
 
     // memset above wipes these back-pointers (they live inside ch1/ch2/ch4); restore them
     apu.ch1.envelope.reg = &apu.NR12;

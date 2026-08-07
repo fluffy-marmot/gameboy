@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/mooneye/misc/boot_div-A.gb
+TEST_ROM = tests/testdata/blargg/dmg_sound/rom_singles/01-registers.gb
 K =
 
 run:
