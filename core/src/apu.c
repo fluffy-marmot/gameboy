@@ -35,11 +35,23 @@
 #define NR51_BIT_CH2_RIGHT                      0b00000010
 #define NR51_BIT_CH1_RIGHT                      0b00000001
 
+#define CH1_PAN_LEFT                            (apu.NR51 & NR51_BIT_CH1_LEFT)
+#define CH2_PAN_LEFT                            (apu.NR51 & NR51_BIT_CH2_LEFT)
+#define CH3_PAN_LEFT                            (apu.NR51 & NR51_BIT_CH3_LEFT)
+#define CH4_PAN_LEFT                            (apu.NR51 & NR51_BIT_CH4_LEFT)
+#define CH1_PAN_RIGHT                           (apu.NR51 & NR51_BIT_CH1_RIGHT)
+#define CH2_PAN_RIGHT                           (apu.NR51 & NR51_BIT_CH2_RIGHT)
+#define CH3_PAN_RIGHT                           (apu.NR51 & NR51_BIT_CH3_RIGHT)
+#define CH4_PAN_RIGHT                           (apu.NR51 & NR51_BIT_CH4_RIGHT)
+
 // NR50 - master volume & VIN panning
 #define NR50_BIT_VIN_LEFT                       0b10000000
 #define NR50_BITS_LEFT_VOLUME                   0b01110000
 #define NR50_BIT_VIN_RIGHT                      0b00001000
 #define NR50_BITS_RIGHT_VOLUME                  0b00000111
+
+#define LEFT_VOLUME                             ((apu.NR50 & NR50_BITS_LEFT_VOLUME) >> 4)
+#define RIGHT_VOLUME                            (apu.NR50 & NR50_BITS_RIGHT_VOLUME)
 
 //////////////////////////////////////////////////////////
 /* CHANNEL 1 */
@@ -67,6 +79,8 @@
 #define CH1_WAVE_DUTY                           ((apu.NR11 & NR11_BITS_WAVE_DUTY) >> 6)
 #define CH1_INIT_LENGTH_TIMER                   (apu.NR11 & NR11_BITS_INIT_LENGTH_TIMER)
 
+#define CH1_DAC_ENABLED                         (apu.NR12 & BITMASK_ENVELOPE_DAC_ENABLED)
+
 // NR13 - channel 1 period low
 
 // NR14 - channel 1 period high & control
@@ -93,6 +107,8 @@
 #define CH2_WAVE_DUTY                           ((apu.NR21 & NR21_BITS_WAVE_DUTY) >> 6)
 #define CH2_INIT_LENGTH_TIMER                   (apu.NR21 & NR21_BITS_INIT_LENGTH_TIMER)
 
+#define CH2_DAC_ENABLED                         (apu.NR22 & BITMASK_ENVELOPE_DAC_ENABLED)
+
 // NR23 - channel 2 period low
 
 // NR24 - channel 2 period high & control
@@ -115,7 +131,7 @@
 
 #define NR30_BIT_DAC                            0b10000000
 
-#define CH3_DAC                                 (apu.NR30 & NR30_BIT_DAC)
+#define CH3_DAC_ENABLED                         (apu.NR30 & NR30_BIT_DAC)
 
 // NR31 - channel 3 length timer
 
@@ -137,6 +153,7 @@
 #define NR34_BIT_LENGTH_ENABLE                  0b01000000
 #define NR34_BITS_PERIOD_HIGH                   0b00000111
 
+#define CH3_PERIOD                              (((apu.NR34 & NR34_BITS_PERIOD_HIGH) << 8) | apu.NR33)
 #define CH3_LENGTH_TIMER_ENABLED                (apu.NR34 & NR34_BIT_LENGTH_ENABLE)
 #define CH3_TRIGGER                             (apu.NR34 & NR34_BIT_TRIGGER)
 
@@ -147,9 +164,9 @@
 // NR41 - channel 4 length timer
 #define USEPINS_NR41                            0b00111111
 
-#define NR41_BITS_LENGTH_TIMER                  0b00111111
+#define NR41_BITS_INIT_LENGTH_TIMER             0b00111111
 
-#define CH4_INIT_LENGTH_TIMER                   (apu.NR41 & NR41_BITS_LENGTH_TIMER)
+#define CH4_INIT_LENGTH_TIMER                   (apu.NR41 & NR41_BITS_INIT_LENGTH_TIMER)
 
 // NR43 - channel 4 frequency & randomness
 #define NR43_BITS_CLOCK_SHIFT                   0b11110000
@@ -175,11 +192,14 @@
 
 #define SHORT_TIMER                             64
 #define LONG_TIMER                              256
+#define PERIOD_COUNTER_OVERFLOW                 2048
 
 #define MASK_BIT_L                              0b00000001
+#define MASK_NIBBLE_L                           0b00001111
 #define READABLE_NRx4                           0b01000000
 
 // Envelope stuff for ch 1, 2, 4
+#define BITMASK_ENVELOPE_DAC_ENABLED            0b11111000
 #define BITMASK_ENVELOPE_INITIAL_VOLUME         0b11110000
 #define BITMASK_ENVELOPE_DIR                    0b00001000
 #define BITMASK_ENVELOPE_PACE                   0b00000111
@@ -195,14 +215,14 @@ static const uint8_t DUTY_WAVEFORM[4] = {
     [0b11] = 0b11111100                         // 75.0 % ratio
 };
 
-static const uint8_t CH4_VOLUME_SHIFT[4] = {
+static const uint8_t CH3_VOLUME_SHIFT[4] = {
     [0b00] = 0b00000100,
     [0b01] = 0b00000000,
     [0b10] = 0b00000001,
     [0b11] = 0b00000010,
 };
 
-static const float DAC[16] = {
+static const analog DAC[16] = {
     [0x0] = 1.0f - (2.0f *  0.0f) / 15.0f,
     [0x1] = 1.0f - (2.0f *  1.0f) / 15.0f,
     [0x2] = 1.0f - (2.0f *  2.0f) / 15.0f,
@@ -223,8 +243,10 @@ static const float DAC[16] = {
 
 static gb_apu_t apu;
 
+// TODO Examine more: For CH1 only: when the period sweep overflows4, or
+// The channel’s DAC is turned off. The envelope reaching a volume of 0 does NOT turn the channel off!
 static void
-cycle_envelope(envelope_data_t *env)
+tick_envelope(envelope_data_t *env)
 {
     if (ENVELOPE_PACE(env->reg) == 0)    return;
     if (env->timer && --env->timer != 0) return;
@@ -248,7 +270,7 @@ calculate_sweep_frequency_and_check_overflow_ch1(void)
 }
 
 static void
-cycle_sweep_ch1(void)
+tick_sweep_ch1(void)
 {
     if (apu.ch1.sweep.timer && --apu.ch1.sweep.timer) return;
 
@@ -266,16 +288,7 @@ cycle_sweep_ch1(void)
 }
 
 static void
-cycle_waveduty(waveduty_data_t *waveduty, uint16_t ch_period)
-{
-    if (waveduty->timer == 0) {
-        waveduty->timer = (2048 - ch_period) * 4;
-        waveduty->cycle = (waveduty->cycle + 1) % 8;
-    }
-}
-
-static void
-cycle_length_timers(void)
+tick_length_timers(void)
 {
     if (CH1_LENGTH_TIMER_ENABLED && (--apu.ch1.len_timer == 0))     DISABLE_CH(1);
     if (CH2_LENGTH_TIMER_ENABLED && (--apu.ch2.len_timer == 0))     DISABLE_CH(2);
@@ -296,6 +309,8 @@ trigger_ch1(void)
 {
     // enable
     ENABLE_CH(1);
+    apu.ch1.waveduty.timer = CH1_PERIOD;
+
     // length timer
     if (apu.ch1.len_timer == 0)
         apu.ch1.len_timer = SHORT_TIMER - CH1_INIT_LENGTH_TIMER;
@@ -314,6 +329,8 @@ trigger_ch2(void)
 {
     // enable
     ENABLE_CH(2);
+    apu.ch2.waveduty.timer = CH2_PERIOD;
+
     // length timer
     if (apu.ch2.len_timer == 0)
         apu.ch2.len_timer = SHORT_TIMER - CH2_INIT_LENGTH_TIMER;
@@ -326,6 +343,8 @@ trigger_ch3(void)
 {
     // enable
     ENABLE_CH(3);
+    apu.ch3.wave_timer = CH3_PERIOD;
+    apu.ch3.sample_index = 0;
     // long length timer
     if (apu.ch3.len_timer == 0)
         apu.ch3.len_timer = LONG_TIMER - CH3_INIT_LENGTH_TIMER;
@@ -341,19 +360,89 @@ trigger_ch4(void)
         apu.ch4.len_timer = SHORT_TIMER - CH4_INIT_LENGTH_TIMER;
 }
 
-stereo_sample_t
-audio_sample(void)
+static analog
+dac_ch1(void)
 {
-    float left = 0.0;
-    float right = 0.0;
-
     digital ch1_dig = 0x0;
-    if (CH2_ON) {
+    if (CH1_ON) {
         uint8_t ch1_vol = apu.ch1.envelope.volume;
         ch1_dig = ((DUTY_WAVEFORM[CH1_WAVE_DUTY] >> apu.ch1.waveduty.cycle) & MASK_BIT_L) * ch1_vol;
     }
-    analog ch1 = DAC[ch1_dig];
+    return DAC[ch1_dig];
+}
 
+static analog
+dac_ch1(void)
+{
+    digital ch2_dig = 0x0;
+    if (CH2_ON) {
+        uint8_t ch2_vol = apu.ch2.envelope.volume;
+        ch2_dig = ((DUTY_WAVEFORM[CH2_WAVE_DUTY] >> apu.ch2.waveduty.cycle) & MASK_BIT_L) * ch2_vol;
+    }
+    return DAC[ch2_dig];
+}
+
+static analog
+dac_ch3(void)
+{
+    if (!CH3_ON) return DAC[0x0];
+
+    uint8_t sample_byte = apu.waveram[apu.ch3.sample_index / 2];
+    digital sample = ((apu.ch3.sample_index % 2 == 0) ? (sample_byte >> 4) : (sample_byte)) & MASK_NIBBLE_L;
+    sample >>= CH3_VOLUME_SHIFT[CH3_OUTPUT_LEVEL];
+    return DAC[sample];
+}
+
+static stereo_sample_t
+mix_sample(void)
+{
+    analog signal;
+    stereo_sample_t sample = {0};
+
+    if (CH1_DAC_ENABLED) {
+        signal = dac_ch1();
+        if (CH1_PAN_LEFT)   sample.left  += signal;
+        if (CH1_PAN_RIGHT)  sample.right += signal;
+    }
+    if (CH2_DAC_ENABLED) {
+        signal = dac_ch2();
+        if (CH2_PAN_LEFT)   sample.left  += signal;
+        if (CH2_PAN_RIGHT)  sample.right += signal;
+    }
+    if (CH3_DAC_ENABLED) {
+        signal = dac_ch3();
+        if (CH3_PAN_LEFT)   sample.left  += signal;
+        if (CH3_PAN_RIGHT)  sample.right += signal;
+    }
+    return sample;
+}
+
+static stereo_sample_t
+volume_scale_sample(stereo_sample_t sample)
+{
+    sample.left *= (LEFT_VOLUME + 1);
+    sample.right *= (RIGHT_VOLUME + 1);
+    return sample;
+}
+
+
+
+static void
+apu_power_off(void)
+{
+    uint8_t ch1_len_timer = CH1_INIT_LENGTH_TIMER;
+    uint8_t ch2_len_timer = CH2_INIT_LENGTH_TIMER;
+    uint8_t ch3_len_timer = CH3_INIT_LENGTH_TIMER;
+    uint8_t ch4_len_timer = CH4_INIT_LENGTH_TIMER;
+
+    // zero out everything except waveram, DIV_APU, and NR52
+    memset(&apu.NR51, 0x00, sizeof(gb_apu_t) - offsetof(gb_apu_t, NR51));
+
+    // the length timer bits also don't get zeroed out
+    apu.NR11 = ch1_len_timer;
+    apu.NR21 = ch2_len_timer;
+    apu.NR31 = ch3_len_timer;
+    apu.NR41 = ch4_len_timer;
 }
 
 static uint8_t 
@@ -363,7 +452,7 @@ read_apu_reg (memaddr address)
     /* On monochrome consoles, wave RAM can only be accessed on the same cycle that CH3 does. Otherwise, reads
     return $FF, and writes are ignored. */
     if (ADDR_RANGE(ADDR_START_WAVERAM, ADDR_END_WAVERAM))
-        return apu.ch3.waveram[address - ADDR_START_WAVERAM];
+        return apu.waveram[address - ADDR_START_WAVERAM];
 
     switch (address) {
     case MEMADDR_NR52:                          return apu.NR52 | (USEPINS_NR52 ^ 0xFF);
@@ -399,19 +488,27 @@ static void
 write_apu_reg(memaddr address, uint8_t val)
 {
     // if APU is powered off, all other registers are read only
-    if (!APU_ENABLED && address != MEMADDR_NR52)
+    if (address == MEMADDR_NR52) {
+        apu.NR52 = (WRITEABLE_NR52 & val) | (READONLY_NR52 & apu.NR52) | (USEPINS_NR52 ^ 0xFF);
+        if (!APU_ENABLED)
+            apu_power_off();
         return;
-    if (ADDR_RANGE(ADDR_START_WAVERAM, ADDR_END_WAVERAM)) {
+    } else if (ADDR_RANGE(ADDR_START_WAVERAM, ADDR_END_WAVERAM)) {
         if (!CH3_ON)
-            apu.ch3.waveram[address - ADDR_START_WAVERAM] = val;
+            apu.waveram[address - ADDR_START_WAVERAM] = val;
         return;
+    } else if (!APU_ENABLED) {
+        switch (address) {
+            case MEMADDR_NR11:                  apu.NR11 = val & NR11_BITS_INIT_LENGTH_TIMER; return;
+            case MEMADDR_NR21:                  apu.NR21 = val & NR21_BITS_INIT_LENGTH_TIMER; return;
+            case MEMADDR_NR31:                  apu.NR31 = val;                             ; return;
+            case MEMADDR_NR41:                  apu.NR41 = val & NR41_BITS_INIT_LENGTH_TIMER; return;
+            default:
+                return;
+        }
     }
 
     switch (address) {
-    case MEMADDR_NR52:
-        // TODO turning off clears all APU registers and makes them readonly, except for NR52
-        apu.NR52   = (WRITEABLE_NR52 & val) | (READONLY_NR52 & apu.NR52) | (USEPINS_NR52 ^ 0xFF);
-        break;
     case MEMADDR_NR51:                          apu.NR51 = val; break;
     case MEMADDR_NR50:                          apu.NR50 = val; break;
 
@@ -455,21 +552,40 @@ write_apu_reg(memaddr address, uint8_t val)
 static bus_interface_t bus_registers_apu =  { .read = read_apu_reg, .write = write_apu_reg };
 
 void
-cycle_512hz_apu(void)
+cycle_512hz_apu_frame_sequencer(void)
 {
     apu.DIV_APU++;
     if (apu.DIV_APU % 2 == 0) {
-        cycle_length_timers();
+        tick_length_timers();
+        if (apu.DIV_APU % 4 == 2)
+            tick_sweep_ch1();
     }
-
     if (apu.DIV_APU % 8 == 7) {
-        cycle_envelope_ch1();
-        cycle_envelope_ch2();
-        cycle_envelope_ch4();
+        tick_envelope(&apu.ch1.envelope);
+        tick_envelope(&apu.ch2.envelope);
+        tick_envelope(&apu.ch4.envelope);
     }
+}
 
-    if (apu.DIV_APU % 4 == 2) {
-        cycle_sweep_ch1();
+void
+cycle_mcycle_apu_pulse_channels(void)
+{
+    if (++apu.ch1.waveduty.timer == PERIOD_COUNTER_OVERFLOW) {
+        apu.ch1.waveduty.timer = CH1_PERIOD;
+        apu.ch1.waveduty.cycle = (apu.ch1.waveduty.cycle + 1) % 8;
+    }
+    if (++apu.ch2.waveduty.timer == PERIOD_COUNTER_OVERFLOW) {
+        apu.ch2.waveduty.timer = CH2_PERIOD;
+        apu.ch2.waveduty.cycle = (apu.ch2.waveduty.cycle + 1) % 8;
+    }
+}
+
+void
+cycle_2tcycles_apu_wave_channel(void)
+{
+    if (++apu.ch3.wave_timer == PERIOD_COUNTER_OVERFLOW) {
+        apu.ch3.wave_timer = CH3_PERIOD;
+        apu.ch3.sample_index = (apu.ch3.sample_index + 1) % 32;
     }
 }
 

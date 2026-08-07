@@ -14,11 +14,16 @@ emulate_machine_cycle(void)
     for (int tcycle = 0; tcycle < DOTS_PER_MACHINE_CYCLE; tcycle++) {
         cycle_tcycle_timers();
         if (gb.timers->serial_falling_edge)
+            // TODO rename with rate
             cycle_serial();
         if (gb.timers->apu_falling_edge)
-            cycle_512hz_apu();
+            cycle_512hz_apu_frame_sequencer();
+        if (tcycle % 2 == 0)
+            cycle_2tcycles_apu_wave_channel();
+
         encountered_vblank |= cycle_tcycle_ppu();
     }
+    cycle_mcycle_apu_pulse_channels();
     return encountered_vblank;
 }
 

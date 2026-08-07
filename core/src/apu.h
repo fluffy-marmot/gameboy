@@ -25,14 +25,20 @@ typedef struct {
 } sweep_data_t;
 
 typedef struct {
-    uint8_t timer;
+    uint16_t timer;
     uint8_t cycle;
     uint8_t *reg;
 } waveduty_data_t;
 
 // TODO bindings
+
+// Important not to move first 3 members of the struct:
+/* when APU is turned off, waveram, DIV_APU and NR52  aren't zeroed out, along w/ length timer bits */ 
 typedef struct {
+    uint8_t waveram[GB_DMG_WAVERAM_SIZE];       // 16 bytes of RAM for channel 3 samples
+    uint8_t DIV_APU;                            // counter driving the APU
     uint8_t NR52;                               // audio master control
+
     uint8_t NR51;                               // sound panning
     uint8_t NR50;                               // master volume and VIN panning
 
@@ -59,38 +65,32 @@ typedef struct {
     uint8_t NR44;                               // channel 4 control
     
     struct {
-        waveduty_data_t waveduty;
+        uint8_t len_timer;
         envelope_data_t envelope;
+        waveduty_data_t waveduty;
         sweep_data_t sweep;
-
-        uint8_t len_timer;
     } ch1;
-
     struct {
-        waveduty_data_t waveduty;
-        envelope_data_t envelope;
-
         uint8_t len_timer;
+        envelope_data_t envelope;
+        waveduty_data_t waveduty;
     } ch2;
-
     struct {
         uint16_t len_timer;
-
-        uint8_t waveram[GB_DMG_WAVERAM_SIZE];       // 16 bytes of RAM for channel 3 samples
+        uint16_t wave_timer;
+        uint8_t sample_index;
     } ch3;
-
     struct {
-        envelope_data_t envelope;
-
         uint8_t len_timer;
+        envelope_data_t envelope;
+        uint8_t sample_index;
     } ch4;
-
-    uint8_t DIV_APU;                            // counter driving the APU
-
 } gb_apu_t;
 
 gb_apu_t *init_gameboy_apu(gb_bus_t *);
-void cycle_512hz_apu(void);
+void cycle_512hz_apu_frame_sequencer(void);
+void cycle_mcycle_apu_pulse_channels(void);
+void cycle_2tcycles_apu_wave_channel(void);
 
 #endif
 
