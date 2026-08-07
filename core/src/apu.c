@@ -322,6 +322,9 @@ trigger_ch1(void)
     apu.ch1.sweep.enabled = CH1_SWEEP_PACE | CH1_SWEEP_SHIFT;
     if (CH1_SWEEP_SHIFT)
         calculate_sweep_frequency_and_check_overflow_ch1();
+
+     if (!CH1_DAC_ENABLED)
+        DISABLE_CH(1);
 }
 
 static void
@@ -335,6 +338,9 @@ trigger_ch2(void)
         apu.ch2.len_timer = SHORT_TIMER - CH2_INIT_LENGTH_TIMER;
     // envelope
     trigger_envelope(&apu.ch2.envelope);
+
+    if (!CH2_DAC_ENABLED)
+        DISABLE_CH(2);
 }
 
 static void
@@ -347,6 +353,9 @@ trigger_ch3(void)
     // long length timer
     if (apu.ch3.len_timer == 0)
         apu.ch3.len_timer = LONG_TIMER - CH3_INIT_LENGTH_TIMER;
+
+    if (!CH3_DAC_ENABLED)
+        DISABLE_CH(3);
 }
 
 static void
@@ -371,7 +380,7 @@ dac_ch1(void)
 }
 
 static analog
-dac_ch1(void)
+dac_ch2(void)
 {
     digital ch2_dig = 0x0;
     if (CH2_ON) {
@@ -413,14 +422,16 @@ mix_sample(void)
         if (CH3_PAN_LEFT)   sample.left  += signal;
         if (CH3_PAN_RIGHT)  sample.right += signal;
     }
+    sample.left /= 3.0f;
+    sample.right /= 3.0f;
     return sample;
 }
 
 static stereo_sample_t
 volume_scale_sample(stereo_sample_t sample)
 {
-    sample.left *= (LEFT_VOLUME + 1);
-    sample.right *= (RIGHT_VOLUME + 1);
+    sample.left *= (LEFT_VOLUME + 1) / 8.0f;
+    sample.right *= (RIGHT_VOLUME + 1) / 8.0f;
     return sample;
 }
 
@@ -451,6 +462,11 @@ apu_power_off(void)
 
     // zero out everything except waveram, DIV_APU, and NR52
     memset(&apu.NR51, 0x00, sizeof(gb_apu_t) - offsetof(gb_apu_t, NR51));
+
+    // memset above wipes these back-pointers (they live inside ch1/ch2/ch4); restore them
+    apu.ch1.envelope.reg = &apu.NR12;
+    apu.ch2.envelope.reg = &apu.NR22;
+    apu.ch4.envelope.reg = &apu.NR42;
 
     // the length timer bits also don't get zeroed out
     apu.NR11 = ch1_len_timer;
@@ -528,7 +544,10 @@ write_apu_reg(memaddr address, uint8_t val)
 
     case MEMADDR_NR10:                          apu.NR10 = val | (USEPINS_NR10 ^ 0xFF); break;
     case MEMADDR_NR11:                          apu.NR11 = val; break;
-    case MEMADDR_NR12:                          apu.NR12 = val; break;
+    case MEMADDR_NR12:                          
+        apu.NR12 = val;
+        if (!CH1_DAC_ENABLED) DISABLE_CH(1);
+        break;
     case MEMADDR_NR13:                          apu.NR13 = val; break;
     case MEMADDR_NR14:
         apu.NR14 = val | (USEPINS_NR14 ^ 0xFF);
@@ -536,14 +555,20 @@ write_apu_reg(memaddr address, uint8_t val)
         break;
 
     case MEMADDR_NR21:                          apu.NR21 = val; break;
-    case MEMADDR_NR22:                          apu.NR22 = val; break;
+    case MEMADDR_NR22:
+        apu.NR22 = val;
+        if (!CH2_DAC_ENABLED) DISABLE_CH(2);
+        break;
     case MEMADDR_NR23:                          apu.NR23 = val; break;
     case MEMADDR_NR24:
         apu.NR24 = val | (USEPINS_NR24 ^ 0xFF);
         if (CH2_TRIGGER) trigger_ch2();
         break;
 
-    case MEMADDR_NR30:                          apu.NR30 = val | (USEPINS_NR30 ^ 0xFF); break;
+    case MEMADDR_NR30:
+        apu.NR30 = val | (USEPINS_NR30 ^ 0xFF);
+        if (!CH3_DAC_ENABLED) DISABLE_CH(3);
+        break;
     case MEMADDR_NR31:                          apu.NR31 = val; break;
     case MEMADDR_NR32:                          apu.NR32 = val | (USEPINS_NR32 ^ 0xFF); break;
     case MEMADDR_NR33:                          apu.NR33 = val; break;
@@ -559,8 +584,6 @@ write_apu_reg(memaddr address, uint8_t val)
         apu.NR44 = val | (USEPINS_NR44 ^ 0xFF);
         if (CH4_TRIGGER) trigger_ch4();
         break;
-
-    default:                                    return UNREADABLE;
     }
 }
 static bus_interface_t bus_registers_apu =  { .read = read_apu_reg, .write = write_apu_reg };

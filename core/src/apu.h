@@ -5,7 +5,7 @@
 #include "bus.h"
 
 #define AUDIO_SAMPLE_RATE                       48100   // Hz
-#define AUDIO_BUFFER_CAPACITY                   128     // samples
+#define AUDIO_BUFFER_CAPACITY                   1024    // samples
 
 typedef uint8_t digital;
 typedef float analog;
@@ -37,12 +37,12 @@ typedef struct {
     uint8_t cycle;
     uint8_t *reg;
 } waveduty_data_t;
-
-// TODO bindings
-
-// Important not to move first 3 members of the struct:
+// Important not to move first 5 members of the struct: besides buffer, 
 /* when APU is turned off, waveram, DIV_APU and NR52  aren't zeroed out, along w/ length timer bits */ 
 typedef struct {
+    audio_buffer_t buf;
+    int sample_timer;
+
     uint8_t waveram[GB_DMG_WAVERAM_SIZE];       // 16 bytes of RAM for channel 3 samples
     uint8_t DIV_APU;                            // counter driving the APU
     uint8_t NR52;                               // audio master control
@@ -93,9 +93,6 @@ typedef struct {
         envelope_data_t envelope;
         uint8_t sample_index;
     } ch4;
-
-    audio_buffer_t buf;
-    int sample_timer;
 } gb_apu_t;
 
 gb_apu_t *init_gameboy_apu(gb_bus_t *);

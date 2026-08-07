@@ -28,9 +28,14 @@ def GB_serial_buffer_flush() -> str | None:
     buffer_size = gb.serial.contents.buf.size
     if not buffer_size:
         return None
-    # return ct.cast(GB.GB_serial_buffer_flush(), pointer(uint8 * buffer_size)).contents
     raw = ct.string_at(GB.GB_serial_buffer_flush(), buffer_size)
     return raw.decode('ascii', errors='backslashreplace')
+
+def GB_audio_buffer_flush() -> list[float] | None:
+    buffer_size = gb.apu.contents.buf.size
+    if not buffer_size:
+        return None
+    return GB.GB_audio_buffer_flush()[:buffer_size * 2]
 
 def check_blank_frame() -> bool:
     return gb.ppu.contents.lcd.blank_frames > 0

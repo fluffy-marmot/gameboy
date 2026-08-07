@@ -1,7 +1,7 @@
 
+import array
 from collections import deque
 import configparser
-from ctypes import Array
 from pathlib import Path
 import sys
 from time import perf_counter
@@ -75,10 +75,22 @@ def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
         screen.fill(color="white", rect=dest_rect)
 
 
+def play_audio(samples: list[float]) -> None:
+    buf = pygame.mixer.Sound(array.array("f", samples))
+
+    audio_channel = pygame.mixer.Channel(0)
+    if audio_channel.get_busy():
+        audio_channel.queue(buf)
+    else:
+        audio_channel.play(buf)
+
+
 def main() -> None:
     pygame.init()
     screen = pygame.display.set_mode((LCD_WIDTH * SCALE, LCD_HEIGHT * SCALE))
     render_surface = pygame.Surface((LCD_WIDTH, LCD_HEIGHT))
+
+    pygame.mixer.init(frequency=AUDIO_SAMPLE_RATE, size=32, channels=2, buffer=512, allowedchanges=0)
 
     load_keybinds()
     load_bootrom()
@@ -112,6 +124,10 @@ def main() -> None:
         output = GB_serial_buffer_flush()
         if output:
             print(f"Serial output: {output}")
+
+        audio_buffer = GB_audio_buffer_flush()
+        if audio_buffer:
+            play_audio(audio_buffer)
         
         window_draw(screen, render_surface)
         pygame.display.flip()

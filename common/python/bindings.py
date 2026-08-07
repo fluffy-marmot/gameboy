@@ -14,6 +14,9 @@ SCANLINE_MAX_OBJS = 10
 LCD_WIDTH = 160
 LCD_HEIGHT = 144
 
+AUDIO_SAMPLE_RATE = 48100
+AUDIO_BUFFER_CAPACITY = 1024
+
 c_bool = ct.c_bool
 c_int = ct.c_int
 c_float = ct.c_float
@@ -264,9 +267,77 @@ class gb_serial_t(struct):
         ("irq", pointer(gb_irq_handler_t)),
     ]
 
+class envelope_data_t(struct):
+    _fields_ = [
+        ("timer", uint8),
+        ("volume", uint8),
+        ("reg", pointer(uint8)),
+    ]
+
+class sweep_data_t(struct):
+    _fields_ = [
+        ("timer", uint8),
+        ("shadow_frequency", uint16),
+        ("enabled", uint8),
+    ]
+
+class waveduty_data_t(struct):
+    _fields_ = [
+        ("timer", uint16),
+        ("cycle", uint8),
+        ("reg", pointer(uint8)),
+    ]
+
+class stereo_sample_t(struct):
+    _fields_ = [
+        ("left", c_float),
+        ("right", c_float),
+    ]
+
+class audio_buffer_t(struct):
+    _fields_ = [
+        ("size", uint16),
+        ("data", stereo_sample_t * AUDIO_BUFFER_CAPACITY),
+    ]
+
+class apu_ch1_t(struct):
+    _fields_ = [
+        ("len_timer", uint8),
+        ("envelope", envelope_data_t),
+        ("waveduty", waveduty_data_t),
+        ("sweep", sweep_data_t),
+    ]
+
+class apu_ch2_t(struct):
+    _fields_ = [
+        ("len_timer", uint8),
+        ("envelope", envelope_data_t),
+        ("waveduty", waveduty_data_t),
+    ]
+
+class apu_ch3_t(struct):
+    _fields_ = [
+        ("len_timer", uint16),
+        ("wave_timer", uint16),
+        ("sample_index", uint8),
+    ]
+
+class apu_ch4_t(struct):
+    _fields_ = [
+        ("len_timer", uint8),
+        ("envelope", envelope_data_t),
+        ("sample_index", uint8),
+    ]
+
 class gb_apu_t(struct):
     _fields_ = [
+        ("buf", audio_buffer_t),
+        ("sample_timer", c_int),
+
+        ("waveram", uint8 * GB_DMG_WAVERAM_SIZE),
+        ("DIV_APU", uint8),
         ("NR52", uint8),
+
         ("NR51", uint8),
         ("NR50", uint8),
 
@@ -292,9 +363,10 @@ class gb_apu_t(struct):
         ("NR43", uint8),
         ("NR44", uint8),
 
-        ("DIV_APU", uint8),
-
-        ("waveram", uint8 * GB_DMG_WAVERAM_SIZE),
+        ("ch1", apu_ch1_t),
+        ("ch2", apu_ch2_t),
+        ("ch3", apu_ch3_t),
+        ("ch4", apu_ch4_t),
     ]
 
 class gb_gameboy_t(struct):
