@@ -330,7 +330,6 @@ trigger_ch2(void)
     // enable
     ENABLE_CH(2);
     apu.ch2.waveduty.timer = CH2_PERIOD;
-
     // length timer
     if (apu.ch2.len_timer == 0)
         apu.ch2.len_timer = SHORT_TIMER - CH2_INIT_LENGTH_TIMER;
@@ -425,7 +424,22 @@ volume_scale_sample(stereo_sample_t sample)
     return sample;
 }
 
+static stereo_sample_t
+high_pass_filter_sample(stereo_sample_t sample)
+{
+    static double capacitor_left = 0.0;
+    static double capacitor_right = 0.0;
 
+    stereo_sample_t output_sample = { .left = 0.0f, .right = 0.0f };
+    if (CH1_DAC_ENABLED || CH2_DAC_ENABLED || CH3_DAC_ENABLED) {
+        output_sample.left = sample.left - capacitor_left;
+        output_sample.right = sample.right - capacitor_right;
+
+        capacitor_left = sample.left - output_sample.left * 0.996013;
+        capacitor_right = sample.right - output_sample.right * 0.996013;
+    }
+    return output_sample;
+}
 
 static void
 apu_power_off(void)
@@ -550,6 +564,17 @@ write_apu_reg(memaddr address, uint8_t val)
     }
 }
 static bus_interface_t bus_registers_apu =  { .read = read_apu_reg, .write = write_apu_reg };
+
+static void cycle_tcycle_apu_audio_sample(void) {
+    apu.sample_timer += AUDIO_SAMPLE_RATE;
+    if (apu.sample_timer > DOTS_PER_SECOND) {
+        apu.sample_timer %= DOTS_PER_SECOND;
+        // if we've reached max buffer size, assume client doesn't read audio buffer and discard
+        if (apu.buf.size == AUDIO_BUFFER_CAPACITY)
+            apu.buf.size = 0;
+        apu.buf.data[apu.buf.size++] = high_pass_filter_sample(volume_scale_sample(mix_sample()));
+    }
+}
 
 void
 cycle_512hz_apu_frame_sequencer(void)

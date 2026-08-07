@@ -4,6 +4,9 @@
 #include "_specification.h"
 #include "bus.h"
 
+#define AUDIO_SAMPLE_RATE                       48100   // Hz
+#define AUDIO_BUFFER_CAPACITY                   128     // samples
+
 typedef uint8_t digital;
 typedef float analog;
 
@@ -11,6 +14,11 @@ typedef struct {
     analog left;
     analog right;
 } stereo_sample_t;
+
+typedef struct {
+    uint16_t size;
+    stereo_sample_t data[AUDIO_BUFFER_CAPACITY];
+} audio_buffer_t;
 
 typedef struct {
     uint8_t timer;
@@ -85,6 +93,9 @@ typedef struct {
         envelope_data_t envelope;
         uint8_t sample_index;
     } ch4;
+
+    audio_buffer_t buf;
+    int sample_timer;
 } gb_apu_t;
 
 gb_apu_t *init_gameboy_apu(gb_bus_t *);
@@ -94,10 +105,4 @@ void cycle_2tcycles_apu_wave_channel(void);
 
 #endif
 
-/*
-CH1-2 pulse-width modulated waves, 4 fixed pulse width settings
-CH 3 - wave channel
-CH 4 - pseudo random noise channel
-
-VIN - analog from cartridge? implement?
-*/
+// VIN implementation? seems unlikely...
