@@ -16,10 +16,12 @@ emulate_machine_cycle(void)
         if (gb.timers->serial_falling_edge)
             // TODO rename with rate
             cycle_serial();
+
         if (gb.timers->apu_falling_edge)
             cycle_512hz_apu_frame_sequencer();
         if (tcycle % 2 == 0)
             cycle_2tcycles_apu_wave_channel();
+        cycle_tcycle_apu_emit_sample();
 
         encountered_vblank |= cycle_tcycle_ppu();
     }

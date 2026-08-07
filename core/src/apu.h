@@ -102,6 +102,7 @@ gb_apu_t *init_gameboy_apu(gb_bus_t *);
 void cycle_512hz_apu_frame_sequencer(void);
 void cycle_mcycle_apu_pulse_channels(void);
 void cycle_2tcycles_apu_wave_channel(void);
+void cycle_tcycle_apu_emit_sample(void);
 
 #endif
 

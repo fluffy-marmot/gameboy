@@ -16,6 +16,7 @@ LCD_HEIGHT = 144
 
 c_bool = ct.c_bool
 c_int = ct.c_int
+c_float = ct.c_float
 uint8 = ct.c_uint8
 uint16 = ct.c_uint16
 uint32 = ct.c_uint32
@@ -361,6 +362,9 @@ GB.GB_load_rom.restype = ct.c_int
 
 GB.GB_serial_buffer_flush.argtypes = []
 GB.GB_serial_buffer_flush.restype = pointer(uint8)
+
+GB.GB_audio_buffer_flush.argtypes = []
+GB.GB_audio_buffer_flush.restype = pointer(c_float)
 
 LCD = ct.cast(GB.GB_get_lcd(), pointer(uint32 * (LCD_WIDTH * LCD_HEIGHT))).contents
 gb = gb_gameboy_t.in_dll(GB, "gb")

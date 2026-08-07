@@ -565,7 +565,9 @@ write_apu_reg(memaddr address, uint8_t val)
 }
 static bus_interface_t bus_registers_apu =  { .read = read_apu_reg, .write = write_apu_reg };
 
-static void cycle_tcycle_apu_audio_sample(void) {
+// emit samples only at rate of AUDIO_SAMPLE_RATE
+void 
+cycle_tcycle_apu_emit_sample(void) {
     apu.sample_timer += AUDIO_SAMPLE_RATE;
     if (apu.sample_timer > DOTS_PER_SECOND) {
         apu.sample_timer %= DOTS_PER_SECOND;
@@ -622,4 +624,20 @@ init_gameboy_apu(gb_bus_t *bus)
     apu.ch4.envelope.reg = &apu.NR42;
     bus->interface_reg_apu = &bus_registers_apu;
     return &apu;
+}
+
+/* ############################################################################
+###############################################################################
+
+        client-facing ABI functions
+        
+###############################################################################
+############################################################################ */
+
+// caller should read size of buf before flushing it, as it will be set to 0
+float *
+GB_audio_buffer_flush(void)
+{
+    apu.buf.size = 0;
+    return (float *) apu.buf.data;
 }
