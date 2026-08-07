@@ -4,9 +4,11 @@ from collections import deque
 import configparser
 from pathlib import Path
 import sys
+from threading import Lock
 from time import perf_counter
 
 import pygame
+import sounddevice
 
 from common.python.bindings import GB, LCD, LCD_WIDTH, LCD_HEIGHT, uint8, uint32
 from common.python.common import *
@@ -17,7 +19,6 @@ KEYBINDS = {}
 
 CONFIG = configparser.ConfigParser()
 CONFIG.read(BASE_DIR / "clients" / "pygame" / "config.ini")
-
 
 def load_keybinds() -> None:
     keybinds = CONFIG["keybinds"]
@@ -75,14 +76,43 @@ def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
         screen.fill(color="white", rect=dest_rect)
 
 
-def play_audio(samples: list[float]) -> None:
-    buf = pygame.mixer.Sound(array.array("f", samples))
+class AudioPlayer:
+    # stereo, float32 samples
+    BYTES_PER_FRAME = 2 * 4
 
-    audio_channel = pygame.mixer.Channel(0)
-    if audio_channel.get_busy():
-        audio_channel.queue(buf)
-    else:
-        audio_channel.play(buf)
+    def __init__(self, samplerate: int) -> None:
+        self._lock = Lock()
+        self._buffer = bytearray()
+        self._stream = sounddevice.RawOutputStream(
+            samplerate=samplerate,
+            channels=2,
+            dtype="float32",
+            callback=self._callback,
+        )
+        self._stream.start()
+
+    def _callback(self, outdata, frames: int, time, status) -> None:
+        """ sounddevice's RawOutputStream expects this argument signature for callback I guess """
+        need = frames * self.BYTES_PER_FRAME
+        with self._lock:
+            have = len(self._buffer)
+            take = min(need, have)
+            chunk = bytes(self._buffer[:take])
+            del self._buffer[:take]
+        if take < need:
+            # print(f"missing {need-take} bytes for audio buffer")
+            chunk += b"\x00" * (need - take)
+        outdata[:] = chunk
+
+    def push(self, samples: list[float] | None) -> None:
+        if not samples:
+            return
+        with self._lock:
+            self._buffer.extend(array.array("f", samples).tobytes())
+
+    def close(self) -> None:
+        self._stream.stop()
+        self._stream.close()
 
 
 def main() -> None:
@@ -90,7 +120,7 @@ def main() -> None:
     screen = pygame.display.set_mode((LCD_WIDTH * SCALE, LCD_HEIGHT * SCALE))
     render_surface = pygame.Surface((LCD_WIDTH, LCD_HEIGHT))
 
-    pygame.mixer.init(frequency=AUDIO_SAMPLE_RATE, size=32, channels=2, buffer=512, allowedchanges=0)
+    audio_player = AudioPlayer(AUDIO_SAMPLE_RATE)
 
     load_keybinds()
     load_bootrom()
@@ -100,10 +130,12 @@ def main() -> None:
     frame = 0
     pygame.display.set_caption(f"Gameboy")
     clock = pygame.Clock()
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
+                audio_player.close()
                 print(f"Rendered {frame} frames this session")
                 raise SystemExit
         frame_start = perf_counter()
@@ -125,9 +157,7 @@ def main() -> None:
         if output:
             print(f"Serial output: {output}")
 
-        audio_buffer = GB_audio_buffer_flush()
-        if audio_buffer:
-            play_audio(audio_buffer)
+        audio_player.push(GB_audio_buffer_flush())
         
         window_draw(screen, render_surface)
         pygame.display.flip()

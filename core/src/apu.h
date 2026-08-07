@@ -4,7 +4,7 @@
 #include "_specification.h"
 #include "bus.h"
 
-#define AUDIO_SAMPLE_RATE                       48100   // Hz
+#define AUDIO_SAMPLE_RATE                       44100   // Hz
 #define AUDIO_BUFFER_CAPACITY                   1024    // samples
 
 typedef uint8_t digital;
