@@ -313,7 +313,7 @@ trigger_ch1(void)
 
     // length timer
     if (apu.ch1.len_timer == 0)
-        apu.ch1.len_timer = SHORT_TIMER - CH1_INIT_LENGTH_TIMER;
+        apu.ch1.len_timer = SHORT_TIMER;
     // envelope
     trigger_envelope(&apu.ch1.envelope);
     // sweep
@@ -335,7 +335,7 @@ trigger_ch2(void)
     apu.ch2.waveduty.timer = CH2_PERIOD;
     // length timer
     if (apu.ch2.len_timer == 0)
-        apu.ch2.len_timer = SHORT_TIMER - CH2_INIT_LENGTH_TIMER;
+        apu.ch2.len_timer = SHORT_TIMER;
     // envelope
     trigger_envelope(&apu.ch2.envelope);
 
@@ -352,7 +352,7 @@ trigger_ch3(void)
     apu.ch3.sample_index = 0;
     // long length timer
     if (apu.ch3.len_timer == 0)
-        apu.ch3.len_timer = LONG_TIMER - CH3_INIT_LENGTH_TIMER;
+        apu.ch3.len_timer = LONG_TIMER;
 
     if (!CH3_DAC_ENABLED)
         DISABLE_CH(3);
@@ -365,7 +365,7 @@ trigger_ch4(void)
     ENABLE_CH(4);
     // length timer
     if (apu.ch4.len_timer == 0)
-        apu.ch4.len_timer = SHORT_TIMER - CH4_INIT_LENGTH_TIMER;
+        apu.ch4.len_timer = SHORT_TIMER;
 }
 
 static analog
@@ -543,7 +543,10 @@ write_apu_reg(memaddr address, uint8_t val)
     case MEMADDR_NR50:                          apu.NR50 = val; break;
 
     case MEMADDR_NR10:                          apu.NR10 = val | (USEPINS_NR10 ^ 0xFF); break;
-    case MEMADDR_NR11:                          apu.NR11 = val; break;
+    case MEMADDR_NR11:
+        apu.NR11 = val;
+        apu.ch1.len_timer = SHORT_TIMER - CH1_INIT_LENGTH_TIMER;
+        break;
     case MEMADDR_NR12:                          
         apu.NR12 = val;
         if (!CH1_DAC_ENABLED) DISABLE_CH(1);
@@ -554,7 +557,10 @@ write_apu_reg(memaddr address, uint8_t val)
         if (CH1_TRIGGER) trigger_ch1();
         break;
 
-    case MEMADDR_NR21:                          apu.NR21 = val; break;
+    case MEMADDR_NR21:
+        apu.NR21 = val;
+        apu.ch2.len_timer = SHORT_TIMER - CH2_INIT_LENGTH_TIMER;
+        break;
     case MEMADDR_NR22:
         apu.NR22 = val;
         if (!CH2_DAC_ENABLED) DISABLE_CH(2);
@@ -569,7 +575,10 @@ write_apu_reg(memaddr address, uint8_t val)
         apu.NR30 = val | (USEPINS_NR30 ^ 0xFF);
         if (!CH3_DAC_ENABLED) DISABLE_CH(3);
         break;
-    case MEMADDR_NR31:                          apu.NR31 = val; break;
+    case MEMADDR_NR31: 
+        apu.NR31 = val;
+        apu.ch3.len_timer = LONG_TIMER - val;
+        break;
     case MEMADDR_NR32:                          apu.NR32 = val | (USEPINS_NR32 ^ 0xFF); break;
     case MEMADDR_NR33:                          apu.NR33 = val; break;
     case MEMADDR_NR34:
@@ -577,7 +586,10 @@ write_apu_reg(memaddr address, uint8_t val)
         if (CH3_TRIGGER) trigger_ch3();
         break;
 
-    case MEMADDR_NR41:                          apu.NR41 = val | (USEPINS_NR41 ^ 0xFF); break;
+    case MEMADDR_NR41:
+        apu.NR41 = val | (USEPINS_NR41 ^ 0xFF);
+        apu.ch4.len_timer = SHORT_TIMER - CH4_INIT_LENGTH_TIMER;
+        break;
     case MEMADDR_NR42:                          apu.NR42 = val; break;
     case MEMADDR_NR43:                          apu.NR43 = val; break;
     case MEMADDR_NR44:
