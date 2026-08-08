@@ -266,6 +266,8 @@ calculate_sweep_frequency_and_check_overflow_ch1(void)
 {
     uint16_t new_frequency = apu.ch1.sweep.shadow_frequency >> CH1_SWEEP_SHIFT;
     new_frequency = apu.ch1.sweep.shadow_frequency + new_frequency * (CH1_SWEEP_DIR_DOWN ? -1 : 1);
+    if (CH1_SWEEP_DIR_DOWN)
+        apu.ch1.sweep.subtraction_since_trigger = true;
     if (new_frequency > CH1_MAX_FREQUENCY)
         DISABLE_CH(1);
     return new_frequency;
@@ -335,6 +337,7 @@ trigger_ch1(void)
     if (CH1_DAC_ENABLED)
         ENABLE_CH(1);
     // sweep
+    apu.ch1.sweep.subtraction_since_trigger = false;
     apu.ch1.sweep.shadow_frequency = CH1_PERIOD;
     apu.ch1.sweep.timer = CH1_SWEEP_PACE ? CH1_SWEEP_PACE : 8;
     apu.ch1.sweep.enabled = CH1_SWEEP_PACE | CH1_SWEEP_SHIFT;
@@ -592,7 +595,13 @@ write_apu_reg(memaddr address, uint8_t val)
     case MEMADDR_NR51:                          apu.NR51 = val; break;
     case MEMADDR_NR50:                          apu.NR50 = val; break;
 
-    case MEMADDR_NR10:                          apu.NR10 = val | (USEPINS_NR10 ^ 0xFF); break;
+    case MEMADDR_NR10:
+        apu.NR10 = val | (USEPINS_NR10 ^ 0xFF);
+        /* Pandocs: "Clearing the sweep direction bit in NR10 after at least one sweep calculation has been made
+        using the substraction mode since the last trigger causes the channel to be immediately disabled." */
+        if (apu.ch1.sweep.subtraction_since_trigger && !CH1_SWEEP_DIR_DOWN)
+            DISABLE_CH(1);
+        break;
     case MEMADDR_NR11:
         apu.NR11 = val;
         apu.ch1.len_timer = SHORT_TIMER - CH1_INIT_LENGTH_TIMER;

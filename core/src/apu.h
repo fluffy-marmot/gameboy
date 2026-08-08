@@ -30,6 +30,7 @@ typedef struct {
     uint8_t timer;
     uint16_t shadow_frequency;
     uint8_t enabled;
+    bool subtraction_since_trigger;
 } sweep_data_t;
 
 typedef struct {
