@@ -289,13 +289,24 @@ tick_sweep_ch1(void)
     }
 }
 
-static void
-tick_length_timers(void)
-{
-    if (CH1_LENGTH_TIMER_ENABLED && (--apu.ch1.len_timer == 0))     DISABLE_CH(1);
-    if (CH2_LENGTH_TIMER_ENABLED && (--apu.ch2.len_timer == 0))     DISABLE_CH(2);
-    if (CH3_LENGTH_TIMER_ENABLED && (--apu.ch3.len_timer == 0))     DISABLE_CH(3);
-    if (CH4_LENGTH_TIMER_ENABLED && (--apu.ch4.len_timer == 0))     DISABLE_CH(4);
+static void tick_length_timer1(void) {
+    if (apu.DIV_APU % 2 != 0) return;
+    if (CH1_LENGTH_TIMER_ENABLED && apu.ch1.len_timer && (--apu.ch1.len_timer == 0))    DISABLE_CH(1);
+}
+
+static void tick_length_timer2(void) {
+    if (apu.DIV_APU % 2 != 0) return;
+    if (CH2_LENGTH_TIMER_ENABLED && apu.ch2.len_timer && (--apu.ch2.len_timer == 0))    DISABLE_CH(2);
+}
+
+static void tick_length_timer3(void) {
+    if (apu.DIV_APU % 2 != 0) return;
+    if (CH3_LENGTH_TIMER_ENABLED && apu.ch3.len_timer && (--apu.ch3.len_timer == 0))    DISABLE_CH(3);
+}
+
+static void tick_length_timer4(void) {
+    if (apu.DIV_APU % 2 != 0) return;
+    if (CH4_LENGTH_TIMER_ENABLED && apu.ch4.len_timer && (--apu.ch4.len_timer == 0))    DISABLE_CH(4);
 }
 
 static void
@@ -312,8 +323,12 @@ trigger_ch1(void)
     apu.ch1.waveduty.timer = CH1_PERIOD;
 
     // length timer
-    if (apu.ch1.len_timer == 0)
+    if (apu.ch1.len_timer == 0) {
         apu.ch1.len_timer = SHORT_TIMER;
+        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0 
+        tick_length_timer1();
+    }
+
     // envelope
     trigger_envelope(&apu.ch1.envelope);
     // sweep
@@ -332,9 +347,14 @@ static void
 trigger_ch2(void)
 {
     apu.ch2.waveduty.timer = CH2_PERIOD;
+
     // length timer
-    if (apu.ch2.len_timer == 0)
+    if (apu.ch2.len_timer == 0) {
         apu.ch2.len_timer = SHORT_TIMER;
+        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0 
+        tick_length_timer2();
+    }
+
     // envelope
     trigger_envelope(&apu.ch2.envelope);
 
@@ -348,9 +368,13 @@ trigger_ch3(void)
 {
     apu.ch3.wave_timer = CH3_PERIOD;
     apu.ch3.sample_index = 0;
+
     // long length timer
-    if (apu.ch3.len_timer == 0)
+    if (apu.ch3.len_timer == 0) {
         apu.ch3.len_timer = LONG_TIMER;
+        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0 
+        tick_length_timer3();
+    }
 
     // enable
     if (CH3_DAC_ENABLED)
@@ -360,10 +384,12 @@ trigger_ch3(void)
 static void
 trigger_ch4(void)
 {
-
     // length timer
-    if (apu.ch4.len_timer == 0)
+    if (apu.ch4.len_timer == 0) {
         apu.ch4.len_timer = SHORT_TIMER;
+        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0 
+        tick_length_timer4();
+    }
 
     // enable
     if (CH4_DAC_ENABLED)
@@ -575,8 +601,14 @@ write_apu_reg(memaddr address, uint8_t val)
         break;
     case MEMADDR_NR13:                          apu.NR13 = val; break;
     case MEMADDR_NR14:
+        uint8_t ch1_before_len_timer_enabled = CH1_LENGTH_TIMER_ENABLED;
         apu.NR14 = val | (USEPINS_NR14 ^ 0xFF);
-        if (CH1_TRIGGER) trigger_ch1();
+        // Due to quirk tested by Blargg's 03-trigger test - rising edge causes a tick of len timer
+        if (!ch1_before_len_timer_enabled && CH1_LENGTH_TIMER_ENABLED)
+            tick_length_timer1();
+
+        if (CH1_TRIGGER)
+            trigger_ch1();
         break;
 
     case MEMADDR_NR21:
@@ -589,7 +621,11 @@ write_apu_reg(memaddr address, uint8_t val)
         break;
     case MEMADDR_NR23:                          apu.NR23 = val; break;
     case MEMADDR_NR24:
+        uint8_t ch2_before_len_timer_enabled = CH2_LENGTH_TIMER_ENABLED;
         apu.NR24 = val | (USEPINS_NR24 ^ 0xFF);
+        // Due to quirk tested by Blargg's 03-trigger test - rising edge causes a tick of len timer
+        if (!ch2_before_len_timer_enabled && CH2_LENGTH_TIMER_ENABLED)
+            tick_length_timer2();
         if (CH2_TRIGGER) trigger_ch2();
         break;
 
@@ -604,10 +640,13 @@ write_apu_reg(memaddr address, uint8_t val)
     case MEMADDR_NR32:                          apu.NR32 = val | (USEPINS_NR32 ^ 0xFF); break;
     case MEMADDR_NR33:                          apu.NR33 = val; break;
     case MEMADDR_NR34:
+        uint8_t ch3_before_len_timer_enabled = CH3_LENGTH_TIMER_ENABLED;
         apu.NR34 = val | (USEPINS_NR34 ^ 0xFF);
+        // Due to quirk tested by Blargg's 03-trigger test - rising edge causes a tick of len timer
+        if (!ch3_before_len_timer_enabled && CH3_LENGTH_TIMER_ENABLED)
+            tick_length_timer3();
         if (CH3_TRIGGER) trigger_ch3();
         break;
-
     case MEMADDR_NR41:
         apu.NR41 = val | (USEPINS_NR41 ^ 0xFF);
         apu.ch4.len_timer = SHORT_TIMER - CH4_INIT_LENGTH_TIMER;
@@ -618,7 +657,11 @@ write_apu_reg(memaddr address, uint8_t val)
         break;
     case MEMADDR_NR43:                          apu.NR43 = val; break;
     case MEMADDR_NR44:
+        uint8_t ch4_before_len_timer_enabled = CH4_LENGTH_TIMER_ENABLED;
         apu.NR44 = val | (USEPINS_NR44 ^ 0xFF);
+        // Due to quirk tested by Blargg's 03-trigger test - rising edge causes a tick of len timer
+        if (!ch4_before_len_timer_enabled && CH4_LENGTH_TIMER_ENABLED)
+            tick_length_timer4();
         if (CH4_TRIGGER) trigger_ch4();
         break;
     }
@@ -642,16 +685,20 @@ void
 cycle_512hz_apu_frame_sequencer(void)
 {
     apu.DIV_APU++;
-    if (apu.DIV_APU % 2 == 0) {
-        tick_length_timers();
-        if (apu.DIV_APU % 4 == 2)
-            tick_sweep_ch1();
-    }
+
+    if (apu.DIV_APU % 4 == 2)
+        tick_sweep_ch1();
     if (apu.DIV_APU % 8 == 7) {
         tick_envelope(&apu.ch1.envelope);
         tick_envelope(&apu.ch2.envelope);
         tick_envelope(&apu.ch4.envelope);
     }
+
+    // DIV_APU % 2 check is baked into these functions, since they are also used for quirk behavior
+    tick_length_timer1();
+    tick_length_timer2();
+    tick_length_timer3();
+    tick_length_timer4();
 }
 
 void
