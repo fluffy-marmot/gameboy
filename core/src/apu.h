@@ -93,6 +93,8 @@ typedef struct {
         envelope_data_t envelope;
         uint8_t sample_index;
     } ch4;
+
+    uint8_t waveram_transaction;
 } gb_apu_t;
 
 gb_apu_t *init_gameboy_apu(gb_bus_t *);

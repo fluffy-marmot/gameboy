@@ -67,7 +67,7 @@
 #define NR10_BITS_SWEEP_SHIFT                   0b00000111
 
 #define CH1_SWEEP_PACE                          ((apu.NR10 & NR10_BITS_SWEEP_PACE) >> 4)
-#define CH1_SWEEP_DIR_UP                        (apu.NR10 & NR10_BIT_SWEEP_DIR)
+#define CH1_SWEEP_DIR_DOWN                      (apu.NR10 & NR10_BIT_SWEEP_DIR)
 #define CH1_SWEEP_SHIFT                         (apu.NR10 & NR10_BITS_SWEEP_SHIFT)
 
 // NR11 - channel 1 length timer & duty cycle
@@ -265,7 +265,7 @@ static uint16_t
 calculate_sweep_frequency_and_check_overflow_ch1(void)
 {
     uint16_t new_frequency = apu.ch1.sweep.shadow_frequency >> CH1_SWEEP_SHIFT;
-    new_frequency = apu.ch1.sweep.shadow_frequency + new_frequency * (CH1_SWEEP_DIR_UP ? 1 : -1);
+    new_frequency = apu.ch1.sweep.shadow_frequency + new_frequency * (CH1_SWEEP_DIR_DOWN ? -1 : 1);
     if (new_frequency > CH1_MAX_FREQUENCY)
         DISABLE_CH(1);
     return new_frequency;
@@ -331,16 +331,15 @@ trigger_ch1(void)
 
     // envelope
     trigger_envelope(&apu.ch1.envelope);
+    // enable before sweep overflow check, which could keep it disabled
+    if (CH1_DAC_ENABLED)
+        ENABLE_CH(1);
     // sweep
     apu.ch1.sweep.shadow_frequency = CH1_PERIOD;
     apu.ch1.sweep.timer = CH1_SWEEP_PACE ? CH1_SWEEP_PACE : 8;
     apu.ch1.sweep.enabled = CH1_SWEEP_PACE | CH1_SWEEP_SHIFT;
     if (CH1_SWEEP_SHIFT)
         calculate_sweep_frequency_and_check_overflow_ch1();
-
-    // enable
-    if (CH1_DAC_ENABLED)
-        ENABLE_CH(1);
 }
 
 static void
@@ -517,8 +516,11 @@ read_apu_reg (memaddr address)
     // TODO - does this need to be blocked if in some particular state?
     /* On monochrome consoles, wave RAM can only be accessed on the same cycle that CH3 does. Otherwise, reads
     return $FF, and writes are ignored. */
-    if (ADDR_RANGE(ADDR_START_WAVERAM, ADDR_END_WAVERAM))
-        return apu.waveram[address - ADDR_START_WAVERAM];
+    if (ADDR_RANGE(ADDR_START_WAVERAM, ADDR_END_WAVERAM)) {
+        if (!CH3_ON)                            return apu.waveram[address - ADDR_START_WAVERAM];
+        else if (apu.waveram_transaction)       return apu.waveram[apu.ch3.sample_index / 2];
+        else                                    return UNREADABLE;
+    }
 
     switch (address) {
     case MEMADDR_NR52:                          return apu.NR52 | (USEPINS_NR52 ^ 0xFF);
@@ -720,6 +722,7 @@ cycle_2tcycles_apu_wave_channel(void)
     if (++apu.ch3.wave_timer == PERIOD_COUNTER_OVERFLOW) {
         apu.ch3.wave_timer = CH3_PERIOD;
         apu.ch3.sample_index = (apu.ch3.sample_index + 1) % 32;
+        apu.waveram_transaction = 1;
     }
 }
 
