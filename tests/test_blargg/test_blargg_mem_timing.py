@@ -6,7 +6,7 @@ import pytest
 
 from tests.test_blargg.helpers import run_blargg_test_serial_output
 
-blargg_mem_timing = list((DATA_BLARGG / "mem_timing").rglob("*.gb"))
+blargg_mem_timing = sorted((DATA_BLARGG / "mem_timing").rglob("*.gb"))
 
 @pytest.mark.parametrize("testrom", blargg_mem_timing, ids=lambda f: f.stem)
 def test_blargg_mem_timing(testrom: Path) -> None:

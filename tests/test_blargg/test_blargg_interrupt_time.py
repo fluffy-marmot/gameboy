@@ -6,7 +6,7 @@ import pytest
 
 from tests.test_blargg.helpers import run_blargg_test_serial_output
 
-blargg_interrupt_time = list((DATA_BLARGG / "interrupt_time").rglob("*.gb"))
+blargg_interrupt_time = sorted((DATA_BLARGG / "interrupt_time").rglob("*.gb"))
 
 # @pytest.mark.skip("interrupt time seems to depend on some basic APU") # TODO
 @pytest.mark.parametrize("testrom", blargg_interrupt_time, ids=lambda f: f.stem)

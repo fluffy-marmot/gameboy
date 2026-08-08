@@ -6,7 +6,7 @@ import pytest
 
 from tests.test_mooneye.helpers import run_mooneye_test
 
-mooneye_interrupts = list((DATA_MOONEYE_ACCEPTANCE / "interrupts").rglob("*.gb"))
+mooneye_interrupts = sorted((DATA_MOONEYE_ACCEPTANCE / "interrupts").rglob("*.gb"))
 
 @pytest.mark.parametrize("testrom", mooneye_interrupts, ids=lambda f: f.stem)
 def test_mooneye_interrupts(testrom, cpu):

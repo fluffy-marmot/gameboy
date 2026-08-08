@@ -6,7 +6,7 @@ import pytest
 
 from tests.test_mooneye.helpers import run_mooneye_test
 
-mooneye_instr = list((DATA_MOONEYE_ACCEPTANCE / "instr").rglob("*.gb"))
+mooneye_instr = sorted((DATA_MOONEYE_ACCEPTANCE / "instr").rglob("*.gb"))
 
 @pytest.mark.parametrize("testrom", mooneye_instr, ids=lambda f: f.stem)
 def test_mooneye_instr(testrom, cpu):

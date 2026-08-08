@@ -6,7 +6,7 @@ import pytest
 
 from tests.test_blargg.helpers import run_blargg_test_serial_output
 
-blargg_cpu_instrs = list((DATA_BLARGG / "cpu_instrs").rglob("*.gb"))
+blargg_cpu_instrs = sorted((DATA_BLARGG / "cpu_instrs").rglob("*.gb"))
 
 # @pytest.mark.skip("Passes reliably, a bit slow")
 @pytest.mark.parametrize("testrom", blargg_cpu_instrs, ids=lambda f: f.stem)

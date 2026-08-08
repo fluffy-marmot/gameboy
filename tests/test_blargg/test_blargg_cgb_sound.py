@@ -6,7 +6,7 @@ import pytest
 
 from tests.test_blargg.helpers import run_blargg_test_serial_output
 
-blargg_cgb_sound = list((DATA_BLARGG / "cgb_sound").rglob("*.gb"))
+blargg_cgb_sound = sorted((DATA_BLARGG / "cgb_sound").rglob("*.gb"))
 
 @pytest.mark.skip("CGB test only")
 @pytest.mark.parametrize("testrom", blargg_cgb_sound, ids=lambda f: f.stem)
