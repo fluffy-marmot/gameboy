@@ -79,10 +79,12 @@ def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
 class AudioPlayer:
     # stereo, float32 samples
     BYTES_PER_FRAME = 2 * 4
+    MAX_LATENCY_MS = 100
 
     def __init__(self, samplerate: int) -> None:
         self._lock = Lock()
         self._buffer = bytearray()
+        self._max_buffered_bytes = int(samplerate * self.MAX_LATENCY_MS / 1000) * self.BYTES_PER_FRAME
         self._stream = sounddevice.RawOutputStream(
             samplerate=samplerate,
             channels=2,
@@ -100,7 +102,7 @@ class AudioPlayer:
             chunk = bytes(self._buffer[:take])
             del self._buffer[:take]
         if take < need:
-            # print(f"missing {need-take} bytes for audio buffer")
+            print(f"missing {need-take} bytes for audio buffer")
             chunk += b"\x00" * (need - take)
         outdata[:] = chunk
 
@@ -109,6 +111,9 @@ class AudioPlayer:
             return
         with self._lock:
             self._buffer.extend(array.array("f", samples).tobytes())
+            excess = len(self._buffer) - self._max_buffered_bytes
+            if excess > 0:
+                del self._buffer[:excess]
 
     def close(self) -> None:
         self._stream.stop()
