@@ -560,9 +560,14 @@ write_apu_reg(memaddr address, uint8_t val)
 {
     // if APU is powered off, all other registers are read only
     if (address == MEMADDR_NR52) {
+        uint8_t apu_enabled_before = APU_ENABLED;
         apu.NR52 = (WRITEABLE_NR52 & val) | (READONLY_NR52 & apu.NR52) | (USEPINS_NR52 ^ 0xFF);
-        if (!APU_ENABLED)
+        if (apu_enabled_before && !APU_ENABLED)
             apu_power_off();
+        else if (!apu_enabled_before && APU_ENABLED)
+            // Blargg tests dmg-sound-07 and 08 (maybe?), need next frame sequencer cycle to run with "0 cycle"
+            // so we need DIV_APU to be 0 after it gets incremented
+            apu.DIV_APU = 0xFF;
         return;
     } else if (ADDR_RANGE(ADDR_START_WAVERAM, ADDR_END_WAVERAM)) {
         if (!CH3_ON)
