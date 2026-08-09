@@ -22,6 +22,43 @@
 gb_mbc1_t mbc1;
 
 static uint8_t
+high_bank_number(void)
+{
+    switch (mbc1.cart->rom_size) {
+    case 2 * MiB:
+        return ((mbc1.BANK2 & 0b11) << 5) | (mbc1.BANK1 & mbc1.rom_bank_bitmask);
+    case 1 * MiB:
+        return ((mbc1.BANK2 & 0b01) << 5) | (mbc1.BANK1 & mbc1.rom_bank_bitmask);
+    default:
+        return (mbc1.BANK1 & mbc1.rom_bank_bitmask);
+    }
+}
+
+static uint8_t
+zero_bank_number(void)
+{
+    switch (mbc1.cart->rom_size) {
+    case 2 * MiB:
+        return ((mbc1.BANK2 & 0b11) << 5);
+    case 1 * MiB:
+        return ((mbc1.BANK2 & 0b01) << 5);
+    default:
+        return 0;
+    }
+}
+
+static uint16_t
+resolved_ram_index(memaddr address)
+{
+    if (mbc1.cart->ram_size == 2 * KiB || mbc1.cart->ram_size == 8 * KiB)
+        return (address - ADDR_START_WRAM_CARTRIDGE) % mbc1.cart->ram_size;
+    else if (mbc1.MODE == 0)
+        return address - ADDR_START_WRAM_CARTRIDGE;
+    else
+        return (mbc1.BANK2 << 13) | (address - ADDR_START_WRAM_CARTRIDGE);
+}
+
+static uint8_t
 read_bus_mbc1(memaddr address)
 {
     // TODO probably add check against rom size
@@ -29,23 +66,19 @@ read_bus_mbc1(memaddr address)
         if (mbc1.MODE == 0)
             return mbc1.cart->rom[address];
         else
-            return mbc1.cart->rom[(mbc1.BANK2 << 19) | address];
+            return mbc1.cart->rom[zero_bank_number() * ADDR_START_ROM_BANK + address];
     }
     if (ADDR_RANGE(ADDR_START_ROM_BANK, ADDR_END_ROM_BANK)) {
-        return mbc1.cart->rom[(mbc1.BANK2 << 19) | (mbc1.BANK1 << 14) | (address - ADDR_START_ROM_BANK)];
+        return mbc1.cart->rom[high_bank_number() * ADDR_START_ROM_BANK + (address - ADDR_START_ROM_BANK)];
     }
     if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) {
-        if (mbc1.RAMG != RAMG_ENABLE_ACCESSS)
+        if (mbc1.RAMG != RAMG_ENABLE_ACCESSS || mbc1.cart->ram_size == 0)
             return UNREADABLE;
 
-        memaddr resolved_addr;
-        if (mbc1.MODE == 0)
-            resolved_addr = address - ADDR_START_WRAM_CARTRIDGE;
-        else
-            resolved_addr = (mbc1.BANK2 << 13) | (address - ADDR_START_WRAM_CARTRIDGE);
+        uint16_t ram_index = resolved_ram_index(address);
 
-        if (resolved_addr < mbc1.cart->ram_size)
-            return mbc1.cart->ram[resolved_addr];
+        if (ram_index < mbc1.cart->ram_size)
+            return mbc1.cart->ram[ram_index];
     } 
     return UNREADABLE;
 }
@@ -55,7 +88,7 @@ write_bus_mbc1(memaddr address, uint8_t val)
     if (ADDR_BELOW(RAMG_WRITE_ACCESS_HIGH)) {
         mbc1.RAMG = val & USEPINS_RAMG;
     } else if (ADDR_RANGE(BANK1_WRITE_ACCESS_LOW, BANK1_WRITE_ACCESS_HIGH)) {
-        mbc1.BANK1 = (val == 0 ? BANK1_INITIAL : val & USEPINS_BANK1);
+        mbc1.BANK1 = ((val & USEPINS_BANK1) == 0 ? BANK1_INITIAL : val & USEPINS_BANK1);
     } else if (ADDR_RANGE(BANK2_WRITE_ACCESS_LOW, BANK2_WRITE_ACCESS_HIGH)) {
         mbc1.BANK2 = val & USEPINS_BANK2;
     } else if (ADDR_RANGE(MODE_WRITE_ACCESS_LOW, MODE_WRITE_ACCESS_HIGH)) {
@@ -63,25 +96,23 @@ write_bus_mbc1(memaddr address, uint8_t val)
     }
 
     else if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) {
-        if (mbc1.RAMG != RAMG_ENABLE_ACCESSS)
+        if (mbc1.RAMG != RAMG_ENABLE_ACCESSS || mbc1.cart->ram_size == 0)
             return;
 
-        memaddr resolved_addr;
-        if (mbc1.MODE == 0)
-            resolved_addr = address - ADDR_START_WRAM_CARTRIDGE;
-        else
-            resolved_addr = (mbc1.BANK2 << 13) | (address - ADDR_START_WRAM_CARTRIDGE);
-        
-        if (resolved_addr < mbc1.cart->ram_size)
-            mbc1.cart->ram[resolved_addr] = val;
+        uint16_t ram_index = resolved_ram_index(address);
+
+        if (ram_index < mbc1.cart->ram_size)
+            mbc1.cart->ram[ram_index] = val;
     }
 }
 static bus_interface_t bus_mbc1 = { .read = read_bus_mbc1, .write = write_bus_mbc1 };
 
 void
-init_gameboy_mbc1(gb_cartridge_t *cartridge)
+init_gameboy_mbc1(gb_cartridge_t *cartridge, uint8_t rom_bank_bitmask)
 {
+    memset(&mbc1, 0, sizeof(gb_mbc1_t));
     mbc1.BANK1 = BANK1_INITIAL;
+    mbc1.rom_bank_bitmask = rom_bank_bitmask;
     mbc1.cart = &cartridge->data;
     cartridge->mbc_bus = &bus_mbc1;
 }

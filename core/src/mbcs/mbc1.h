@@ -9,10 +9,11 @@ typedef struct {
     uint8_t BANK2;                              // upper 2 bits of ROM bank number or all RAM bank number
     uint8_t MODE;                               // mode register
 
+    uint8_t rom_bank_bitmask;
     cart_data_t *cart;
 } gb_mbc1_t;
 
-void init_gameboy_mbc1(gb_cartridge_t *);
+void init_gameboy_mbc1(gb_cartridge_t *, uint8_t);
 
 #endif
 /*

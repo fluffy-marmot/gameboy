@@ -30,6 +30,26 @@ write_cart(memaddr address, uint8_t val)
 
 static bus_interface_t bus_cart =  { .read = read_cart, .write = write_cart };
 
+static uint8_t
+rom_bank_bitmask(void)
+{
+    switch (cartridge.header.rom_size_id) {
+    case MBC_ROM_SIZE_32KiB:                    return 0b00000001;
+    case MBC_ROM_SIZE_64KiB:                    return 0b00000011;
+    case MBC_ROM_SIZE_128KiB:                   return 0b00000111;
+    case MBC_ROM_SIZE_256KiB:                   return 0b00001111;
+    case MBC_ROM_SIZE_512KiB:
+    case MBC_ROM_SIZE_1MiB:
+    case MBC_ROM_SIZE_2MiB:
+    case MBC_ROM_SIZE_4MiB:
+    case MBC_ROM_SIZE_8MiB:
+    case MBC_ROM_SIZE_1152KiB:
+    case MBC_ROM_SIZE_1280KiB:
+    case MBC_ROM_SIZE_1536KiB:
+    default:                                    return 0b00011111;
+    }
+}
+
 static size_t
 reported_header_rom_size(void)
 {
@@ -77,11 +97,13 @@ validate_header_ram_size(void)
 static gb_return_t
 select_mbc_controller(void)
 {
+    uint8_t bm = rom_bank_bitmask();
+
     switch (cartridge.header.mbc_type) {
     case MBC_TYPE_NONE_PLAIN_ROM:               cartridge.mbc_bus = NULL;                       break;
     case MBC_TYPE_MBC1:
     case MBC_TYPE_MBC1_RAM:
-    case MBC_TYPE_MBC1_BBRAM:                   init_gameboy_mbc1(&cartridge);                  break;
+    case MBC_TYPE_MBC1_BBRAM:                   init_gameboy_mbc1(&cartridge, bm);              break;
     case MBC_TYPE_MBC2:
     case MBC_TYPE_MBC2_BBRAM:
     case MBC_TYPE_NONE_RAM:
