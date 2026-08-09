@@ -42,7 +42,6 @@ typedef struct {
 typedef struct {
     uint32_t timer;
     uint16_t LFSR;
-    uint8_t control;
 } noise_data_t;
 
 // Important not to move first 5 members of the struct: besides buffer, 
@@ -101,14 +100,13 @@ typedef struct {
         envelope_data_t envelope;
         noise_data_t noise;
     } ch4;
-
-    uint8_t waveram_transaction;
 } gb_apu_t;
 
 gb_apu_t *init_gameboy_apu(gb_bus_t *);
 void cycle_512hz_apu_frame_sequencer(void);
 void cycle_mcycle_apu_pulse_channels(void);
 void cycle_tcycle_apu_wave_channel(void);
+void cycle_tcycle_apu_noise_channel(void);
 void cycle_tcycle_apu_emit_sample(void);
 
 #endif

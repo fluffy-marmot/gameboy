@@ -11,7 +11,6 @@ emulate_machine_cycle(void)
     bool encountered_vblank = false;
     cycle_mcycle_dma();
     cycle_mcycle_cpu();
-    // gb.apu->waveram_transaction = 0;
     for (int tcycle = 0; tcycle < DOTS_PER_MACHINE_CYCLE; tcycle++) {
         cycle_tcycle_timers();
         if (gb.timers->serial_falling_edge)
@@ -22,6 +21,7 @@ emulate_machine_cycle(void)
             cycle_512hz_apu_frame_sequencer();
 
         cycle_tcycle_apu_wave_channel();
+        cycle_tcycle_apu_noise_channel();
         cycle_tcycle_apu_emit_sample();
 
         encountered_vblank |= cycle_tcycle_ppu();

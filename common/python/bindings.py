@@ -367,8 +367,6 @@ class gb_apu_t(struct):
         ("ch2", apu_ch2_t),
         ("ch3", apu_ch3_t),
         ("ch4", apu_ch4_t),
-
-        ("waveram_transaction", uint8),
     ]
 
 class gb_gameboy_t(struct):

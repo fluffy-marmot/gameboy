@@ -171,7 +171,7 @@ def main() -> None:
         frame_times.append(int((perf_counter() - frame_start) * 1_000_000))
         if frame  % 120 == 0:
             pygame.display.set_caption(f"Gameboy - {sum(frame_times) // len(frame_times):>5} μs/frame")
-        clock.tick(60)
+        clock.tick(59.7275)
             
 
 if __name__ == "__main__":

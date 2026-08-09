@@ -177,7 +177,7 @@
 
 #define CH4_CLOCK_SHIFT                         ((apu.NR43 & NR43_BITS_CLOCK_SHIFT) >> 4)
 #define CH4_LFSR_WIDTH                          (apu.NR43 & NR43_BIT_LFSR_WIDTH)
-#define CH4_CLOCK_DIVIDER                       (apu.NR43 & NR43_BITS_CLOCK_DIVIDER)
+#define CH4_CLOCK_DIVISOR_CODE                  (apu.NR43 & NR43_BITS_CLOCK_DIVIDER)
 
 // NR44 - channel 4 period high & control
 #define USEPINS_NR44                            0b11000000
@@ -187,14 +187,6 @@
 
 #define CH4_LENGTH_TIMER_ENABLED                (apu.NR44 & NR44_BIT_LENGTH_ENABLE)
 #define CH4_TRIGGER                             (apu.NR44 & NR44_BIT_TRIGGER)
-
-#define CH4_NOISE_BITS_SHIFT                    0b11110000
-#define CH4_NOISE_BIT_COUNTER_WIDTH             0b00001000
-#define CH4_NOISE_BITS_DIVISOR_CODE             0b00000111
-
-#define CH4_NOISE_SHIFT                         (apu.ch4.noise.control & CH4_NOISE_BITS_SHIFT)
-#define CH4_NOISE_COUNTER_WIDTH                 (apu.ch4.noise.control & CH4_NOISE_BIT_COUNTER_WIDTH)
-#define CH4_NOISE_DIVISOR_CODE                  (apu.ch4.noise.control & CH4_NOISE_BITS_DIVISOR_CODE)
 
 //////////////////////////////////////////////////////////
 /* OTHER / COMMON */
@@ -413,8 +405,12 @@ trigger_ch4(void)
         // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0 
         tick_length_timer4();
     }
+    // TODO ?? "except that shift being equal to 14 or 15 stops the channel from being clocked entirely."
+    apu.ch4.noise.timer = CH4_DIVISOR[CH4_CLOCK_DIVISOR_CODE] << CH4_CLOCK_SHIFT;
+    apu.ch4.noise.LFSR = 0x7FFF;
 
-    apu.ch4.noise.timer = CH4_DIVISOR[CH4_NOISE_DIVISOR_CODE] << CH4_NOISE_SHIFT;
+    // envelope
+    trigger_envelope(&apu.ch4.envelope);
 
     // enable
     if (CH4_DAC_ENABLED)
@@ -429,7 +425,7 @@ dac_ch1(void)
         uint8_t ch1_vol = apu.ch1.envelope.volume;
         ch1_dig = ((DUTY_WAVEFORM[CH1_WAVE_DUTY] >> apu.ch1.waveduty.cycle) & MASK_BIT_L) * ch1_vol;
     }
-    return DAC[ch1_dig];
+    return DAC[ch1_dig & 0xF];
 }
 
 static analog
@@ -440,7 +436,7 @@ dac_ch2(void)
         uint8_t ch2_vol = apu.ch2.envelope.volume;
         ch2_dig = ((DUTY_WAVEFORM[CH2_WAVE_DUTY] >> apu.ch2.waveduty.cycle) & MASK_BIT_L) * ch2_vol;
     }
-    return DAC[ch2_dig];
+    return DAC[ch2_dig & 0xF];
 }
 
 static analog
@@ -451,7 +447,16 @@ dac_ch3(void)
     uint8_t sample_byte = apu.waveram[apu.ch3.sample_index / 2];
     digital sample = ((apu.ch3.sample_index % 2 == 0) ? (sample_byte >> 4) : (sample_byte)) & MASK_NIBBLE_L;
     sample >>= CH3_VOLUME_SHIFT[CH3_OUTPUT_LEVEL];
-    return DAC[sample];
+    return DAC[sample & 0xF];
+}
+
+static analog
+dac_ch4(void)
+{
+    if (!CH4_ON) return DAC[0x0];
+
+    digital ch4_dig = ((~apu.ch4.noise.LFSR) & MASK_BIT_L) * apu.ch4.envelope.volume;
+    return DAC[ch4_dig & 0xF];
 }
 
 static stereo_sample_t
@@ -475,8 +480,13 @@ mix_sample(void)
         if (CH3_PAN_LEFT)   sample.left  += signal;
         if (CH3_PAN_RIGHT)  sample.right += signal;
     }
-    sample.left /= 3.0f;
-    sample.right /= 3.0f;
+    if (CH4_DAC_ENABLED) {
+        signal = dac_ch4();
+        if (CH4_PAN_LEFT)   sample.left  += signal;
+        if (CH4_PAN_RIGHT)  sample.right += signal;
+    }
+    sample.left /= 4.0f;
+    sample.right /= 4.0f;
     return sample;
 }
 
@@ -768,7 +778,21 @@ cycle_tcycle_apu_wave_channel(void)
     if (CH3_ON && ++apu.ch3.wave_timer == PERIOD_COUNTER_OVERFLOW * 2) {
         apu.ch3.wave_timer = CH3_PERIOD * 2;
         apu.ch3.sample_index = (apu.ch3.sample_index + 1) % 32;
-        // apu.waveram_transaction = 1;
+    }
+}
+
+void
+cycle_tcycle_apu_noise_channel(void)
+{
+    if (CH4_ON && --apu.ch4.noise.timer == 0) {
+        apu.ch4.noise.timer = CH4_DIVISOR[CH4_CLOCK_DIVISOR_CODE] << CH4_CLOCK_SHIFT;
+        uint8_t low_bits_xor = (apu.ch4.noise.LFSR ^ (apu.ch4.noise.LFSR >> 1)) & MASK_BIT_L;
+        apu.ch4.noise.LFSR >>= 1;
+        apu.ch4.noise.LFSR |= (low_bits_xor << 14);
+        if (CH4_LFSR_WIDTH) {
+            apu.ch4.noise.LFSR &= ~(MASK_BIT_L << 6);
+            apu.ch4.noise.LFSR |= (low_bits_xor << 6);
+        }
     }
 }
 
