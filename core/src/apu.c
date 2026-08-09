@@ -671,7 +671,6 @@ write_apu_reg(memaddr address, uint8_t val)
             // zombie mode quirk that increments volume
             apu.ch2.envelope.volume = (apu.ch2.envelope.volume + 1) % 0x10;
         break;
-        break;
     case MEMADDR_NR23:                          apu.NR23 = val; break;
     case MEMADDR_NR24:
         uint8_t ch2_before_len_timer_enabled = CH2_LENGTH_TIMER_ENABLED;
@@ -710,7 +709,6 @@ write_apu_reg(memaddr address, uint8_t val)
         else if (CH4_ON && (val & MASK_NIBBLE_L) == ZOMBIE_MODE_NIBBLE_VAL)
             // zombie mode quirk that increments volume
             apu.ch4.envelope.volume = (apu.ch4.envelope.volume + 1) % 0x10;
-        break;
         break;
     case MEMADDR_NR43:                          apu.NR43 = val; break;
     case MEMADDR_NR44:

@@ -149,8 +149,8 @@ def main() -> None:
         GB.GB_update_joypad(
             not keys[KEYBINDS["start"]],
             not keys[KEYBINDS["select"]],
-            not keys[KEYBINDS["a"]],
             not keys[KEYBINDS["b"]],
+            not keys[KEYBINDS["a"]],
             not keys[KEYBINDS["down"]],
             not keys[KEYBINDS["up"]],
             not keys[KEYBINDS["left"]],

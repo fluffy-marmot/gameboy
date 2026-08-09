@@ -1,3 +1,6 @@
+#ifndef GB_MBC1
+#define GB_MBC1
+
 #include "../cartridge.h"
 
 typedef struct {
@@ -10,6 +13,8 @@ typedef struct {
 } gb_mbc1_t;
 
 void init_gameboy_mbc1(gb_cartridge_t *);
+
+#endif
 /*
 
 A15 A14 A13   Address range        Region

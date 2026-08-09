@@ -279,6 +279,7 @@ class sweep_data_t(struct):
         ("timer", uint8),
         ("shadow_frequency", uint16),
         ("enabled", uint8),
+        ("subtraction_since_trigger", c_bool),
     ]
 
 class waveduty_data_t(struct):
@@ -322,11 +323,17 @@ class apu_ch3_t(struct):
         ("sample_index", uint8),
     ]
 
+class noise_data_t(struct):
+    _fields_ = [
+        ("timer", uint32),
+        ("LFSR", uint16),
+    ]
+
 class apu_ch4_t(struct):
     _fields_ = [
         ("len_timer", uint8),
         ("envelope", envelope_data_t),
-        ("sample_index", uint8),
+        ("noise", noise_data_t),
     ]
 
 class gb_apu_t(struct):
