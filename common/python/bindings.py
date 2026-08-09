@@ -170,6 +170,7 @@ class gb_cpu_t(struct):
 
     cycle_num: int
     cb_instruction: int
+    halt_bug_flag: int
 
     _fields_ = [
         ("B", uint8),
@@ -196,6 +197,7 @@ class gb_cpu_t(struct):
 
         ("cycle_num", uint8),
         ("cb_instruction", uint8),
+        ("halt_bug_flag", uint8),
         ("instruction", pointer(instruction)),
     ]
 

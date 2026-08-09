@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from PIL import Image
+
 from common.python.bindings import *
 
 def GB_load_rom(romfile: Path) -> None:
@@ -39,3 +41,7 @@ def GB_audio_buffer_flush() -> list[float] | None:
 
 def check_blank_frame() -> bool:
     return gb.ppu.contents.lcd.blank_frames > 0
+
+def save_lcd_png(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.frombuffer("RGBA", (LCD_WIDTH, LCD_HEIGHT), LCD, "raw", "BGRA", 0, 1).save(path)

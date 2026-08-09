@@ -1793,7 +1793,7 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
 ############################################################################ */
 
 static void
-fetch_instruction()
+fetch_instruction(void)
 {
     if (cpu.cb_instruction) {
         cpu.IR = cpu.bus->read(cpu.PC++);
@@ -1803,15 +1803,22 @@ fetch_instruction()
     } else if (cpu.IME && (cpu.irq->check_next_enabled_and_requested() != INTERRUPT_NONE )) {
         cpu.instruction = &____INTERRUPT_HANDLER;
         cpu.cycle_num = 0;
+        if (cpu.halt_bug_flag && cpu.halt_bug_flag--)
+            cpu.PC--;
     } else {
         cpu.IR = cpu.bus->read(cpu.PC++);
         cpu.instruction = &OPCODE_TABLE[cpu.IR];
         cpu.cycle_num = 0;
+        if (cpu.halt_bug_flag && cpu.halt_bug_flag--)
+            cpu.PC--;
+        // check conditions for the infamous HALT BUG
+        if (cpu.IR == 0x76 && !cpu.IME && (cpu.irq->IE & cpu.irq->IF & 0x1F))
+            cpu.halt_bug_flag = 1;
     }
 }
 
 void
-cycle_mcycle_cpu()
+cycle_mcycle_cpu(void)
 {
     if (cpu.instruction == NULL || cpu.cycle_num == cpu.instruction->cycle_count)
         fetch_instruction();

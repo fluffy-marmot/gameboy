@@ -45,6 +45,7 @@ typedef struct {
 
     uint8_t cycle_num;                          // the machine cycle within current instruction
     uint8_t cb_instruction;                     // 1 if next fetch should use CB table
+    uint8_t halt_bug_flag;                      // track whether to trigger halt bug behavior
     const instruction_t *instruction;           // current instruction
 } sm83_cpu_t;
 

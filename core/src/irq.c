@@ -1,6 +1,9 @@
 #include "irq.h"
 
-#define BIT                         0b00000001
+#define BIT                                     0b00000001
+
+#define USEPINS_IE                              0b00011111
+#define USEPINS_IF                              0b00011111
 
 static gb_irq_handler_t irq_handler;
 static uint8_t stat_interrupt_line;
@@ -29,12 +32,12 @@ call_interrupt(interrupt_t interrupt)
 {
     irq_handler.IF ^= (BIT << interrupt);
     switch (interrupt) {
-    case INTERRUPT_VBLANK:          return ADDR_INTERRUPT_VBLANK;
-    case INTERRUPT_STAT:            return ADDR_INTERRUPT_STAT;
-    case INTERRUPT_TIMER:           return ADDR_INTERRUPT_TIMER;
-    case INTERRUPT_SERIAL:          return ADDR_INTERRUPT_SERIAL;
-    case INTERRUPT_JOYPAD:          return ADDR_INTERRUPT_JOYPAD;
-    default:                        return 0x0000;
+    case INTERRUPT_VBLANK:                      return ADDR_INTERRUPT_VBLANK;
+    case INTERRUPT_STAT:                        return ADDR_INTERRUPT_STAT;
+    case INTERRUPT_TIMER:                       return ADDR_INTERRUPT_TIMER;
+    case INTERRUPT_SERIAL:                      return ADDR_INTERRUPT_SERIAL;
+    case INTERRUPT_JOYPAD:                      return ADDR_INTERRUPT_JOYPAD;
+    default:                                    return 0x0000;
     }
 }
 
@@ -42,9 +45,9 @@ static uint8_t
 read_interrupt_registers(memaddr address)
 { 
     switch (address) {
-    case MEMADDR_IF:                return irq_handler.IF;
-    case MEMADDR_IE:                return irq_handler.IE;
-    default:                        return UNREADABLE;
+    case MEMADDR_IF:                            return irq_handler.IF | ~USEPINS_IE;
+    case MEMADDR_IE:                            return irq_handler.IE | ~USEPINS_IF;
+    default:                                    return UNREADABLE;
     }
 }
 
@@ -52,13 +55,8 @@ static void
 write_interrupt_registers(memaddr address, uint8_t value)
 {
     switch (address) {
-    case MEMADDR_IF:
-        irq_handler.IF = value;
-        break;
-    case MEMADDR_IE:
-        irq_handler.IE = value;
-        break;
-    default:
+    case MEMADDR_IF:                            irq_handler.IF = value | ~USEPINS_IF;       break;
+    case MEMADDR_IE:                            irq_handler.IE = value | ~USEPINS_IF;       break;
     }
 }
 static bus_interface_t bus_registers_interrupt = { read_interrupt_registers, write_interrupt_registers };

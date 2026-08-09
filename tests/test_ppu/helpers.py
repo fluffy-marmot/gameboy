@@ -7,10 +7,10 @@ import pytest
 
 def run_image_test(testrom: Path, total_pixels: dict | None):
     GB_load_rom(testrom)
-    GB_emulate_until_opcode(0x40)
+    GB_emulate_until_opcode(0x40, max_mcycles=30_000_000)
 
     output_path = IMG_TEST_OUTPUT / f"{testrom.stem}.png"
-    img_test_output(output_path)
+    save_lcd_png(output_path)
 
     reference_path = testrom.parent / f"{testrom.stem}.png"
     if not reference_path.exists():
@@ -38,8 +38,3 @@ def run_image_test(testrom: Path, total_pixels: dict | None):
     if diff_count != 0:
         pytest.fail(
             f"{testrom.stem}: Diff {diff_count}/{LCD_WIDTH * LCD_HEIGHT}px Bound: {bbox}", pytrace=False)
-
-
-def img_test_output(output_path: Path):
-    img = Image.frombuffer("RGBA", (LCD_WIDTH, LCD_HEIGHT), LCD, "raw", "BGRA", 0, 1)
-    img.save(output_path)

@@ -130,6 +130,9 @@ def main() -> None:
     load_keybinds()
     load_bootrom()
     load_rom()
+
+    # call without arguments to set colors used by ppu test suites
+    # GB_set_lcd_colors()
     
     frame_times = deque(maxlen=120)
     frame = 0
@@ -139,6 +142,8 @@ def main() -> None:
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                # log last frame - useful for creating reference images of passing tests
+                save_lcd_png(BASE_DIR / "logs" / "lastframe.png")
                 pygame.quit()
                 audio_player.close()
                 print(f"Rendered {frame} frames this session")

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/mooneye/acceptance/interrupts/ie_push.gb
+TEST_ROM = tests/testdata/blargg/halt_bug.gb
 K =
 
 run:
