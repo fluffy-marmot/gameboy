@@ -188,6 +188,14 @@
 #define CH4_LENGTH_TIMER_ENABLED                (apu.NR44 & NR44_BIT_LENGTH_ENABLE)
 #define CH4_TRIGGER                             (apu.NR44 & NR44_BIT_TRIGGER)
 
+#define CH4_NOISE_BITS_SHIFT                    0b11110000
+#define CH4_NOISE_BIT_COUNTER_WIDTH             0b00001000
+#define CH4_NOISE_BITS_DIVISOR_CODE             0b00000111
+
+#define CH4_NOISE_SHIFT                         (apu.ch4.noise.control & CH4_NOISE_BITS_SHIFT)
+#define CH4_NOISE_COUNTER_WIDTH                 (apu.ch4.noise.control & CH4_NOISE_BIT_COUNTER_WIDTH)
+#define CH4_NOISE_DIVISOR_CODE                  (apu.ch4.noise.control & CH4_NOISE_BITS_DIVISOR_CODE)
+
 //////////////////////////////////////////////////////////
 /* OTHER / COMMON */
 //////////////////////////////////////////////////////////
@@ -222,6 +230,17 @@ static const uint8_t CH3_VOLUME_SHIFT[4] = {
     [0b01] = 0b00000000,
     [0b10] = 0b00000001,
     [0b11] = 0b00000010,
+};
+
+static const uint8_t CH4_DIVISOR[8] = {
+    [0b000] =  8,
+    [0b001] = 16,
+    [0b010] = 32,
+    [0b011] = 48,
+    [0b100] = 64,
+    [0b101] = 80,
+    [0b110] = 96,
+    [0b111] = 112
 };
 
 static const analog DAC[16] = {
@@ -368,7 +387,7 @@ trigger_ch2(void)
 static void
 trigger_ch3(void)
 {
-    apu.ch3.wave_timer = CH3_PERIOD;
+    apu.ch3.wave_timer = CH3_PERIOD * 2;
     apu.ch3.sample_index = 0;
 
     // long length timer
@@ -392,6 +411,8 @@ trigger_ch4(void)
         // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0 
         tick_length_timer4();
     }
+
+    apu.ch4.noise.timer = CH4_DIVISOR[CH4_NOISE_DIVISOR_CODE] << CH4_NOISE_SHIFT;
 
     // enable
     if (CH4_DAC_ENABLED)
@@ -521,7 +542,10 @@ read_apu_reg (memaddr address)
     return $FF, and writes are ignored. */
     if (ADDR_RANGE(ADDR_START_WAVERAM, ADDR_END_WAVERAM)) {
         if (!CH3_ON)                            return apu.waveram[address - ADDR_START_WAVERAM];
-        else if (apu.waveram_transaction)       return apu.waveram[apu.ch3.sample_index / 2];
+        else if ((PERIOD_COUNTER_OVERFLOW * 2 - apu.ch3.wave_timer) < 4) {
+            printf("HELLLOOO");
+            return apu.waveram[((apu.ch3.sample_index) % 32) / 2];
+        }   
         else                                    return UNREADABLE;
     }
 
@@ -700,6 +724,7 @@ cycle_tcycle_apu_emit_sample(void) {
 void
 cycle_512hz_apu_frame_sequencer(void)
 {
+    if (!APU_ENABLED) return;
     apu.DIV_APU++;
 
     if (apu.DIV_APU % 4 == 2)
@@ -720,23 +745,23 @@ cycle_512hz_apu_frame_sequencer(void)
 void
 cycle_mcycle_apu_pulse_channels(void)
 {
-    if (++apu.ch1.waveduty.timer == PERIOD_COUNTER_OVERFLOW) {
+    if (CH1_ON && ++apu.ch1.waveduty.timer == PERIOD_COUNTER_OVERFLOW) {
         apu.ch1.waveduty.timer = CH1_PERIOD;
         apu.ch1.waveduty.cycle = (apu.ch1.waveduty.cycle + 1) % 8;
     }
-    if (++apu.ch2.waveduty.timer == PERIOD_COUNTER_OVERFLOW) {
+    if (CH2_ON && ++apu.ch2.waveduty.timer == PERIOD_COUNTER_OVERFLOW) {
         apu.ch2.waveduty.timer = CH2_PERIOD;
         apu.ch2.waveduty.cycle = (apu.ch2.waveduty.cycle + 1) % 8;
     }
 }
 
 void
-cycle_2tcycles_apu_wave_channel(void)
+cycle_tcycle_apu_wave_channel(void)
 {
-    if (++apu.ch3.wave_timer == PERIOD_COUNTER_OVERFLOW) {
-        apu.ch3.wave_timer = CH3_PERIOD;
+    if (CH3_ON && ++apu.ch3.wave_timer == PERIOD_COUNTER_OVERFLOW * 2) {
+        apu.ch3.wave_timer = CH3_PERIOD * 2;
         apu.ch3.sample_index = (apu.ch3.sample_index + 1) % 32;
-        apu.waveram_transaction = 1;
+        // apu.waveram_transaction = 1;
     }
 }
 

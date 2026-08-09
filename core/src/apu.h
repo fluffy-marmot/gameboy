@@ -38,6 +38,13 @@ typedef struct {
     uint8_t cycle;
     uint8_t *reg;
 } waveduty_data_t;
+
+typedef struct {
+    uint32_t timer;
+    uint16_t LFSR;
+    uint8_t control;
+} noise_data_t;
+
 // Important not to move first 5 members of the struct: besides buffer, 
 /* when APU is turned off, waveram, DIV_APU aren't zeroed out, along w/ length timer bits */ 
 typedef struct {
@@ -87,12 +94,12 @@ typedef struct {
     struct {
         uint16_t len_timer;
         uint16_t wave_timer;
-        uint8_t sample_index;
+        uint8_t sample_index; // TODO put this into a struct too
     } ch3;
     struct {
         uint8_t len_timer;
         envelope_data_t envelope;
-        uint8_t sample_index;
+        noise_data_t noise;
     } ch4;
 
     uint8_t waveram_transaction;
@@ -101,7 +108,7 @@ typedef struct {
 gb_apu_t *init_gameboy_apu(gb_bus_t *);
 void cycle_512hz_apu_frame_sequencer(void);
 void cycle_mcycle_apu_pulse_channels(void);
-void cycle_2tcycles_apu_wave_channel(void);
+void cycle_tcycle_apu_wave_channel(void);
 void cycle_tcycle_apu_emit_sample(void);
 
 #endif
