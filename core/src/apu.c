@@ -214,6 +214,8 @@
 #define BITMASK_ENVELOPE_DIR                    0b00001000
 #define BITMASK_ENVELOPE_PACE                   0b00000111
 
+#define ZOMBIE_MODE_NIBBLE_VAL                  0b00001000
+
 #define ENVELOPE_INITIAL_VOLUME(env_reg)        ((*(env_reg) & BITMASK_ENVELOPE_INITIAL_VOLUME) >> 4)
 #define ENVELOPE_DIR_UP(env_reg)                (*(env_reg) & BITMASK_ENVELOPE_DIR)
 #define ENVELOPE_PACE(env_reg)                  (*(env_reg) & BITMASK_ENVELOPE_PACE)
@@ -537,15 +539,9 @@ apu_power_off(void)
 static uint8_t 
 read_apu_reg (memaddr address)
 {
-    // TODO - does this need to be blocked if in some particular state?
-    /* On monochrome consoles, wave RAM can only be accessed on the same cycle that CH3 does. Otherwise, reads
-    return $FF, and writes are ignored. */
+    // Haven't figured out a proper way to handle waveram bus conflicts
     if (ADDR_RANGE(ADDR_START_WAVERAM, ADDR_END_WAVERAM)) {
         if (!CH3_ON)                            return apu.waveram[address - ADDR_START_WAVERAM];
-        else if ((PERIOD_COUNTER_OVERFLOW * 2 - apu.ch3.wave_timer) < 4) {
-            printf("HELLLOOO");
-            return apu.waveram[((apu.ch3.sample_index) % 32) / 2];
-        }   
         else                                    return UNREADABLE;
     }
 
@@ -638,6 +634,9 @@ write_apu_reg(memaddr address, uint8_t val)
     case MEMADDR_NR12:                          
         apu.NR12 = val;
         if (!CH1_DAC_ENABLED) DISABLE_CH(1);
+        else if (CH1_ON && (val & MASK_NIBBLE_L) == ZOMBIE_MODE_NIBBLE_VAL)
+            // zombie mode quirk that increments volume
+            apu.ch1.envelope.volume = (apu.ch1.envelope.volume + 1) % 0x10;
         break;
     case MEMADDR_NR13:                          apu.NR13 = val; break;
     case MEMADDR_NR14:
@@ -658,6 +657,10 @@ write_apu_reg(memaddr address, uint8_t val)
     case MEMADDR_NR22:
         apu.NR22 = val;
         if (!CH2_DAC_ENABLED) DISABLE_CH(2);
+        else if (CH2_ON && (val & MASK_NIBBLE_L) == ZOMBIE_MODE_NIBBLE_VAL)
+            // zombie mode quirk that increments volume
+            apu.ch2.envelope.volume = (apu.ch2.envelope.volume + 1) % 0x10;
+        break;
         break;
     case MEMADDR_NR23:                          apu.NR23 = val; break;
     case MEMADDR_NR24:
@@ -694,6 +697,10 @@ write_apu_reg(memaddr address, uint8_t val)
     case MEMADDR_NR42:
         apu.NR42 = val;
         if (!CH4_DAC_ENABLED) DISABLE_CH(4);
+        else if (CH4_ON && (val & MASK_NIBBLE_L) == ZOMBIE_MODE_NIBBLE_VAL)
+            // zombie mode quirk that increments volume
+            apu.ch4.envelope.volume = (apu.ch4.envelope.volume + 1) % 0x10;
+        break;
         break;
     case MEMADDR_NR43:                          apu.NR43 = val; break;
     case MEMADDR_NR44:
