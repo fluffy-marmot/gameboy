@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/mooneye/emulator-only/mbc1/bits_bank1.gb
+TEST_ROM = tests/testdata/mooneye/acceptance/interrupts/ie_push.gb
 K =
 
 run:

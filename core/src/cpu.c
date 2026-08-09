@@ -1478,10 +1478,15 @@ daa_confusion()
 }
 
 static void
-ready_interrupt()
+interrupt_ready()
 {
     cpu.IME = 0;
     SP_dec();
+}
+
+static void
+interrupt_set_vector()
+{
     WZ_set(cpu.irq->call_interrupt(cpu.irq->check_next_enabled_and_requested()));
 }
 
@@ -1587,9 +1592,19 @@ static const instruction_t ____INVALID = {
 
 /*
 Interrupt Handler, not an opcode instruction but can be modeled as one
+
+// Based on mooneye acceptance test interrupts/ie_push.gb:
+NOTE: this is a bit quirky to account for an edge case: the write of the high byte can write over 0xFFFF, the IE
+register, changing the interrupt to be processed and possibly removing all interrupts from being a candidate.
+However the low byte write happens too late to affect behavior. What I'm doing is setting WZ to the jump vector
+on the 4th machine cycle before low byte is written because 5th cycle will set PC To WZ; If IE was written and
+reports as no pending interrupts, the jump vector will be 0x0000 instead of an actual interrupt one. It's
+technically incorrect for the low byte to be written during 5th instruction, as the bus would be occupied with
+fetch of the next instruction already, this write happens during 4th cycle of this instruction and 5th cycle is
+a no op besides the next instruction fetch.
 */
 static const instruction_t ____INTERRUPT_HANDLER = {
-    .cycles = { nop, ready_interrupt, stack_push_PC_h, stack_push_PC_l, nop },
+    .cycles = { nop, interrupt_ready, stack_push_PC_h, interrupt_set_vector, stack_push_PC_l },
     .cycle_count = 5
 };
 
