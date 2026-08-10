@@ -5,7 +5,7 @@ tests/testdata/
 # image output for LCD comparison tests
 tests/output/
 
-# copyrighted roms and bootoms
+# copyrighted roms and bootroms
 romlib/
 
 # build targets
