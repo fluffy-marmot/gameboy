@@ -4,11 +4,12 @@ from tests.config import *
 
 import pytest
 
-from tests.test_blargg.helpers import run_blargg_test_serial_output
+from tests.test_blargg.helpers import run_blargg_test_memory_signature
 
 blargg_oam_bug = sorted((DATA_BLARGG / "oam_bug").rglob("*.gb"))
 
-# @pytest.mark.skip("obscure OAM bug unimplemented") # TODO
 @pytest.mark.parametrize("testrom", blargg_oam_bug, ids=lambda f: f.stem)
 def test_blargg_oam_bug(testrom: Path) -> None:
-    run_blargg_test_serial_output(testrom, timeout_sec=10)
+    # if testrom.stem in {"oam_bug", "7-timing_effect"}:
+    #     pytest.xfail("Working test? Excluded from https://gbdev.io/GBEmulatorShootout/")
+    run_blargg_test_memory_signature(testrom, timeout_sec=10)

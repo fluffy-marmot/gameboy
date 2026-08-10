@@ -48,7 +48,20 @@
 #define HL                                      ((uint16_t) ((cpu.H << 8) | cpu.L))
 #define WZ                                      ((uint16_t) ((cpu.W << 8) | cpu.Z))
 
+#define HALT_OPCODE                             0x76
+
 static gb_cpu_t cpu;
+
+/*
+https://gbdev.io/pandocs/OAM_Corruption_Bug.html 
+
+This is needed to trigger a check for the quirky OAM corruption bug. A lot of the cases are handled naturally by
+actual bus / read writes, but it's necessary to use a separate interface in my design for situations triggering
+the bug that involve IDU. These can't go through the regular bus write or they would be interpreted as actual
+writes when the PPU conditions aren't correct to trigger the bug - information unknown until reaching the PPU,
+at which point it would be too late to cancel the write.
+*/
+static void oam_conf(memaddr addr)              { cpu.bus_oam_corruption->write(addr, UNREADABLE);   }
 
 static inline void nop      (void) {};
 static inline void invalid  (void) {};
@@ -58,7 +71,7 @@ static inline void HL_dec()                     { uint16_t hl = HL - 1; cpu.H = 
 static inline void HL_inc()                     { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu.L = hl; }
 static inline void WZ_set(uint16_t val)         { cpu.W = val >> 8; cpu.Z = val;                     }
 static inline void WZ_inc()                     { WZ_set(WZ + 1);                                    }
-static inline void SP_dec()                     { cpu.SP--;                                          }
+static inline void SP_dec()                     { oam_conf(cpu.SP); cpu.SP--;                        }
 
 /* ############################################################################
 ###############################################################################
@@ -71,35 +84,35 @@ static inline void SP_dec()                     { cpu.SP--;                     
 /*
 Helper functions to load to temporary 8-bit latch Z or W from various 16-bit memory locations
 */
-static void memory_read_PC_Z()                  { cpu.Z = cpu.bus->read(cpu.PC++);            }
-static void memory_read_PC_W()                  { cpu.W = cpu.bus->read(cpu.PC++);            }
-static void memory_read_SP_Z()                  { cpu.Z = cpu.bus->read(cpu.SP++);            }
-static void memory_read_SP_W()                  { cpu.W = cpu.bus->read(cpu.SP++);            }
-static void memory_read_BC_Z()                  { cpu.Z = cpu.bus->read(BC);                  }
-static void memory_read_DE_Z()                  { cpu.Z = cpu.bus->read(DE);                  }
-static void memory_read_HL_Z()                  { cpu.Z = cpu.bus->read(HL);                  }
-static void memory_read_HLdZ()                  { cpu.Z = cpu.bus->read(HL); HL_dec();        }
-static void memory_read_HLiZ()                  { cpu.Z = cpu.bus->read(HL); HL_inc();        }
-static void memory_read_WZ_Z()                  { cpu.Z = cpu.bus->read(WZ);                  }
-static void memory_read__C_Z()                  { cpu.Z = cpu.bus->read(0xFF00 + cpu.C);      }
-static void memory_read__Z_Z()                  { cpu.Z = cpu.bus->read(0xFF00 + cpu.Z);      }
+static void memory_read_PC_Z()                  { oam_conf(cpu.PC); cpu.Z = cpu.bus->read(cpu.PC++); }
+static void memory_read_PC_W()                  { oam_conf(cpu.PC); cpu.W = cpu.bus->read(cpu.PC++); }
+static void memory_read_SP_Z()                  { oam_conf(cpu.SP); cpu.Z = cpu.bus->read(cpu.SP++); }
+static void memory_read_SP_W()                  { cpu.W = cpu.bus->read(cpu.SP++);                   }
+static void memory_read_BC_Z()                  { cpu.Z = cpu.bus->read(BC);                         }
+static void memory_read_DE_Z()                  { cpu.Z = cpu.bus->read(DE);                         }
+static void memory_read_HL_Z()                  { cpu.Z = cpu.bus->read(HL);                         }
+static void memory_read_HLdZ()                  { oam_conf(HL); cpu.Z = cpu.bus->read(HL); HL_dec(); }
+static void memory_read_HLiZ()                  { oam_conf(HL); cpu.Z = cpu.bus->read(HL); HL_inc(); }
+static void memory_read_WZ_Z()                  { cpu.Z = cpu.bus->read(WZ);                         }
+static void memory_read__C_Z()                  { cpu.Z = cpu.bus->read(0xFF00 + cpu.C);             }
+static void memory_read__Z_Z()                  { cpu.Z = cpu.bus->read(0xFF00 + cpu.Z);             }
 
 /*
 Helper functions to write to various 16-bit memory locations, various 8-bit values
 */
-static void memory_write_HL_R  ()               { cpu.bus->write(HL, cpu.reg[IR_REG_R]);      }
-static void memory_write_HL_Z  ()               { cpu.bus->write(HL, cpu.Z);                  }
-static void memory_write_BC_A  ()               { cpu.bus->write(BC, cpu.A);                  }
-static void memory_write_DE_A  ()               { cpu.bus->write(DE, cpu.A);                  }
-static void memory_write_HLdA  ()               { cpu.bus->write(HL, cpu.A);  HL_dec();       }
-static void memory_write_HLiA  ()               { cpu.bus->write(HL, cpu.A);  HL_inc();       }
-static void memory_write_WZ_A  ()               { cpu.bus->write(WZ, cpu.A);                  }
-static void memory_write_WZ_SPl()               { cpu.bus->write(WZ, cpu.SP); WZ_inc();       }
-static void memory_write_WZ_SPh()               { cpu.bus->write(WZ, cpu.SP >> 8);            }
-static void memory_write__C_A  ()               { cpu.bus->write(0xFF00 + cpu.C, cpu.A);      }
-static void memory_write__Z_A  ()               { cpu.bus->write(0xFF00 + cpu.Z, cpu.A);      }
-static void memory_write_SP_PCh()               { cpu.bus->write(cpu.SP, cpu.PC >> 8);        }
-static void memory_write_SP_PCl()               { cpu.bus->write(cpu.SP, cpu.PC);             }
+static void memory_write_HL_R  ()               { cpu.bus->write(HL, cpu.reg[IR_REG_R]);             }
+static void memory_write_HL_Z  ()               { cpu.bus->write(HL, cpu.Z);                         }
+static void memory_write_BC_A  ()               { cpu.bus->write(BC, cpu.A);                         }
+static void memory_write_DE_A  ()               { cpu.bus->write(DE, cpu.A);                         }
+static void memory_write_HLdA  ()               { cpu.bus->write(HL, cpu.A);  HL_dec();              }
+static void memory_write_HLiA  ()               { cpu.bus->write(HL, cpu.A);  HL_inc();              }
+static void memory_write_WZ_A  ()               { cpu.bus->write(WZ, cpu.A);                         }
+static void memory_write_WZ_SPl()               { cpu.bus->write(WZ, cpu.SP); WZ_inc();              }
+static void memory_write_WZ_SPh()               { cpu.bus->write(WZ, cpu.SP >> 8);                   }
+static void memory_write__C_A  ()               { cpu.bus->write(0xFF00 + cpu.C, cpu.A);             }
+static void memory_write__Z_A  ()               { cpu.bus->write(0xFF00 + cpu.Z, cpu.A);             }
+static void memory_write_SP_PCh()               { cpu.bus->write(cpu.SP, cpu.PC >> 8);               }
+static void memory_write_SP_PCl()               { cpu.bus->write(cpu.SP, cpu.PC);                    }
 
 // Needed declarations - function is defined below one that uses it
 static uint8_t add_and_set_carry_flags(uint8_t, uint8_t, uint8_t);
@@ -631,7 +644,7 @@ cp_with_A(uint16_t val)
     if (result) CLR_Z; else SET_Z;
 }
 
-static void cp_r_with_A()  { cp_with_A(cpu.reg[IR_REG_R]);           }
+static void cp_r_with_A()  { cp_with_A(cpu.reg[IR_REG_R]);              }
 static void cp_Z_with_A()  { cp_with_A(cpu.Z);                       }
 
 // INSTRUCTIONS ###############################################################
@@ -754,11 +767,14 @@ inc_or_dec_16bit(int8_t change)
 {
     uint8_t reg16 = IR_REG_16;
     if (reg16 == MASK_REG_SPorAF) {
+        oam_conf(cpu.SP);
         cpu.SP += change;
     } else {
-        uint16_t result = (cpu.reg[reg16 * 2] << 8) + cpu.reg[reg16 * 2 + 1] + change;
-        cpu.reg[reg16 * 2    ] = (uint8_t) (result >> 8);
-        cpu.reg[reg16 * 2 + 1] = (uint8_t)  result;
+        uint16_t val = (cpu.reg[reg16 * 2] << 8) + cpu.reg[reg16 * 2 + 1];
+        oam_conf(val);
+        val = val + change;
+        cpu.reg[reg16 * 2    ] = (uint8_t) (val >> 8);
+        cpu.reg[reg16 * 2 + 1] = (uint8_t)  val;
     }
 }
 
@@ -1488,6 +1504,7 @@ static void
 interrupt_set_vector()
 {
     WZ_set(cpu.irq->call_interrupt(cpu.irq->check_next_enabled_and_requested()));
+    stack_push_PC_l();
 }
 
 static void halt() {
@@ -1498,7 +1515,7 @@ static void        set_carry_flag () { CLR_N; CLR_H; SET_C;                   }
 static void complement_carry_flag () { CLR_N; CLR_H; cpu.F ^= MASK_FLAG_C;    }
 static void complement_accumulator() { SET_N; SET_H; cpu.A ^= MASK_BYTE;      }
 static void     disable_interrupts() { cpu.IME = 0;  cpu.IME_latch = 0;       }
-static void      enable_interrupts() { if (!cpu.IME_latch) cpu.IME_latch = 2; }   // TODO double check behavior
+static void      enable_interrupts() { if (!cpu.IME_latch) cpu.IME_latch = 2; }
 static void                 prefix() { cpu.cb_instruction = 1;                }
 
 // INSTRUCTIONS ###############################################################
@@ -1592,19 +1609,9 @@ static const instruction_t ____INVALID = {
 
 /*
 Interrupt Handler, not an opcode instruction but can be modeled as one
-
-// Based on mooneye acceptance test interrupts/ie_push.gb:
-NOTE: this is a bit quirky to account for an edge case: the write of the high byte can write over 0xFFFF, the IE
-register, changing the interrupt to be processed and possibly removing all interrupts from being a candidate.
-However the low byte write happens too late to affect behavior. What I'm doing is setting WZ to the jump vector
-on the 4th machine cycle before low byte is written because 5th cycle will set PC To WZ; If IE was written and
-reports as no pending interrupts, the jump vector will be 0x0000 instead of an actual interrupt one. It's
-technically incorrect for the low byte to be written during 5th instruction, as the bus would be occupied with
-fetch of the next instruction already, this write happens during 4th cycle of this instruction and 5th cycle is
-a no op besides the next instruction fetch.
 */
 static const instruction_t ____INTERRUPT_HANDLER = {
-    .cycles = { nop, interrupt_ready, stack_push_PC_h, interrupt_set_vector, stack_push_PC_l },
+    .cycles = { nop, interrupt_ready, stack_push_PC_h, interrupt_set_vector, nop },
     .cycle_count = 5
 };
 
@@ -1796,6 +1803,8 @@ static void
 fetch_instruction(void)
 {
     if (cpu.cb_instruction) {
+        if (ADDR_OAM_BUG_RANGE(cpu.PC))
+            oam_conf(cpu.PC);
         cpu.IR = cpu.bus->read(cpu.PC++);
         cpu.instruction = &CB_OPCODE_TABLE[cpu.IR];
         cpu.cb_instruction = 0;
@@ -1806,28 +1815,43 @@ fetch_instruction(void)
         if (cpu.halt_bug_flag && cpu.halt_bug_flag--)
             cpu.PC--;
     } else {
+        if (ADDR_OAM_BUG_RANGE(cpu.PC))
+            oam_conf(cpu.PC);
         cpu.IR = cpu.bus->read(cpu.PC++);
         cpu.instruction = &OPCODE_TABLE[cpu.IR];
         cpu.cycle_num = 0;
         if (cpu.halt_bug_flag && cpu.halt_bug_flag--)
             cpu.PC--;
         // check conditions for the infamous HALT BUG
-        if (cpu.IR == 0x76 && !cpu.IME && (cpu.irq->IE & cpu.irq->IF & 0x1F))
+        if (cpu.IR == HALT_OPCODE && !cpu.IME && (cpu.irq->IE & cpu.irq->IF & 0x1F))
             cpu.halt_bug_flag = 1;
     }
 }
 
+/*
+disabling overlapping_fetch option is only for CPU tests that expect to examine the 
+state of registers "between" the execution of the instruction's mcycle and next instruction's fetch
+*/
 void
-cycle_mcycle_cpu(void)
+cycle_mcycle_cpu(cpu_fetch_t fetch_mode)
 {
-    if (cpu.instruction == NULL || cpu.cycle_num == cpu.instruction->cycle_count)
+    // bootstrap first instruction fetch etc., consider it to last 1 mcycle if not in test mode
+    if (cpu.instruction == NULL || cpu.cycle_num == cpu.instruction->cycle_count) {
         fetch_instruction();
+        if (fetch_mode == CPU_FETCH_OVERLAPPING)
+            return;
+    }
 
+    // execute current instruction's current machine cycle subroutine
     cpu.instruction->cycles[cpu.cycle_num++]();
 
     // Tick down the IME latch for delayed interrupt enable
     if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
         cpu.IME = 1;
+
+    // normally next instruction fetch overlaps last instruction's last cycle, unless running SSTs
+    if (fetch_mode == CPU_FETCH_OVERLAPPING && cpu.cycle_num == cpu.instruction->cycle_count)
+        fetch_instruction();
 }
 
 gb_cpu_t *
@@ -1835,6 +1859,7 @@ init_gameboy_cpu(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
     memset(&cpu, 0, sizeof(gb_cpu_t));
     cpu.bus = bus->bus_dispatcher;
+    cpu.bus_oam_corruption = bus->interface_oam_corruption;
     cpu.irq = irq;
     return &cpu;
 }
