@@ -10,7 +10,7 @@ emulate_machine_cycle(void)
 {
     bool encountered_vblank = false;
     cycle_mcycle_dma();
-    cycle_mcycle_cpu();
+    cycle_mcycle_cpu(CPU_FETCH_OVERLAPPING);
     for (int tcycle = 0; tcycle < DOTS_PER_MACHINE_CYCLE; tcycle++) {
         cycle_tcycle_timers();
         if (gb.timers->serial_falling_edge)
@@ -99,7 +99,7 @@ GB_test_single_instruction(int max_mcycles)
 {
     int i = 0;
     do {
-        cycle_mcycle_cpu();
+        cycle_mcycle_cpu(CPU_FETCH_TESTMODE_SINGLE_INSTRUCTION);
         i++;
     } while (i < max_mcycles &&
              (gb.cpu->cb_instruction || gb.cpu->cycle_num != gb.cpu->instruction->cycle_count));

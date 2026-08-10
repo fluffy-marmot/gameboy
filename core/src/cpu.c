@@ -48,6 +48,8 @@
 #define HL                                      ((uint16_t) ((cpu.H << 8) | cpu.L))
 #define WZ                                      ((uint16_t) ((cpu.W << 8) | cpu.Z))
 
+#define HALT_OPCODE                             0x76
+
 static gb_cpu_t cpu;
 
 static inline void nop      (void) {};
@@ -1824,22 +1826,32 @@ fetch_instruction(void)
         if (cpu.halt_bug_flag && cpu.halt_bug_flag--)
             cpu.PC--;
         // check conditions for the infamous HALT BUG
-        if (cpu.IR == 0x76 && !cpu.IME && (cpu.irq->IE & cpu.irq->IF & 0x1F))
+        if (cpu.IR == HALT_OPCODE && !cpu.IME && (cpu.irq->IE & cpu.irq->IF & 0x1F))
             cpu.halt_bug_flag = 1;
     }
 }
 
+/*
+disable_overlapping_fetch option via fetch_mode is purely for CPU tests that expect to examine the 
+state of registers "between" the execution of the instruction's mcycle and next instruction's fetch
+*/
 void
-cycle_mcycle_cpu(void)
+cycle_mcycle_cpu(cpu_fetch_t fetch_mode)
 {
+    // bootstrap first instruction fetch etc.
     if (cpu.instruction == NULL || cpu.cycle_num == cpu.instruction->cycle_count)
         fetch_instruction();
 
+    // execute current instruction's current machine cycle subroutine
     cpu.instruction->cycles[cpu.cycle_num++]();
 
     // Tick down the IME latch for delayed interrupt enable
     if ((cpu.IME_latch > 0) && (--cpu.IME_latch == 0))
         cpu.IME = 1;
+
+    // normally next instruction fetch overlaps last instruction's last cycle, unless running SSts
+    if (fetch_mode == CPU_FETCH_OVERLAPPING && cpu.cycle_num == cpu.instruction->cycle_count)
+        fetch_instruction();
 }
 
 gb_cpu_t *
