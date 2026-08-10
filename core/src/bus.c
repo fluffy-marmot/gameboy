@@ -6,7 +6,7 @@
 #define BOOT_ROM_DISABLED                       0b00000001
 #define USEPINS_BOOT_ROM_LOCK                   0b00000001
 
-#define MASK_ECHO_RAM                           0b0001111111111111
+#define MASK_ECHO_RAM                           0b1101111111111111
 
 #define ADDRESS_FF_BUS(address)                 ((address & 0xFF00) == 0xFF00)
 
