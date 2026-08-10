@@ -32,7 +32,8 @@ typedef struct {
     bus_interface_t *interface_reg_serial;
     
     bus_interface_t *interface_dma;
-
+    
+    bus_interface_t *interface_oam_corruption;
     bus_interface_t *interface_nop;
 
     uint8_t BOOT_ROM_LOCK;

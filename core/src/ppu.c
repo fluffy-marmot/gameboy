@@ -193,6 +193,7 @@ read_ppu_reg(memaddr address)
     default:                        return UNREADABLE;
     }       
 }
+
 static void
 write_ppu_reg(memaddr address, uint8_t val)
 {
@@ -226,19 +227,86 @@ write_ppu_reg(memaddr address, uint8_t val)
 }
 static bus_interface_t bus_registers_ppu = { .read = read_ppu_reg, .write = write_ppu_reg };
 
-static uint8_t read_vram(memaddr address) {
-    return VRAM(address);
+static uint8_t
+read_vram(memaddr address)
+{
+    switch (PPU_MODE) {
+    case PPU_MODE_HBLANK:
+    case PPU_MODE_VBLANK:
+    case PPU_MODE_OAM_SCAN:         return VRAM(address);
+    case PPU_MODE_DRAWING:
+    default:                        return UNREADABLE;
+    }
 }
-static void write_vram(memaddr address, uint8_t val) {
-    VRAM(address) = val;
+
+static void
+write_vram(memaddr address, uint8_t val)
+{
+    switch (PPU_MODE) {
+    case PPU_MODE_HBLANK:
+    case PPU_MODE_VBLANK:
+    case PPU_MODE_OAM_SCAN:         VRAM(address) = val;                                              break;
+    case PPU_MODE_DRAWING:
+    }
 }
 static bus_interface_t bus_vram = { .read = read_vram, .write = write_vram };
 
-static uint8_t read_oam(memaddr address) {
-    return OAM(address);
+static uint8_t 
+read_oam_corruption(memaddr address)
+{
+    uint8_t block = ppu.line_dot / 4;
+    if (PPU_MODE != PPU_MODE_OAM_SCAN || block < 1) return UNREADABLE;
+    if (!ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_UNUSABLE)) return UNREADABLE;
+
+    uint16_t *a = (uint16_t *) &ppu.oam[8 * block];
+    uint16_t *b = (uint16_t *) &ppu.oam[8 * (block - 1)];
+    uint16_t *c = (uint16_t *) &ppu.oam[8 * (block - 1) + 4];
+    *a = *b | (*a & *c);
+
+    for (uint8_t byte_index = 2; byte_index < 8; byte_index++)
+        ppu.oam[8 * block + byte_index] = ppu.oam[8 * (block - 1) + byte_index];
+
+    return UNREADABLE;
 }
-static void write_oam(memaddr address, uint8_t val) {
-    OAM(address) = val;
+
+static void 
+write_oam_corruption(memaddr address, uint8_t)
+{
+    uint8_t block = ppu.line_dot / 4;
+    if (PPU_MODE != PPU_MODE_OAM_SCAN || block < 1) return;
+    if (!ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_UNUSABLE)) return;
+
+    uint16_t *a = (uint16_t *) &ppu.oam[8 * block];
+    uint16_t *b = (uint16_t *) &ppu.oam[8 * (block - 1)];
+    uint16_t *c = (uint16_t *) &ppu.oam[8 * (block - 1) + 4];
+    *a = ((*a ^ *c) & (*b ^ *c)) ^ *c;
+
+    for (uint8_t byte_index = 2; byte_index < 8; byte_index++)
+        ppu.oam[8 * block + byte_index] = ppu.oam[8 * (block - 1) + byte_index];
+}
+bus_interface_t bus_oam_corruption = { .read = read_oam_corruption, .write = write_oam_corruption };
+
+static uint8_t
+read_oam(memaddr address)
+{
+    switch (PPU_MODE) {
+    case PPU_MODE_HBLANK:
+    case PPU_MODE_VBLANK:           return OAM(address);
+    case PPU_MODE_OAM_SCAN:         return bus_oam_corruption.read(address);
+    case PPU_MODE_DRAWING:
+    default:                        return UNREADABLE;
+    }
+}
+
+static void
+write_oam(memaddr address, uint8_t val)
+{
+    switch (PPU_MODE) {
+    case PPU_MODE_HBLANK:
+    case PPU_MODE_VBLANK:           OAM(address) = val;                                               break;
+    case PPU_MODE_OAM_SCAN:         bus_oam_corruption.write(address, val);                           break;
+    case PPU_MODE_DRAWING:
+    }
 }
 static bus_interface_t bus_oam = { .read = read_oam, .write = write_oam };
 
@@ -530,6 +598,7 @@ init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
     bus->interface_vram = &bus_vram;
     bus->interface_oam = &bus_oam;
     bus->interface_reg_ppu = &bus_registers_ppu;
+    bus->interface_oam_corruption = &bus_oam_corruption;
     return &ppu;
 }
 

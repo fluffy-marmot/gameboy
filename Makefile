@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/blargg/halt_bug.gb
+TEST_ROM = tests/testdata/blargg/oam_bug/source/2-causes.s
 K =
 
 run:

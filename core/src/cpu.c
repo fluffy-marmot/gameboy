@@ -101,6 +101,15 @@ static void memory_write__Z_A  ()               { cpu.bus->write(0xFF00 + cpu.Z,
 static void memory_write_SP_PCh()               { cpu.bus->write(cpu.SP, cpu.PC >> 8);        }
 static void memory_write_SP_PCl()               { cpu.bus->write(cpu.SP, cpu.PC);             }
 
+/*
+These helpers are needed to trigger a quirky behavior that emulates a hardware bug in the DMG Gameboy
+https://gbdev.io/pandocs/OAM_Corruption_Bug.html
+Need to use a separate interface for these because it is not an intended bus access, and if the bug conditions
+don't apply on the ppu's end, then an actual write shouldn't occur
+*/
+static void oam_corrupt_w(memaddr addr)         { cpu.bus_oam_corruption->write(addr, 0xFF);  }
+// static void oam_corrupt_r(memaddr addr)         { cpu.bus_oam_corruption->read (addr);        }
+
 // Needed declarations - function is defined below one that uses it
 static uint8_t add_and_set_carry_flags(uint8_t, uint8_t, uint8_t);
 
@@ -754,11 +763,14 @@ inc_or_dec_16bit(int8_t change)
 {
     uint8_t reg16 = IR_REG_16;
     if (reg16 == MASK_REG_SPorAF) {
+        oam_corrupt_w(cpu.SP);
         cpu.SP += change;
     } else {
-        uint16_t result = (cpu.reg[reg16 * 2] << 8) + cpu.reg[reg16 * 2 + 1] + change;
-        cpu.reg[reg16 * 2    ] = (uint8_t) (result >> 8);
-        cpu.reg[reg16 * 2 + 1] = (uint8_t)  result;
+        uint16_t val = (cpu.reg[reg16 * 2] << 8) + cpu.reg[reg16 * 2 + 1];
+        oam_corrupt_w(val);
+        val = val + change;
+        cpu.reg[reg16 * 2    ] = (uint8_t) (val >> 8);
+        cpu.reg[reg16 * 2 + 1] = (uint8_t)  val;
     }
 }
 
@@ -1835,6 +1847,7 @@ init_gameboy_cpu(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
     memset(&cpu, 0, sizeof(gb_cpu_t));
     cpu.bus = bus->bus_dispatcher;
+    cpu.bus_oam_corruption = bus->interface_oam_corruption;
     cpu.irq = irq;
     return &cpu;
 }

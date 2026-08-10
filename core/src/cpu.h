@@ -41,6 +41,7 @@ typedef struct {
     uint8_t IME_latch;                          // used to delay enabling the IME until next machine cycle
 
     bus_interface_t *bus;                       // access to memory bus read/write interface
+    bus_interface_t *bus_oam_corruption;        // a separate interface for handling OAM corruption bug
     gb_irq_handler_t *irq;                      // access to interrupt interface
 
     uint8_t cycle_num;                          // the machine cycle within current instruction

@@ -44,8 +44,8 @@ GB_reboot_system(void)
 {
     gb.bus = init_gameboy_bus();
     gb.irq = init_gameboy_irq(gb.bus);
-    gb.cpu = init_gameboy_cpu(gb.bus, gb.irq);
     gb.ppu = init_gameboy_ppu(gb.bus, gb.irq);
+    gb.cpu = init_gameboy_cpu(gb.bus, gb.irq);
     gb.dma = init_gameboy_dma(gb.bus);
     gb.apu = init_gameboy_apu(gb.bus);
     gb.joypad = init_gameboy_joypad(gb.bus, gb.irq);
