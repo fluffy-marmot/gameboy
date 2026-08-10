@@ -52,24 +52,6 @@
 
 static gb_cpu_t cpu;
 
-static inline void nop      (void) {};
-static inline void invalid  (void) {};
-static inline void cb_prefix(void) {};
-
-static inline void HL_dec()                     { uint16_t hl = HL - 1; cpu.H = hl >> 8; cpu.L = hl; }
-static inline void HL_inc()                     { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu.L = hl; }
-static inline void WZ_set(uint16_t val)         { cpu.W = val >> 8; cpu.Z = val;                     }
-static inline void WZ_inc()                     { WZ_set(WZ + 1);                                    }
-static inline void SP_dec()                     { cpu.SP--;                                          }
-
-/* ############################################################################
-###############################################################################
-
-        Memory reads and writes helpers
-
-###############################################################################
-############################################################################ */
-
 /*
 These helpers are needed to trigger a quirky behavior that emulates a hardware bug in the DMG Gameboy
 https://gbdev.io/pandocs/OAM_Corruption_Bug.html
@@ -78,6 +60,24 @@ don't apply on the ppu's end, then an actual write shouldn't occur
 */
 static void oam_conf(memaddr addr)              { cpu.bus_oam_corruption->write(addr, 0xFF);  }
 // static void oam_corrupt_r(memaddr addr)         { cpu.bus_oam_corruption->read (addr);        }
+
+static inline void nop      (void) {};
+static inline void invalid  (void) {};
+static inline void cb_prefix(void) {};
+
+static inline void HL_dec()                     { uint16_t hl = HL - 1; cpu.H = hl >> 8; cpu.L = hl; }
+static inline void HL_inc()                     { uint16_t hl = HL + 1; cpu.H = hl >> 8; cpu.L = hl; }
+static inline void WZ_set(uint16_t val)         { cpu.W = val >> 8; cpu.Z = val;                     }
+static inline void WZ_inc()                     { WZ_set(WZ + 1);                                    }
+static inline void SP_dec()                     { oam_conf(cpu.SP); cpu.SP--;                        }
+
+/* ############################################################################
+###############################################################################
+
+        Memory reads and writes helpers
+
+###############################################################################
+############################################################################ */
 
 /*
 Helper functions to load to temporary 8-bit latch Z or W from various 16-bit memory locations

@@ -580,8 +580,8 @@ step_mixer()
 bool
 cycle_tcycle_ppu(void)
 {
-    if (!PPU_ENABLED) return false;
     resolve_oam_corruption();
+    if (!PPU_ENABLED) return false;
 
     switch (PPU_MODE) {
     case PPU_MODE_OAM_SCAN:
