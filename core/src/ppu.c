@@ -209,6 +209,8 @@ write_ppu_reg(memaddr address, uint8_t val)
             ppu.line_dot = 0;
             ppu.lcd.blank_frames = 1;
         } else if (!ppu_enabled_before && PPU_ENABLED) {
+            // this seems to be a quirk, that the first scanline after a LCD on is 4 dots shorter?
+            ppu.line_dot = 4;
             stat_compare_ly_lyc();
             ppu_set_mode(PPU_MODE_OAM_SCAN);
         }

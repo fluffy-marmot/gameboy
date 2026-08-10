@@ -85,7 +85,7 @@ Helper functions to load to temporary 8-bit latch Z or W from various 16-bit mem
 static void memory_read_PC_Z()                  { oam_conf(cpu.PC); cpu.Z = cpu.bus->read(cpu.PC++);            }
 static void memory_read_PC_W()                  { oam_conf(cpu.PC); cpu.W = cpu.bus->read(cpu.PC++);            }
 static void memory_read_SP_Z()                  { oam_conf(cpu.SP); cpu.Z = cpu.bus->read(cpu.SP++);            }
-static void memory_read_SP_W()                  { oam_conf(cpu.SP); cpu.W = cpu.bus->read(cpu.SP++);            }
+static void memory_read_SP_W()                  { cpu.W = cpu.bus->read(cpu.SP++);            }
 static void memory_read_BC_Z()                  { cpu.Z = cpu.bus->read(BC);                  }
 static void memory_read_DE_Z()                  { cpu.Z = cpu.bus->read(DE);                  }
 static void memory_read_HL_Z()                  { cpu.Z = cpu.bus->read(HL);                  }
@@ -1842,9 +1842,12 @@ state of registers "between" the execution of the instruction's mcycle and next 
 void
 cycle_mcycle_cpu(cpu_fetch_t fetch_mode)
 {
-    // bootstrap first instruction fetch etc.
-    if (cpu.instruction == NULL || cpu.cycle_num == cpu.instruction->cycle_count)
+    // bootstrap first instruction fetch etc., consider it to last 1 mcycle if not in test mode
+    if (cpu.instruction == NULL || cpu.cycle_num == cpu.instruction->cycle_count) {
         fetch_instruction();
+        if (fetch_mode == CPU_FETCH_OVERLAPPING)
+            return;
+    }
 
     // execute current instruction's current machine cycle subroutine
     cpu.instruction->cycles[cpu.cycle_num++]();
