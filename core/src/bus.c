@@ -41,7 +41,7 @@ select_interface(memaddr address)
     if (ADDR_RANGE(ADDR_START_WRAM_2, ADDR_END_WRAM_2))                 return bus.interface_wram_system;
     if (ADDR_RANGE(ADDR_START_ECHO_MEM, ADDR_END_ECHO_MEM))             return bus.interface_echo;
     if (ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_OAM_MEM))               return bus.interface_oam;
-    if (ADDR_RANGE(ADDR_START_UNUSABLE, ADDR_END_UNUSABLE))             return bus.interface_unusable;
+    if (ADDR_RANGE(ADDR_START_UNUSABLE, ADDR_END_UNUSABLE))             return bus.interface_oam;
     if (ADDR_RANGE(ADDR_START_APU, ADDR_END_APU))                       return bus.interface_reg_apu;
     if (ADDR_RANGE(ADDR_START_HRAM, ADDR_END_HRAM))                     return bus.interface_hram;
 
@@ -128,13 +128,6 @@ static void write_reg_bootlock(memaddr, uint8_t) {
 }
 static bus_interface_t bus_reg_boot_lock = { .read = read_reg_bootlock, .write = write_reg_bootlock };
 
-// Unusable memory region interface, not much to do
-static uint8_t read_unusable(memaddr) {
-    return UNREADABLE;
-}
-static void write_unusable(memaddr, uint8_t) {}
-static bus_interface_t bus_unusable = { .read = read_unusable, .write = write_unusable };
-
 gb_bus_t *
 init_gameboy_bus(void)
 {
@@ -142,7 +135,6 @@ init_gameboy_bus(void)
     bus.bus_dispatcher = &bus_dispatcher;
     bus.interface_wram_system = &bus_wram;
     bus.interface_echo = &bus_echo;
-    bus.interface_unusable = &bus_unusable;
     bus.interface_hram = &bus_hram;
 
     bus.interface_reg_bootlock = &bus_reg_boot_lock;

@@ -6,10 +6,16 @@
 #include "irq.h"
 
 typedef enum {
-    SCANLINE_START_DOT = 0,
-    SCANLINE_FINAL_OAM_SCAN_DOT = 79,
-    SCANLINE_FINAL_DOT = DOTS_PER_SCANLINE - 1
+    SCANLINE_START_DOT                          = 0,
+    SCANLINE_FINAL_OAM_SCAN_DOT                 = 79,
+    SCANLINE_FINAL_DOT                          = DOTS_PER_SCANLINE - 1
 } scanline_dot_t;
+
+typedef enum {
+    OAM_CORRUPTION_NONE,
+    OAM_CORRUPTION_WRITE,
+    OAM_CORRUPTION_READ
+} oam_corruption_t;
 
 typedef struct {
     /* -- addressable registers (not all R/W) and memory -- */
@@ -45,6 +51,7 @@ typedef struct {
         uint8_t blank_frames;
     } lcd;
 
+    uint8_t oam_corruption_status;
     gb_irq_handler_t *irq;                      // direct access to interrupts data
 } gb_ppu_t;
 

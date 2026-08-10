@@ -121,7 +121,6 @@ class gb_bus_t(struct):
         ("interface_wram_system", pointer(bus_interface_t)),
         ("interface_echo", pointer(bus_interface_t)),
         ("interface_oam", pointer(bus_interface_t)),
-        ("interface_unusable", pointer(bus_interface_t)),
         ("interface_hram", pointer(bus_interface_t)),
 
         ("interface_reg_bootlock", pointer(bus_interface_t)),
@@ -244,6 +243,7 @@ class gb_ppu_t(struct):
         ("obj_buffer_size", uint8),
 
         ("lcd", lcd),
+        ("oam_corruption_status", uint8),
         ("irq", pointer(gb_irq_handler_t)),
     ]
 

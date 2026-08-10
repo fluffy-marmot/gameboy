@@ -71,17 +71,26 @@ static inline void SP_dec()                     { cpu.SP--;                     
 ############################################################################ */
 
 /*
+These helpers are needed to trigger a quirky behavior that emulates a hardware bug in the DMG Gameboy
+https://gbdev.io/pandocs/OAM_Corruption_Bug.html
+Need to use a separate interface for these because it is not an intended bus access, and if the bug conditions
+don't apply on the ppu's end, then an actual write shouldn't occur
+*/
+static void oam_conf(memaddr addr)              { cpu.bus_oam_corruption->write(addr, 0xFF);  }
+// static void oam_corrupt_r(memaddr addr)         { cpu.bus_oam_corruption->read (addr);        }
+
+/*
 Helper functions to load to temporary 8-bit latch Z or W from various 16-bit memory locations
 */
-static void memory_read_PC_Z()                  { cpu.Z = cpu.bus->read(cpu.PC++);            }
-static void memory_read_PC_W()                  { cpu.W = cpu.bus->read(cpu.PC++);            }
-static void memory_read_SP_Z()                  { cpu.Z = cpu.bus->read(cpu.SP++);            }
-static void memory_read_SP_W()                  { cpu.W = cpu.bus->read(cpu.SP++);            }
+static void memory_read_PC_Z()                  { oam_conf(cpu.PC); cpu.Z = cpu.bus->read(cpu.PC++);            }
+static void memory_read_PC_W()                  { oam_conf(cpu.PC); cpu.W = cpu.bus->read(cpu.PC++);            }
+static void memory_read_SP_Z()                  { oam_conf(cpu.SP); cpu.Z = cpu.bus->read(cpu.SP++);            }
+static void memory_read_SP_W()                  { oam_conf(cpu.SP); cpu.W = cpu.bus->read(cpu.SP++);            }
 static void memory_read_BC_Z()                  { cpu.Z = cpu.bus->read(BC);                  }
 static void memory_read_DE_Z()                  { cpu.Z = cpu.bus->read(DE);                  }
 static void memory_read_HL_Z()                  { cpu.Z = cpu.bus->read(HL);                  }
-static void memory_read_HLdZ()                  { cpu.Z = cpu.bus->read(HL); HL_dec();        }
-static void memory_read_HLiZ()                  { cpu.Z = cpu.bus->read(HL); HL_inc();        }
+static void memory_read_HLdZ()                  { oam_conf(HL); cpu.Z = cpu.bus->read(HL); HL_dec();        }
+static void memory_read_HLiZ()                  { oam_conf(HL); cpu.Z = cpu.bus->read(HL); HL_inc();        }
 static void memory_read_WZ_Z()                  { cpu.Z = cpu.bus->read(WZ);                  }
 static void memory_read__C_Z()                  { cpu.Z = cpu.bus->read(0xFF00 + cpu.C);      }
 static void memory_read__Z_Z()                  { cpu.Z = cpu.bus->read(0xFF00 + cpu.Z);      }
@@ -102,15 +111,6 @@ static void memory_write__C_A  ()               { cpu.bus->write(0xFF00 + cpu.C,
 static void memory_write__Z_A  ()               { cpu.bus->write(0xFF00 + cpu.Z, cpu.A);      }
 static void memory_write_SP_PCh()               { cpu.bus->write(cpu.SP, cpu.PC >> 8);        }
 static void memory_write_SP_PCl()               { cpu.bus->write(cpu.SP, cpu.PC);             }
-
-/*
-These helpers are needed to trigger a quirky behavior that emulates a hardware bug in the DMG Gameboy
-https://gbdev.io/pandocs/OAM_Corruption_Bug.html
-Need to use a separate interface for these because it is not an intended bus access, and if the bug conditions
-don't apply on the ppu's end, then an actual write shouldn't occur
-*/
-static void oam_corrupt_w(memaddr addr)         { cpu.bus_oam_corruption->write(addr, 0xFF);  }
-// static void oam_corrupt_r(memaddr addr)         { cpu.bus_oam_corruption->read (addr);        }
 
 // Needed declarations - function is defined below one that uses it
 static uint8_t add_and_set_carry_flags(uint8_t, uint8_t, uint8_t);
@@ -765,11 +765,11 @@ inc_or_dec_16bit(int8_t change)
 {
     uint8_t reg16 = IR_REG_16;
     if (reg16 == MASK_REG_SPorAF) {
-        oam_corrupt_w(cpu.SP);
+        oam_conf(cpu.SP);
         cpu.SP += change;
     } else {
         uint16_t val = (cpu.reg[reg16 * 2] << 8) + cpu.reg[reg16 * 2 + 1];
-        oam_corrupt_w(val);
+        oam_conf(val);
         val = val + change;
         cpu.reg[reg16 * 2    ] = (uint8_t) (val >> 8);
         cpu.reg[reg16 * 2 + 1] = (uint8_t)  val;
@@ -1810,6 +1810,8 @@ static void
 fetch_instruction(void)
 {
     if (cpu.cb_instruction) {
+        if (ADDR_OAM_BUG_RANGE(cpu.PC))
+            oam_conf(cpu.PC);
         cpu.IR = cpu.bus->read(cpu.PC++);
         cpu.instruction = &CB_OPCODE_TABLE[cpu.IR];
         cpu.cb_instruction = 0;
@@ -1820,6 +1822,8 @@ fetch_instruction(void)
         if (cpu.halt_bug_flag && cpu.halt_bug_flag--)
             cpu.PC--;
     } else {
+        if (ADDR_OAM_BUG_RANGE(cpu.PC))
+            oam_conf(cpu.PC);
         cpu.IR = cpu.bus->read(cpu.PC++);
         cpu.instruction = &OPCODE_TABLE[cpu.IR];
         cpu.cycle_num = 0;

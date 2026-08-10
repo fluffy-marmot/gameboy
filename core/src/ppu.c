@@ -254,41 +254,29 @@ static bus_interface_t bus_vram = { .read = read_vram, .write = write_vram };
 static uint8_t 
 read_oam_corruption(memaddr address)
 {
-    uint8_t block = ppu.line_dot / 4;
-    if (PPU_MODE != PPU_MODE_OAM_SCAN || block < 1) return UNREADABLE;
-    if (!ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_UNUSABLE)) return UNREADABLE;
-
-    uint16_t *a = (uint16_t *) &ppu.oam[8 * block];
-    uint16_t *b = (uint16_t *) &ppu.oam[8 * (block - 1)];
-    uint16_t *c = (uint16_t *) &ppu.oam[8 * (block - 1) + 4];
-    *a = *b | (*a & *c);
-
-    for (uint8_t byte_index = 2; byte_index < 8; byte_index++)
-        ppu.oam[8 * block + byte_index] = ppu.oam[8 * (block - 1) + byte_index];
-
+    if (PPU_MODE != PPU_MODE_OAM_SCAN || !ADDR_OAM_BUG_RANGE(address))
+        return UNREADABLE;
+    ppu.oam_corruption_status |= OAM_CORRUPTION_READ;
     return UNREADABLE;
 }
 
 static void 
 write_oam_corruption(memaddr address, uint8_t)
 {
-    uint8_t block = ppu.line_dot / 4;
-    if (PPU_MODE != PPU_MODE_OAM_SCAN || block < 1) return;
-    if (!ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_UNUSABLE)) return;
-
-    uint16_t *a = (uint16_t *) &ppu.oam[8 * block];
-    uint16_t *b = (uint16_t *) &ppu.oam[8 * (block - 1)];
-    uint16_t *c = (uint16_t *) &ppu.oam[8 * (block - 1) + 4];
-    *a = ((*a ^ *c) & (*b ^ *c)) ^ *c;
-
-    for (uint8_t byte_index = 2; byte_index < 8; byte_index++)
-        ppu.oam[8 * block + byte_index] = ppu.oam[8 * (block - 1) + byte_index];
+    if (PPU_MODE != PPU_MODE_OAM_SCAN || !ADDR_OAM_BUG_RANGE(address))
+        return;
+    ppu.oam_corruption_status |= OAM_CORRUPTION_WRITE;
 }
 bus_interface_t bus_oam_corruption = { .read = read_oam_corruption, .write = write_oam_corruption };
 
 static uint8_t
 read_oam(memaddr address)
 {
+    if (ADDR_RANGE(ADDR_START_UNUSABLE, ADDR_END_UNUSABLE)) {
+        if (PPU_MODE == PPU_MODE_OAM_SCAN)
+            return bus_oam_corruption.read(address);
+        return 0x00;
+    }
     switch (PPU_MODE) {
     case PPU_MODE_HBLANK:
     case PPU_MODE_VBLANK:           return OAM(address);
@@ -301,6 +289,11 @@ read_oam(memaddr address)
 static void
 write_oam(memaddr address, uint8_t val)
 {
+    if (ADDR_RANGE(ADDR_START_UNUSABLE, ADDR_END_UNUSABLE)) {
+        if (PPU_MODE == PPU_MODE_OAM_SCAN)
+            bus_oam_corruption.write(address, val);
+        return;
+    }
     switch (PPU_MODE) {
     case PPU_MODE_HBLANK:
     case PPU_MODE_VBLANK:           OAM(address) = val;                                               break;
@@ -309,6 +302,59 @@ write_oam(memaddr address, uint8_t val)
     }
 }
 static bus_interface_t bus_oam = { .read = read_oam, .write = write_oam };
+
+static void
+resolve_oam_corruption(void)
+{
+    if (ppu.oam_corruption_status == OAM_CORRUPTION_NONE)
+        return;
+
+    uint8_t block = ppu.line_dot / 4;
+    if (block == 0) {
+        ppu.oam_corruption_status = OAM_CORRUPTION_NONE;
+        return;
+    }
+
+    uint16_t *a, *b, *c, *d;
+    // special case of both read and IDU-triggered write corruption on the same cycle
+    if (ppu.oam_corruption_status == (OAM_CORRUPTION_READ | OAM_CORRUPTION_WRITE)) {
+        if (block > 3 && block < 19) {
+            a = (uint16_t *) &ppu.oam[8 * (block - 2)];
+            b = (uint16_t *) &ppu.oam[8 * (block - 1)];
+            c = (uint16_t *) &ppu.oam[8 * block];
+            d = (uint16_t *) &ppu.oam[8 * (block - 1) + 4];
+
+            *b = (*b & (*a | *c | *d)) | (*a & *c & *d);
+            memcpy((void *) a, (void *) b, 8);
+            memcpy((void *) c, (void *) b, 8);
+        }
+    // only a regular write corruption
+    } else if (ppu.oam_corruption_status == OAM_CORRUPTION_WRITE) {
+        a = (uint16_t *) &ppu.oam[8 * block];
+        b = (uint16_t *) &ppu.oam[8 * (block - 1)];
+        c = (uint16_t *) &ppu.oam[8 * (block - 1) + 4];
+
+        *a = ((*a ^ *c) & (*b ^ *c)) ^ *c;
+
+        for (uint8_t byte_index = 2; byte_index < 8; byte_index++)
+            ppu.oam[8 * block + byte_index] = ppu.oam[8 * (block - 1) + byte_index];
+    }
+
+    // apply any needed read corruption regardless if a special case occurred or not
+    if (ppu.oam_corruption_status & OAM_CORRUPTION_READ) {
+        a = (uint16_t *) &ppu.oam[8 * block];
+        b = (uint16_t *) &ppu.oam[8 * (block - 1)];
+        c = (uint16_t *) &ppu.oam[8 * (block - 1) + 4];
+
+        *a = *b | (*a & *c);
+
+        for (uint8_t byte_index = 2; byte_index < 8; byte_index++)
+            ppu.oam[8 * block + byte_index] = ppu.oam[8 * (block - 1) + byte_index];
+    }
+
+    ppu.oam_corruption_status = OAM_CORRUPTION_NONE;
+}
+
 
 // Check whether BG fetcher should transition to window mode
 static inline bool check_window_ready(void) {
@@ -535,6 +581,8 @@ bool
 cycle_tcycle_ppu(void)
 {
     if (!PPU_ENABLED) return false;
+    resolve_oam_corruption();
+
     switch (PPU_MODE) {
     case PPU_MODE_OAM_SCAN:
         if (ppu.line_dot % 2 == 0 && ppu.obj_buffer_size < SCANLINE_MAX_OBJS)

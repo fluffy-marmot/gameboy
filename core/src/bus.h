@@ -5,6 +5,7 @@
 
 #define ADDR_BELOW(high)                        (address <= high)
 #define ADDR_RANGE(low, high)                   ((low <= address) && (address <= high))
+#define ADDR_OAM_BUG_RANGE(addr)                ((ADDR_START_OAM_MEM <= addr) && (addr <= ADDR_END_UNUSABLE))
 
 typedef struct {
     uint8_t (*read )(memaddr         );
@@ -20,7 +21,6 @@ typedef struct {
     bus_interface_t *interface_wram_system;
     bus_interface_t *interface_echo;
     bus_interface_t *interface_oam;
-    bus_interface_t *interface_unusable;
     bus_interface_t *interface_hram;
 
     bus_interface_t *interface_reg_bootlock;
