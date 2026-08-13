@@ -305,6 +305,27 @@ write_oam(memaddr address, uint8_t val)
 }
 static bus_interface_t bus_oam = { .read = read_oam, .write = write_oam };
 
+static uint8_t
+read_direct_dma(memaddr address)
+{
+    if (ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM))
+        return VRAM(address);
+    else if (ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_OAM_MEM))
+        return OAM(address);
+    else
+        return UNREADABLE;
+}
+
+static void
+write_direct_dma(memaddr address, uint8_t val)
+{
+    if (ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM))
+        VRAM(address) = val;
+    else if (ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_OAM_MEM))
+        OAM(address) = val;
+}
+static bus_interface_t bus_direct_dma = { .read = read_direct_dma, .write = write_direct_dma };
+
 static void
 resolve_oam_corruption(void)
 {
@@ -649,6 +670,7 @@ init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
     bus->interface_oam = &bus_oam;
     bus->interface_reg_ppu = &bus_registers_ppu;
     bus->interface_oam_corruption = &bus_oam_corruption;
+    bus->interface_ppu_dma_direct = &bus_direct_dma;
     return &ppu;
 }
 

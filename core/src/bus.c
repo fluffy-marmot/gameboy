@@ -51,7 +51,7 @@ select_interface(memaddr address)
     case MEMADDR_IF:                                    
     case MEMADDR_IE:                                                    return bus.interface_reg_interrupt;
 
-    case MEMADDR_DMA:                                                   return bus.interface_dma;
+    case MEMADDR_DMA:                                                   return bus.interface_reg_dma;
     
     case MEMADDR_JOYP:                                                  return bus.interface_reg_joypad;
 
@@ -80,17 +80,40 @@ select_interface(memaddr address)
 }
 
 // The main dispatcher interface using select_interface function to pass on bus requests
-static uint8_t read_bus_dispatch (memaddr address) {
+static uint8_t
+read_bus_dispatch(memaddr address)
+{
     if (bus.dma->status == DMA_TRANSFER_ACTIVE && !ADDRESS_FF_BUS(address))
         return bus.dma->data;
     return select_interface(address)->read(address);
 }
-static void write_bus_dispatch(memaddr address, uint8_t val) {
+static void
+write_bus_dispatch(memaddr address, uint8_t val)
+{
     if (bus.dma->status == DMA_TRANSFER_ACTIVE && !ADDRESS_FF_BUS(address))
         return;
     select_interface(address)->write(address, val);
 }
 static bus_interface_t bus_dispatcher = { .read = read_bus_dispatch, .write = write_bus_dispatch };
+
+static uint8_t
+read_bus_dispatch_dma(memaddr address)
+{
+    if (ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM) || ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_OAM_MEM))
+        return bus.interface_ppu_dma_direct->read(address);
+    else
+        return read_bus_dispatch(address);
+}
+
+static void
+write_bus_dispatch_dma(memaddr address, uint8_t val)
+{
+    if (ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM) || ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_OAM_MEM))
+        bus.interface_ppu_dma_direct->write(address, val);
+    else
+        write_bus_dispatch(address, val);
+}
+static bus_interface_t bus_dispatcher_dma = { .read = read_bus_dispatch_dma, .write = write_bus_dispatch_dma };
 
 // WRAM interface
 static uint8_t read_wram (memaddr address) {
@@ -133,6 +156,7 @@ init_gameboy_bus(void)
 {
     memset(&bus, 0, sizeof(gb_bus_t));
     bus.bus_dispatcher = &bus_dispatcher;
+    bus.bus_dispatcher_dma = &bus_dispatcher_dma;
     bus.interface_wram_system = &bus_wram;
     bus.interface_echo = &bus_echo;
     bus.interface_hram = &bus_hram;

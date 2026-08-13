@@ -114,6 +114,7 @@ class gb_dma_t(struct):
 class gb_bus_t(struct):
     _fields_ = [
         ("bus_dispatcher", pointer(bus_interface_t)),
+        ("bus_dispatcher_dma", pointer(bus_interface_t)),
 
         ("interface_rom_boot", pointer(bus_interface_t)),
         ("interface_cartridge", pointer(bus_interface_t)),
@@ -130,8 +131,9 @@ class gb_bus_t(struct):
         ("interface_reg_timers", pointer(bus_interface_t)),
         ("interface_reg_joypad", pointer(bus_interface_t)),
         ("interface_reg_serial", pointer(bus_interface_t)),
+        ("interface_reg_dma", pointer(bus_interface_t)),
 
-        ("interface_dma", pointer(bus_interface_t)),
+        ("interface_ppu_dma_direct", pointer(bus_interface_t)),
 
         ("interface_oam_corruption", pointer(bus_interface_t)),
         ("interface_nop", pointer(bus_interface_t)),

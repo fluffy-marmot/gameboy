@@ -14,6 +14,7 @@ typedef struct {
 
 typedef struct {
     bus_interface_t *bus_dispatcher;
+    bus_interface_t *bus_dispatcher_dma;
 
     bus_interface_t *interface_rom_boot;
     bus_interface_t *interface_cartridge;
@@ -30,8 +31,9 @@ typedef struct {
     bus_interface_t *interface_reg_timers;
     bus_interface_t *interface_reg_joypad;
     bus_interface_t *interface_reg_serial;
+    bus_interface_t *interface_reg_dma;
     
-    bus_interface_t *interface_dma;
+    bus_interface_t *interface_ppu_dma_direct;
     
     bus_interface_t *interface_oam_corruption;
     bus_interface_t *interface_nop;
