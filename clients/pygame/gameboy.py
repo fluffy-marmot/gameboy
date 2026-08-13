@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 from threading import Lock
 from time import perf_counter
+import zlib
 
 import pygame
 import sounddevice
@@ -19,6 +20,9 @@ KEYBINDS = {}
 
 CONFIG = configparser.ConfigParser()
 CONFIG.read(BASE_DIR / "clients" / "pygame" / "config.ini")
+
+romname = None
+cartridge_hash = None
 
 def load_keybinds() -> None:
     keybinds = CONFIG["keybinds"]
@@ -48,6 +52,8 @@ def load_bootrom() -> None:
 
 
 def load_rom() -> None:
+    global romname, cartridge_hash
+
     if len(sys.argv) != 2:
         sys.exit(f"Usage: python {sys.argv[0]} <gb rom>")
     rom = sys.argv[1] if sys.argv[1].endswith("gb") else f"{sys.argv[1]}.gb"
@@ -60,9 +66,39 @@ def load_rom() -> None:
     else:
         rom = (BASE_DIR / rom).resolve()
     try:
+        with open(rom, "rb") as f:
+            romname = rom.stem
+            cartridge_hash = f"{zlib.crc32(f.read()):08X}"
         GB_load_rom(rom)
+        print(f"Loaded ROM: {romname}, CRC32: {cartridge_hash}")
     except FileNotFoundError:
         sys.exit(f"Couldn't find ROM file: {romlib}/{rom}")
+
+def load_bbram() -> None:
+    bbram_config = CONFIG["bbram"].get("config", "")
+    if bbram_config in ["hash", "name"]:
+        bbram_path = CONFIG["bbram"].get("path", "bbram")
+        if bbram_config == "hash":
+            filename = BASE_DIR / bbram_path / f"{cartridge_hash}.bbram"
+        else:
+            filename = BASE_DIR / bbram_path / f"{romname}.bbram"
+        if filename.exists():
+            GB_load_bbram(filename)
+            print(f"Loaded BBRAM contents from {filename.name}")
+        else:
+            print(f"No existing BBRAM file found for this ROM")
+
+def save_bbram() -> None:
+    bbram_config = CONFIG["bbram"].get("config", "")
+    if bbram_config in ["hash", "name"]:
+        bbram_path = CONFIG["bbram"].get("path", "bbram")
+        if bbram_config == "hash":
+            filename = BASE_DIR / bbram_path / f"{cartridge_hash}.bbram"
+        else:
+            filename = BASE_DIR / bbram_path / f"{romname}.bbram"
+        filename.parent.mkdir(parents=True, exist_ok=True)
+        gb_save_bbram(filename)
+        print(f"Saved BBRAM contents to {filename.name}")
         
 
 def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
@@ -130,6 +166,8 @@ def main() -> None:
     load_keybinds()
     load_bootrom()
     load_rom()
+    if GB_uses_bbram():
+        load_bbram()
 
     # call without arguments to set colors used by ppu test suites
     # GB_set_lcd_colors()
@@ -142,6 +180,8 @@ def main() -> None:
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                if GB_uses_bbram():
+                    save_bbram()
                 # log last frame - useful for creating reference images of passing tests
                 save_lcd_png(BASE_DIR / "logs" / "lastframe.png")
                 pygame.quit()

@@ -10,6 +10,20 @@ def GB_load_rom(romfile: Path) -> None:
         buf = (uint8 * len(rom_data)).from_buffer_copy(rom_data)
         GB.GB_load_rom(buf, len(rom_data))
 
+def GB_uses_bbram() -> bool:
+    return GB.GB_uses_bbram()
+
+def GB_load_bbram(bbram_file: Path) -> None:
+    with open(bbram_file, "rb") as f:
+        bbram_data = f.read()
+        buf = (uint8 * len(bbram_data)).from_buffer_copy(bbram_data)
+        GB.GB_load_bbram(buf, len(bbram_data))
+
+def gb_save_bbram(bbram_file: Path) -> None:
+    bbram_data = ct.string_at(gb.cartridge.contents.data.ram, get_cartridge_ram_size())
+    with open(bbram_file, "wb") as f:
+        f.write(bbram_data)
+
 def GB_set_post_boot_state() -> None:
     GB.GB_set_post_boot_state()
 
@@ -45,3 +59,6 @@ def check_blank_frame() -> bool:
 def save_lcd_png(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.frombuffer("RGBA", (LCD_WIDTH, LCD_HEIGHT), LCD, "raw", "BGRA", 0, 1).save(path)
+
+def get_cartridge_ram_size() -> int:
+    return gb.cartridge.contents.data.ram_size

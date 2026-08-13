@@ -445,6 +445,12 @@ GB.GB_load_bootrom.restype = ct.c_int
 GB.GB_load_rom.argtypes = [pointer(uint8), ct.c_size_t]
 GB.GB_load_rom.restype = ct.c_int
 
+GB.GB_load_bbram.argtypes = [pointer(uint8), ct.c_size_t]
+GB.GB_load_bbram.restype = ct.c_int
+
+GB.GB_uses_bbram.argtypes = []
+GB.GB_uses_bbram.restype = c_bool
+
 GB.GB_serial_buffer_flush.argtypes = []
 GB.GB_serial_buffer_flush.restype = pointer(uint8)
 

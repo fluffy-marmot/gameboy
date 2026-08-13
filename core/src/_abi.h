@@ -14,6 +14,7 @@ typedef enum {
     GB_ERROR_ROM_SIZE_HEADER_MISMATCH,
     GB_ERROR_ROM_SIZE_HEADER_INVALID,
     GB_ERROR_RAM_SIZE_HEADER_INVALID,
+    GB_ERROR_BBRAM_WRONG_SIZE,
     GB_ERROR_MBC_UNIMPLEMENTED,
     GB_ERROR_MBC_UNRECOGNIZED
 } gb_return_t;
@@ -33,6 +34,10 @@ GB_ABI     uint8_t GB_test_memory_read (memaddr address);
 // cartridge.c
 // load ROM program cartridge data (abi client handles file reading)
 GB_ABI gb_return_t GB_load_rom(const uint8_t *data, size_t size);
+// check whether a loaded cartridge uses BBRAM
+GB_ABI bool        GB_uses_bbram(void);
+
+GB_ABI gb_return_t GB_load_bbram(const uint8_t *data, size_t size);
 
 // emulator.c
 GB_ABI gb_return_t GB_reboot_system(void);

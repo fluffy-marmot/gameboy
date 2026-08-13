@@ -7,6 +7,8 @@ tests/output/
 
 # copyrighted roms and bootroms
 romlib/
+# save location for bbram
+bbram/
 
 # build targets
 build/
