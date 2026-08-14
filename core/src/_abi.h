@@ -36,6 +36,7 @@ GB_ABI     uint8_t GB_test_memory_read (memaddr address);
 GB_ABI gb_return_t GB_load_rom(const uint8_t *data, size_t size);
 // check whether a loaded cartridge uses BBRAM
 GB_ABI bool        GB_uses_bbram(void);
+GB_ABI bool        GB_uses_rtc(void);
 
 GB_ABI gb_return_t GB_load_bbram(const uint8_t *data, size_t size);
 

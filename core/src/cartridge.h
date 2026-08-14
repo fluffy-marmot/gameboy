@@ -3,6 +3,7 @@
 
 #include "_specification.h"
 #include "bus.h"
+#include "mbcs/rtc.h"
 
 typedef struct {
     uint8_t *rom;

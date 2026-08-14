@@ -12,9 +12,14 @@ emulate_machine_cycle(void)
     cycle_mcycle_dma();
     cycle_mcycle_cpu(CPU_FETCH_OVERLAPPING);
     for (int tcycle = 0; tcycle < DOTS_PER_MACHINE_CYCLE; tcycle++) {
+        // TODO timers should be running on mcycles? pandocs differs from other source
         cycle_tcycle_timers();
+        // cartridge real time clock
+        if (GB_uses_rtc())
+            cycle_tcycle_rtc();
+
         if (gb.timers->serial_falling_edge)
-            // TODO rename with rate
+            // TODO serial should be using its own clock?
             cycle_serial();
 
         if (gb.timers->apu_falling_edge)

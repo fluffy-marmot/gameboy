@@ -1,6 +1,7 @@
 #include "_abi.h"
 #include "cartridge.h"
 #include "mbcs/mbc1.h"
+#include "mbcs/mbc3.h"
 
 static gb_cartridge_t cartridge;
 
@@ -30,6 +31,7 @@ write_cart(memaddr address, uint8_t val)
 
 static bus_interface_t bus_cart =  { .read = read_cart, .write = write_cart };
 
+// TODO move this to mbc1 file, it seems specific to that
 static uint8_t
 rom_bank_bitmask(void)
 {
@@ -90,7 +92,6 @@ validate_header_ram_size(void)
     if (cartridge.data.ram_size > 0)
         cartridge.data.ram = calloc(cartridge.data.ram_size, sizeof(uint8_t));
     
-    // printf("%zu\n", cartridge.data.ram_size);
     return GB_RETURN_OK;
 }
 
@@ -98,24 +99,28 @@ static gb_return_t
 select_mbc_controller(void)
 {
     uint8_t bm = rom_bank_bitmask();
+    bool use_rtc = false;
 
     switch (cartridge.header.mbc_type) {
-    case MBC_TYPE_NONE_PLAIN_ROM:               cartridge.mbc_bus = NULL;                       break;
+    case MBC_TYPE_NONE_PLAIN_ROM:
+    case MBC_TYPE_NONE_RAM:
+    case MBC_TYPE_NONE_BBRAM:                   cartridge.mbc_bus = NULL;                       break;
+
     case MBC_TYPE_MBC1:
     case MBC_TYPE_MBC1_RAM:
     case MBC_TYPE_MBC1_BBRAM:                   init_gameboy_mbc1(&cartridge, bm);              break;
+
+    case MBC_TYPE_MBC3_RTCLOCK:
+    case MBC_TYPE_MBC3_RTCLOCK_BBRAM:           use_rtc = true;                     /* fall through */
+    case MBC_TYPE_MBC3:
+    case MBC_TYPE_MBC3_RAM:
+    case MBC_TYPE_MBC3_BBRAM:                   init_gameboy_mbc3(&cartridge, use_rtc);         break;
+
     case MBC_TYPE_MBC2:
     case MBC_TYPE_MBC2_BBRAM:
-    case MBC_TYPE_NONE_RAM:
-    case MBC_TYPE_NONE_BBRAM:
     case MBC_TYPE_MMM01:
     case MBC_TYPE_MMM01_RAM:
     case MBC_TYPE_MMM01_BBRAM:
-    case MBC_TYPE_MBC3_RTCLOCK:
-    case MBC_TYPE_MBC3_RTCLOCK_BBRAM:
-    case MBC_TYPE_MBC3:
-    case MBC_TYPE_MBC3_RAM:
-    case MBC_TYPE_MBC3_BBRAM:
     case MBC_TYPE_MBC5:
     case MBC_TYPE_MBC5_RAM:
     case MBC_TYPE_MBC5_BBRAM:
@@ -152,6 +157,19 @@ init_cartridge(gb_bus_t *bus)
 ############################################################################ */
 
 bool
+GB_uses_rtc(void)
+{
+    switch (cartridge.header.mbc_type) {
+    case MBC_TYPE_MBC3_RTCLOCK_BBRAM:
+    case MBC_TYPE_MBC3_RTCLOCK:
+    case MBC_TYPE_HuC3:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool
 GB_uses_bbram(void)
 {
     switch (cartridge.header.mbc_type) {
@@ -163,28 +181,9 @@ GB_uses_bbram(void)
     case MBC_TYPE_MBC3_BBRAM:
     case MBC_TYPE_MBC5_BBRAM:
     case MBC_TYPE_MBC5_RUMBLE_BBRAM:
-        return true;
-
-    case MBC_TYPE_NONE_PLAIN_ROM:
-    case MBC_TYPE_MBC1:
-    case MBC_TYPE_MBC1_RAM:
-    case MBC_TYPE_MBC2:
-    case MBC_TYPE_NONE_RAM:
-    case MBC_TYPE_MMM01:
-    case MBC_TYPE_MMM01_RAM:
-    case MBC_TYPE_MBC3_RTCLOCK:
-    case MBC_TYPE_MBC3:
-    case MBC_TYPE_MBC3_RAM:
-    case MBC_TYPE_MBC5:
-    case MBC_TYPE_MBC5_RAM:
-    case MBC_TYPE_MBC5_RUMBLE:
-    case MBC_TYPE_MBC5_RUMBLE_RAM:
-    case MBC_TYPE_MBC6:
     case MBC_TYPE_MBC7:
-    case MBC_TYPE_POCKET_CAMERA:
-    case MBC_TYPE_BANDAI_TAMAS:
-    case MBC_TYPE_HuC3:
     case MBC_TYPE_HuC1:
+        return true;
     default:
         return false;
     }

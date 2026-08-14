@@ -138,7 +138,7 @@ class AudioPlayer:
             chunk = bytes(self._buffer[:take])
             del self._buffer[:take]
         if take < need:
-            print(f"missing {need-take} bytes for audio buffer")
+            # print(f"missing {need-take} bytes for audio buffer")
             chunk += b"\x00" * (need - take)
         outdata[:] = chunk
 
@@ -166,6 +166,7 @@ def main() -> None:
     load_keybinds()
     load_bootrom()
     load_rom()
+    print(get_cartridge_info())
     if GB_uses_bbram():
         load_bbram()
 

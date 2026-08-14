@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/blargg/oam_bug/rom_singles/7-timing_effect.gb
+TEST_ROM = tests/testdata/rtc3test/rtc3test.gb
 K =
 
 run:

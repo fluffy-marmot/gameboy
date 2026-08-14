@@ -61,7 +61,6 @@ resolved_ram_index(memaddr address)
 static uint8_t
 read_bus_mbc1(memaddr address)
 {
-    // TODO probably add check against rom size
     if (ADDR_BELOW(ADDR_END_ROM_FIXED)) {
         if (mbc1.MODE == 0)
             return mbc1.cart->rom[address];

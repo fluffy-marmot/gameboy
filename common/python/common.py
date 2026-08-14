@@ -13,6 +13,9 @@ def GB_load_rom(romfile: Path) -> None:
 def GB_uses_bbram() -> bool:
     return GB.GB_uses_bbram()
 
+def GB_uses_rtc() -> bool:
+    return GB.GB_uses_rtc()
+
 def GB_load_bbram(bbram_file: Path) -> None:
     with open(bbram_file, "rb") as f:
         bbram_data = f.read()
@@ -62,3 +65,7 @@ def save_lcd_png(path: Path) -> None:
 
 def get_cartridge_ram_size() -> int:
     return gb.cartridge.contents.data.ram_size
+
+def get_cartridge_info() -> str:
+    header = gb.cartridge.contents.header
+    return f"Header: {header.mbc_type:02X} {header.rom_size_id:02X} {header.ram_size_id:02X} BBRAM: {GB_uses_bbram()} RTC: {GB_uses_rtc()}"
