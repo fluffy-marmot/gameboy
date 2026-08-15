@@ -150,10 +150,14 @@ update_stat_interrupt(void)
 {
     if (PPU_ENABLED) {
         ppu.irq->update_stat_interrupt_line(
-            (STAT_LYC_INT_SELECT &&  STAT_EQL                      ) ||
-            (STAT_MD0_INT_SELECT && (PPU_MODE == PPU_MODE_HBLANK  )) ||
-            (STAT_MD1_INT_SELECT && (PPU_MODE == PPU_MODE_VBLANK  )) ||
-            (STAT_MD2_INT_SELECT && (PPU_MODE == PPU_MODE_OAM_SCAN))
+            /*
+            The vblank case is a quirk on DMG mentioned in cycle-accurate GB docs and tested on hardware
+            by dtabacaru, the STAT_MD2 bit also seems to affect vblank 
+            */
+            (STAT_LYC_INT_SELECT                          &&  STAT_EQL                      ) ||
+            (STAT_MD0_INT_SELECT                          && (PPU_MODE == PPU_MODE_HBLANK  )) ||
+            ((STAT_MD1_INT_SELECT || STAT_MD2_INT_SELECT) && (PPU_MODE == PPU_MODE_VBLANK  )) ||
+            (STAT_MD2_INT_SELECT                          && (PPU_MODE == PPU_MODE_OAM_SCAN))
         );
     }
 }
