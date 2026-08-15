@@ -4,11 +4,11 @@ from tests.config import *
 
 import pytest
 
-from tests.test_mooneye.helpers import run_mooneye_test
+from tests.test_mooneye.helpers import run_mooneye_test, mooneye_params
 
 mooneye_instr = sorted((DATA_MOONEYE_ACCEPTANCE / "instr").rglob("*.gb"))
 
-@pytest.mark.parametrize("testrom", mooneye_instr, ids=lambda f: f.stem)
+@pytest.mark.parametrize("testrom", mooneye_params(mooneye_instr))
 def test_mooneye_instr(testrom, cpu):
     run_mooneye_test(testrom, cpu)
 

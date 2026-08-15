@@ -37,6 +37,7 @@ GB_ABI gb_return_t GB_load_rom(const uint8_t *data, size_t size);
 // check whether a loaded cartridge uses BBRAM
 GB_ABI bool        GB_uses_bbram(void);
 GB_ABI bool        GB_uses_rtc(void);
+GB_ABI bool        GB_uses_rumble(void);
 
 GB_ABI gb_return_t GB_load_bbram(const uint8_t *data, size_t size);
 
@@ -55,15 +56,15 @@ GB_ABI gb_return_t GB_update_joypad(bool start, bool select, bool b,    bool a,
 
 // ppu.c
 // get display data for LCD screen
-GB_ABI uint32_t *GB_get_lcd(void);
+GB_ABI uint32_t   *GB_get_lcd(void);
 GB_ABI gb_return_t GB_set_lcd_colors(uint32_t colors[4]);
 
 // serial.c
 // flush the serial out data buffer
-GB_ABI uint8_t *GB_serial_buffer_flush(void);
+GB_ABI uint8_t    *GB_serial_buffer_flush(void);
 
 // apu.c
 // flush the audio buffer data
-GB_ABI float *GB_audio_buffer_flush(void);
+GB_ABI float      *GB_audio_buffer_flush(void);
 
 #endif

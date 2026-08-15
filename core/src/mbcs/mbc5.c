@@ -23,10 +23,10 @@
 
 gb_mbc5_t mbc5;
 
-static uint16_t
+static uint32_t
 resolved_ram_index(memaddr address)
 {
-    uint16_t resolved = 0x2000 * RAM_BANK + (address - ADDR_START_WRAM_CARTRIDGE);
+    uint32_t resolved = 0x2000 * RAM_BANK + (address - ADDR_START_WRAM_CARTRIDGE);
     return resolved % mbc5.cart->ram_size;
 }
 
@@ -73,6 +73,7 @@ void
 init_gameboy_mbc5(gb_cartridge_t *cartridge, bool use_rumble)
 {
     memset(&mbc5, 0, sizeof(gb_mbc5_t));
+    mbc5.BANK_ROM_L = 0x01;
     mbc5.has_rumble = use_rumble;
     mbc5.cart = &cartridge->data;
     cartridge->mbc_bus = &bus_mbc5;

@@ -4,11 +4,11 @@ from tests.config import *
 
 import pytest
 
-from tests.test_mooneye.helpers import run_mooneye_test
+from tests.test_mooneye.helpers import run_mooneye_test, mooneye_params
 
 mooneye_em_mbc1 = sorted((DATA_MOONEYE_EMULATOR_ONLY / "mbc1").rglob("*.gb"))
 
 # @pytest.mark.skip(reason="Need to fix seg fault")
-@pytest.mark.parametrize("testrom", mooneye_em_mbc1, ids=lambda f: f.stem)
+@pytest.mark.parametrize("testrom", mooneye_params(mooneye_em_mbc1))
 def test_mooneye_em_mbc1(testrom, cpu):
-    run_mooneye_test(testrom, cpu, timeout_sec=60)
+    run_mooneye_test(testrom, cpu)

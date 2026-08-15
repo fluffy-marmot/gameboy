@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/dmg_mode1_stat_int/dmg_mode1_stat_int_tests.gb
+TEST_ROM = tests/testdata/mooneye/emulator-only/mbc5/rom_1Mb.gb
 K =
 
 run:

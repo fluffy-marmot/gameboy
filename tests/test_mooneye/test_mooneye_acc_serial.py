@@ -4,11 +4,11 @@ from tests.config import *
 
 import pytest
 
-from tests.test_mooneye.helpers import run_mooneye_test
+from tests.test_mooneye.helpers import run_mooneye_test, mooneye_params
 
 mooneye_serial = sorted((DATA_MOONEYE_ACCEPTANCE / "serial").rglob("*.gb"))
 
-@pytest.mark.parametrize("testrom", mooneye_serial, ids=lambda f: f.stem)
+@pytest.mark.parametrize("testrom", mooneye_params(mooneye_serial))
 def test_mooneye_serial(testrom, cpu):
     run_mooneye_test(testrom, cpu)
 

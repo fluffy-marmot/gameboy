@@ -121,6 +121,7 @@ select_mbc_controller(void)
     case MBC_TYPE_MBC5_RUMBLE:
     case MBC_TYPE_MBC5_RUMBLE_RAM:
     case MBC_TYPE_MBC5_RUMBLE_BBRAM:            use_rumble = true;                  /* fall through */
+    case MBC_TYPE_MBC5:
     case MBC_TYPE_MBC5_RAM:
     case MBC_TYPE_MBC5_BBRAM:                   init_gameboy_mbc5(&cartridge, use_rumble);      break;
 
@@ -129,7 +130,6 @@ select_mbc_controller(void)
     case MBC_TYPE_MMM01:
     case MBC_TYPE_MMM01_RAM:
     case MBC_TYPE_MMM01_BBRAM:
-    case MBC_TYPE_MBC5:
 
     case MBC_TYPE_MBC6:
     case MBC_TYPE_MBC7:
@@ -161,7 +161,7 @@ init_cartridge(gb_bus_t *bus)
 ############################################################################ */
 
 bool
-GB_uses_rtc(void)
+GB_uses_rumble(void)
 {
     switch (cartridge.header.mbc_type) {
     case MBC_TYPE_MBC5_RUMBLE:
@@ -174,7 +174,7 @@ GB_uses_rtc(void)
 }
 
 bool
-GB_uses_rumble(void)
+GB_uses_rtc(void)
 {
     switch (cartridge.header.mbc_type) {
     case MBC_TYPE_MBC3_RTCLOCK_BBRAM:

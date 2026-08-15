@@ -454,6 +454,9 @@ GB.GB_uses_bbram.restype = c_bool
 GB.GB_uses_rtc.argtypes = []
 GB.GB_uses_rtc.restype = c_bool
 
+GB.GB_uses_rumble.argtypes = []
+GB.GB_uses_rumble.restype = c_bool
+
 GB.GB_serial_buffer_flush.argtypes = []
 GB.GB_serial_buffer_flush.restype = pointer(uint8)
 
