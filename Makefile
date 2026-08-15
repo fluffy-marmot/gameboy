@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/mooneye/acceptance/timer/rapid_toggle.gb
+TEST_ROM = tests/testdata/mooneye/acceptance/serial/boot_sclk_align-dmgABCmgb.gb
 K =
 
 run:

@@ -79,9 +79,14 @@ GB_set_post_boot_state(void)
     gb.cpu->L = 0x4D;
     gb.cpu->SP = 0xFFFE;
     gb.cpu->PC = 0x0100;
+
     gb.bus->bus_dispatcher->write(MEMADDR_LCDC, 0x91);              // LCDC - enable 
     gb.bus->bus_dispatcher->write(MEMADDR_BGP, 0xFC);               // BGP - set palette as bootrom
     gb.bus->bus_dispatcher->write(MEMADDR_BOOT_ROM_LOCK, 1);        // lock boot ROM
+
+    // the startup value should be 0xABCC but since this emulator will run a fetch as the first mcycle, this
+    // gives the correct value after the initial fetch
+    gb.timers->DIV = 0xABC8;
 
     return GB_RETURN_OK;
 }
