@@ -2,6 +2,7 @@
 #include "cartridge.h"
 #include "mbcs/mbc1.h"
 #include "mbcs/mbc3.h"
+#include "mbcs/mbc5.h"
 
 static gb_cartridge_t cartridge;
 
@@ -100,6 +101,7 @@ select_mbc_controller(void)
 {
     uint8_t bm = rom_bank_bitmask();
     bool use_rtc = false;
+    bool use_rumble = false;
 
     switch (cartridge.header.mbc_type) {
     case MBC_TYPE_NONE_PLAIN_ROM:
@@ -115,6 +117,12 @@ select_mbc_controller(void)
     case MBC_TYPE_MBC3:
     case MBC_TYPE_MBC3_RAM:
     case MBC_TYPE_MBC3_BBRAM:                   init_gameboy_mbc3(&cartridge, use_rtc);         break;
+    
+    case MBC_TYPE_MBC5_RUMBLE:
+    case MBC_TYPE_MBC5_RUMBLE_RAM:
+    case MBC_TYPE_MBC5_RUMBLE_BBRAM:            use_rumble = true;                  /* fall through */
+    case MBC_TYPE_MBC5_RAM:
+    case MBC_TYPE_MBC5_BBRAM:                   init_gameboy_mbc5(&cartridge, use_rumble);      break;
 
     case MBC_TYPE_MBC2:
     case MBC_TYPE_MBC2_BBRAM:
@@ -122,11 +130,7 @@ select_mbc_controller(void)
     case MBC_TYPE_MMM01_RAM:
     case MBC_TYPE_MMM01_BBRAM:
     case MBC_TYPE_MBC5:
-    case MBC_TYPE_MBC5_RAM:
-    case MBC_TYPE_MBC5_BBRAM:
-    case MBC_TYPE_MBC5_RUMBLE:
-    case MBC_TYPE_MBC5_RUMBLE_RAM:
-    case MBC_TYPE_MBC5_RUMBLE_BBRAM:
+
     case MBC_TYPE_MBC6:
     case MBC_TYPE_MBC7:
     case MBC_TYPE_POCKET_CAMERA:
@@ -158,6 +162,19 @@ init_cartridge(gb_bus_t *bus)
 
 bool
 GB_uses_rtc(void)
+{
+    switch (cartridge.header.mbc_type) {
+    case MBC_TYPE_MBC5_RUMBLE:
+    case MBC_TYPE_MBC5_RUMBLE_RAM:
+    case MBC_TYPE_MBC5_RUMBLE_BBRAM:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool
+GB_uses_rumble(void)
 {
     switch (cartridge.header.mbc_type) {
     case MBC_TYPE_MBC3_RTCLOCK_BBRAM:
