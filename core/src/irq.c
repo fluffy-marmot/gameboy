@@ -2,7 +2,6 @@
 
 #define BIT                                     0b00000001
 
-#define USEPINS_IE                              0b00011111
 #define USEPINS_IF                              0b00011111
 
 static gb_irq_handler_t irq_handler;
@@ -45,8 +44,8 @@ static uint8_t
 read_interrupt_registers(memaddr address)
 { 
     switch (address) {
-    case MEMADDR_IF:                            return irq_handler.IF | ~USEPINS_IE;
-    case MEMADDR_IE:                            return irq_handler.IE | ~USEPINS_IF;
+    case MEMADDR_IF:                            return irq_handler.IF | ~USEPINS_IF;
+    case MEMADDR_IE:                            return irq_handler.IE;
     default:                                    return UNREADABLE;
     }
 }
@@ -56,7 +55,7 @@ write_interrupt_registers(memaddr address, uint8_t value)
 {
     switch (address) {
     case MEMADDR_IF:                            irq_handler.IF = value | ~USEPINS_IF;       break;
-    case MEMADDR_IE:                            irq_handler.IE = value | ~USEPINS_IF;       break;
+    case MEMADDR_IE:                            irq_handler.IE = value              ;       break;
     }
 }
 static bus_interface_t bus_registers_interrupt = { read_interrupt_registers, write_interrupt_registers };

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/mooneye/emulator-only/mbc5/rom_1Mb.gb
+TEST_ROM = tests/testdata/mooneye/acceptance/bits/unused_hwio-GS.gb
 K =
 
 run:
