@@ -10,7 +10,7 @@ emulate_machine_cycle(void)
 {
     bool encountered_vblank = false;
     cycle_mcycle_dma();
-    cycle_mcycle_cpu(CPU_FETCH_OVERLAPPING);
+    cycle_mcycle_cpu(CPU_FETCH_MANUAL_CONTROL);
     for (int tcycle = 0; tcycle < DOTS_PER_MACHINE_CYCLE; tcycle++) {
         // TODO timers should be running on mcycles? pandocs differs from other source
         cycle_tcycle_timers();
@@ -32,6 +32,9 @@ emulate_machine_cycle(void)
         encountered_vblank |= cycle_tcycle_ppu();
     }
     cycle_mcycle_apu_pulse_channels();
+    
+    if (gb.cpu->cycle_num == gb.cpu->instruction->cycle_count)
+        fetch_instruction();
     return encountered_vblank;
 }
 

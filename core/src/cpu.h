@@ -54,10 +54,12 @@ typedef sm83_cpu_t gb_cpu_t;
 
 typedef enum {
     CPU_FETCH_OVERLAPPING,
-    CPU_FETCH_TESTMODE_SINGLE_INSTRUCTION
+    CPU_FETCH_TESTMODE_SINGLE_INSTRUCTION,
+    CPU_FETCH_MANUAL_CONTROL
 } cpu_fetch_t;
 
 gb_cpu_t *init_gameboy_cpu(gb_bus_t *, gb_irq_handler_t *);
 void cycle_mcycle_cpu(cpu_fetch_t);
+void fetch_instruction(void);
 
 #endif

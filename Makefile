@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/mooneye/acceptance/timer/tma_write_reloading.gb
+TEST_ROM = tests/testdata/mooneye/acceptance/timer/rapid_toggle.gb
 K =
 
 run:

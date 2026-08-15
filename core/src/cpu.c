@@ -1799,7 +1799,7 @@ static const instruction_t CB_OPCODE_TABLE[256] = {
 ###############################################################################
 ############################################################################ */
 
-static void
+void
 fetch_instruction(void)
 {
     if (cpu.cb_instruction) {
@@ -1838,7 +1838,7 @@ cycle_mcycle_cpu(cpu_fetch_t fetch_mode)
     // bootstrap first instruction fetch etc., consider it to last 1 mcycle if not in test mode
     if (cpu.instruction == NULL || cpu.cycle_num == cpu.instruction->cycle_count) {
         fetch_instruction();
-        if (fetch_mode == CPU_FETCH_OVERLAPPING)
+        if (fetch_mode != CPU_FETCH_TESTMODE_SINGLE_INSTRUCTION)
             return;
     }
 
