@@ -2,7 +2,7 @@
 
 // clear bit 5 of address high byte if we exceed max value
 #define DMA_MAX_VALUE                           0xDF
-#define DMA_MAX_VALUE_OVERFLOW_MASK             0b11101111
+#define DMA_MAX_VALUE_OVERFLOW_MASK             0b11011111
 
 static gb_dma_t dma;
 
