@@ -11,6 +11,8 @@
 #define DIV_BIT_FOR_SERIAL                      0b100000000
 #define DIV_BIT_FOR_APU                         0b1000000000000
 
+#define TIMA_VAL                                timers.tima_overflow_cycles == 1 ? timers.TMA : timers.TIMA
+
 static const uint16_t DIV_BIT_USED[] = {        0b1000000000,
                                                 0b0000001000,
                                                 0b0000100000,
@@ -24,7 +26,7 @@ read_timers_reg(memaddr address)
 {
     switch (address) {
     case MEMADDR_DIV:                           return timers.DIV >> 8;
-    case MEMADDR_TIMA:                          return timers.TIMA;
+    case MEMADDR_TIMA:                          return TIMA_VAL;
     case MEMADDR_TMA:                           return timers.TMA;
     case MEMADDR_TAC:                           return timers.TAC | (USEPINS_TAC ^ 0xFF);
     default:                                    return UNREADABLE;
@@ -69,7 +71,7 @@ cycle_tcycle_timers(void)
     // check for falling edge to increment TIMA timer
     } else if (timers.timer_operation_stored && !timer_operation) {
         if (++timers.TIMA == 0x00) {
-            timers.tima_overflow_cycles = 4;
+            timers.tima_overflow_cycles = 5;
         }
     }
     timers.timer_operation_stored = timer_operation;

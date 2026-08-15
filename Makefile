@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/mooneye/acceptance/bits/unused_hwio-GS.gb
+TEST_ROM = tests/testdata/mooneye/acceptance/timer/tma_write_reloading.gb
 K =
 
 run:
