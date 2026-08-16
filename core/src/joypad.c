@@ -71,6 +71,8 @@ gb_joypad_t *
 init_gameboy_joypad(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
     memset(&joypad, 0, sizeof(gb_joypad_t));
+    memset(&joypad.BUTTON_SELECT, true, 8);
+    update_joyp_register();
     joypad.irq = irq;
     bus->interface_reg_joypad = &bus_reg_joypad;
     return &joypad;

@@ -83,7 +83,14 @@ GB_set_post_boot_state(void)
     gb.bus->bus_dispatcher->write(MEMADDR_LCDC, 0x91);              // LCDC - enable 
     gb.bus->bus_dispatcher->write(MEMADDR_BGP, 0xFC);               // BGP - set palette as bootrom
     gb.bus->bus_dispatcher->write(MEMADDR_BOOT_ROM_LOCK, 1);        // lock boot ROM
+    gb.bus->bus_dispatcher->write(MEMADDR_IF, 0x01);                // vblank interrupt pending
 
+    gb.apu->NR11 = 0xBF;                                            // ch1 duty cycle & len timer
+    gb.apu->NR12 = 0xF3;
+    gb.apu->NR50 = 0x77;
+    gb.apu->NR51 = 0xF3;
+    gb.apu->NR52 = 0xF1;
+    
     // the startup value should be 0xABCC but since this emulator will run a fetch as the first mcycle, this
     // gives the correct value after the initial fetch
     gb.timers->DIV = 0xABC8;
