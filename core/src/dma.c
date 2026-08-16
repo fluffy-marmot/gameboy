@@ -18,7 +18,7 @@ write_bus_dma(memaddr address, uint8_t val)
 {
     if (address == MEMADDR_DMA) {
         dma.DMA = val > DMA_MAX_VALUE ? val & DMA_MAX_VALUE_OVERFLOW_MASK : val;
-        dma.cycles_active = GB_DMG_OAM_SIZE;
+        dma.scheduled = 1;
     }
 }
 static bus_interface_t bus_dma = { .read = read_bus_dma, .write = write_bus_dma };
@@ -26,12 +26,21 @@ static bus_interface_t bus_dma = { .read = read_bus_dma, .write = write_bus_dma 
 void
 cycle_mcycle_dma(void)
 {
-    dma.status = DMA_TRANSFER_INACTIVE;
+    dma.status = DMA_INACTIVE;
+
     if (dma.cycles_active) {
         uint8_t byte = GB_DMG_OAM_SIZE - dma.cycles_active--;
-        dma.data = dma.bus->read(((dma.DMA << 8) + byte));
+        dma.data = dma.bus->read(((dma.DMA_latched << 8) + byte));
         dma.bus->write(ADDR_START_OAM_MEM + byte, dma.data);
-        dma.status = DMA_TRANSFER_ACTIVE;
+        if (ADDR_START_VRAM <= (dma.DMA << 8) && (dma.DMA << 8) <= ADDR_END_VRAM)
+            dma.status = DMA_ACTIVE_BUS_VRAM;
+        else
+            dma.status = DMA_ACTIVE_BUS_EXTERNAL;
+    }
+
+    if (dma.scheduled && dma.scheduled--) {
+        dma.cycles_active = GB_DMG_OAM_SIZE;
+        dma.DMA_latched = dma.DMA;
     }
 }
 

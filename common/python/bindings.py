@@ -104,6 +104,8 @@ class gb_dma_t(struct):
     _fields_ = [
         ("DMA", uint8),
 
+        ("DMA_latched", uint8),
+        ("scheduled", uint8),
         ("cycles_active", uint8),
         ("data", uint8),
         ("status", c_int),

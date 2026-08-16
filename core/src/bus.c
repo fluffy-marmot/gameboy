@@ -83,15 +83,27 @@ select_interface(memaddr address)
 static uint8_t
 read_bus_dispatch(memaddr address)
 {
-    if (bus.dma->status == DMA_TRANSFER_ACTIVE && !ADDRESS_FF_BUS(address))
-        return bus.dma->data;
+    if (bus.dma->status != DMA_INACTIVE && !ADDRESS_FF_BUS(address)) {
+        if (ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_OAM_MEM))
+            return UNREADABLE;
+        else if (ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM) && bus.dma->status == DMA_ACTIVE_BUS_VRAM)
+            return bus.dma->data;
+        else if (!ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM) && bus.dma->status == DMA_ACTIVE_BUS_EXTERNAL)
+            return bus.dma->data;
+    }
     return select_interface(address)->read(address);
 }
 static void
 write_bus_dispatch(memaddr address, uint8_t val)
 {
-    if (bus.dma->status == DMA_TRANSFER_ACTIVE && !ADDRESS_FF_BUS(address))
-        return;
+    if (bus.dma->status != DMA_INACTIVE && !ADDRESS_FF_BUS(address)) {
+        if (ADDR_RANGE(ADDR_START_OAM_MEM, ADDR_END_OAM_MEM))
+            return;
+        else if (ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM) && bus.dma->status == DMA_ACTIVE_BUS_VRAM)
+            return;
+        else if (!ADDR_RANGE(ADDR_START_VRAM, ADDR_END_VRAM) && bus.dma->status == DMA_ACTIVE_BUS_EXTERNAL)
+            return;
+    }
     select_interface(address)->write(address, val);
 }
 static bus_interface_t bus_dispatcher = { .read = read_bus_dispatch, .write = write_bus_dispatch };

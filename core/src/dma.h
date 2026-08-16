@@ -5,13 +5,16 @@
 #include "bus.h"
 
 typedef enum {
-    DMA_TRANSFER_INACTIVE,
-    DMA_TRANSFER_ACTIVE
+    DMA_INACTIVE,
+    DMA_ACTIVE_BUS_VRAM,
+    DMA_ACTIVE_BUS_EXTERNAL
 } dma_status_t;
 
 typedef struct gb_dma{
     uint8_t DMA;                                // DMA control register
 
+    uint8_t DMA_latched;
+    uint8_t scheduled;
     uint8_t cycles_active;
     uint8_t data;
     dma_status_t status;
