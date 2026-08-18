@@ -9,18 +9,20 @@ static bool
 emulate_machine_cycle(void)
 {
     bool encountered_vblank = false;
+
     cycle_mcycle_dma();
     cycle_mcycle_cpu(CPU_FETCH_MANUAL_CONTROL);
+
+    // TODO serial should be using its own clock?
+    if (gb.timers->serial_falling_edge)
+        cycle_serial();
     for (int tcycle = 0; tcycle < DOTS_PER_MACHINE_CYCLE; tcycle++) {
         // TODO timers should be running on mcycles? pandocs differs from other source
         cycle_tcycle_timers();
+        
         // cartridge real time clock
         if (GB_uses_rtc())
             cycle_tcycle_rtc();
-
-        if (gb.timers->serial_falling_edge)
-            // TODO serial should be using its own clock?
-            cycle_serial();
 
         if (gb.timers->apu_falling_edge)
             cycle_512hz_apu_frame_sequencer();
@@ -29,12 +31,14 @@ emulate_machine_cycle(void)
         cycle_tcycle_apu_noise_channel();
         cycle_tcycle_apu_emit_sample();
 
-        encountered_vblank |= cycle_tcycle_ppu();
     }
     cycle_mcycle_apu_pulse_channels();
     
     if (gb.cpu->cycle_num == gb.cpu->instruction->cycle_count)
         fetch_instruction();
+    for (int tcycle = 0; tcycle < DOTS_PER_MACHINE_CYCLE; tcycle++) {
+        encountered_vblank |= cycle_tcycle_ppu();
+    }
     return encountered_vblank;
 }
 
@@ -93,7 +97,7 @@ GB_set_post_boot_state(void)
     
     // the startup value should be 0xABCC but since this emulator will run a fetch as the first mcycle, this
     // gives the correct value after the initial fetch
-    gb.timers->DIV = 0xABC8;
+    gb.timers->DIV = 0xABCC;
 
     return GB_RETURN_OK;
 }

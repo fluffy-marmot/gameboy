@@ -32,7 +32,7 @@ cycle_mcycle_dma(void)
         uint8_t byte = GB_DMG_OAM_SIZE - dma.cycles_active--;
         dma.data = dma.bus->read(((dma.DMA_latched << 8) + byte));
         dma.bus->write(ADDR_START_OAM_MEM + byte, dma.data);
-        if (ADDR_START_VRAM <= (dma.DMA << 8) && (dma.DMA << 8) <= ADDR_END_VRAM)
+        if (ADDR_START_VRAM <= (dma.DMA_latched << 8) && (dma.DMA_latched << 8) <= ADDR_END_VRAM)
             dma.status = DMA_ACTIVE_BUS_VRAM;
         else
             dma.status = DMA_ACTIVE_BUS_EXTERNAL;

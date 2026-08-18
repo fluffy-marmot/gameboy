@@ -471,7 +471,7 @@ Helper for adding two 8-bit values and setting both carry flags
 static uint8_t 
 add_and_set_carry_flags(uint8_t val1, uint8_t val2, uint8_t carry)
 {
-    uint8_t  nibble = (val1 & MASK_NIBBLE_L) + (val2 & MASK_NIBBLE_L) + carry;
+    uint8_t nibble = (val1 & MASK_NIBBLE_L) + (val2 & MASK_NIBBLE_L) + carry;
     if (nibble > MASK_NIBBLE_L) SET_H; else CLR_H;
 
     uint16_t result = val1 + val2 + carry;
@@ -495,6 +495,7 @@ static void adc_Z_to_A  () { add_to_A(cpu.Z, FLAG_C);                        }
 static void add_e_to_SPl() { add_and_set_carry_flags(cpu.SP, cpu.Z, 0);      }  // Cheating a 'lil with Z latch
 static void add_e_to_SPh() { WZ_set(cpu.SP + (int8_t) cpu.Z); CLR_N; CLR_Z;  }
 
+// TODO i don't think I need this function?
 static void
 add_to_reg(uint8_t *reg_addr, uint8_t val, uint8_t carry)
 {

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := debug
 
-TEST_ROM = tests/testdata/mooneye/acceptance/serial/boot_sclk_align-dmgABCmgb.gb
+TEST_ROM = tests/testdata/blargg/instr_timing/instr_timing.gb
 K =
 
 run:
