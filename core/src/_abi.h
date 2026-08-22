@@ -1,5 +1,10 @@
 #ifndef GB_ABI
-#define GB_ABI __attribute__((visibility("default")))
+    #ifdef __EMSCRIPTEN__
+    #include <emscripten.h>
+    #define GB_ABI EMSCRIPTEN_KEEPALIVE
+    #else
+    #define GB_ABI __attribute__((visibility("default")))
+    #endif
 
 #include "_specification.h"
 
