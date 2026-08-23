@@ -72,5 +72,6 @@ GB_ABI uint16_t    GB_serial_buffer_size(void);
 // apu.c
 // flush the audio buffer data
 GB_ABI float      *GB_audio_buffer_flush(void);
+GB_ABI uint16_t    GB_audio_buffer_size(void);
 
 #endif

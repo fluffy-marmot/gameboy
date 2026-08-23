@@ -819,3 +819,9 @@ GB_audio_buffer_flush(void)
     apu.buf.size = 0;
     return (float *) apu.buf.data;
 }
+
+uint16_t
+GB_audio_buffer_size(void)
+{
+    return apu.buf.size;
+}

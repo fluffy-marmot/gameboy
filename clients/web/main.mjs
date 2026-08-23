@@ -16,6 +16,8 @@ const GB_set_post_boot_state = Module.cwrap('GB_set_post_boot_state', 'number', 
 const GB_get_lcd = Module.cwrap('GB_get_lcd', 'number', []);
 const GB_update_joypad = Module.cwrap('GB_update_joypad', null,
     ['boolean','boolean','boolean','boolean','boolean','boolean','boolean','boolean']);
+const GB_audio_buffer_size = Module.cwrap('GB_audio_buffer_size', 'number', []);
+const GB_audio_buffer_flush = Module.cwrap('GB_audio_buffer_flush', 'number', []);
 
 const LCDPtr = GB_get_lcd();
 
@@ -27,6 +29,7 @@ const imageData = ctx.createImageData(LCD_WIDTH, LCD_HEIGHT);
 
 let frameTimer = 0;
 let lastTimestamp = null;
+let isPaused = false;
 
 function drawFrame() {
     const src = Module.HEAPU8.subarray(LCDPtr, LCDPtr + LCD_HEIGHT * LCD_WIDTH * 4);
@@ -41,6 +44,9 @@ function drawFrame() {
 }
 
 function loop(timestamp) {
+    if (isPaused)
+        return;
+
     if (lastTimestamp === null)
         lastTimestamp = timestamp;
 
@@ -54,12 +60,15 @@ function loop(timestamp) {
             !keyState.down, !keyState.up, !keyState.left, !keyState.right
         );
         GB_emulate_frame();
-        frameTimer -= FRAME_TIME_MS;
         drawFrame();
+        queueAudio();
+        frameTimer -= FRAME_TIME_MS;
     }
 
     requestAnimationFrame(loop);
 }
+
+// Loading ROMs
 
 async function loadRom(name) {
     const response = await fetch(resolveRomPath(name));
@@ -99,6 +108,8 @@ if (!romName) {
     }
 }
 
+// Joypad stuff
+
 const keyState = {
     start: false, select: false, b: false, a: false,
     down: false, up: false, left: false, right: false,
@@ -127,5 +138,65 @@ window.addEventListener('keyup', (e) => {
     if (button) {
         keyState[button] = false;
         e.preventDefault();
+    }
+});
+
+// Audio playback
+
+const AUDIO_SAMPLE_RATE = 44100;
+const audioCtx = new AudioContext({ sampleRate: AUDIO_SAMPLE_RATE });
+let nextStartTime = 0;
+let audioStarted = false;
+
+function unlockAudio() {
+    if (!audioStarted) {
+        audioCtx.resume();
+        audioStarted = true;
+    }
+    isPaused = false;
+}
+window.addEventListener('keydown', unlockAudio, { once: true });
+
+function queueAudio() {
+    if (!audioStarted)
+        return;
+
+    const sampleCount = GB_audio_buffer_size(); // stereo pairs
+    if (sampleCount === 0) return;
+
+    const ptr = GB_audio_buffer_flush();
+    const floatIndex = ptr / 4; // byte pointer -> HEAPF32 index
+    const interleaved = Module.HEAPF32.subarray(floatIndex, floatIndex + sampleCount * 2);
+
+    const audioBuffer = audioCtx.createBuffer(2, sampleCount, AUDIO_SAMPLE_RATE);
+    const left = audioBuffer.getChannelData(0);
+    const right = audioBuffer.getChannelData(1);
+    for (let i = 0; i < sampleCount; i++) {
+        left[i]  = interleaved[i * 2];
+        right[i] = interleaved[i * 2 + 1];
+    }
+
+    const source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioCtx.destination);
+
+    const now = audioCtx.currentTime;
+    if (nextStartTime < now) {
+        nextStartTime = now + 0.05; // fell behind — resync with a little headroom instead of bursting
+    }
+    source.start(nextStartTime);
+    nextStartTime += sampleCount / AUDIO_SAMPLE_RATE;
+}
+
+// stop loop and audio playback to prevent super annoying audio blips from loop running 1 sec (?)
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        isPaused = true;
+        audioCtx.suspend();
+    } else {
+        isPaused = false;
+        lastTimestamp = null;
+        audioCtx.resume();
+        requestAnimationFrame(loop);
     }
 });

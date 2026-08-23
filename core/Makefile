@@ -33,8 +33,8 @@ debug:
 ############### for emscripten web build ###############
 
 # add  -Wno-c23-extensions to silence warnings? or edit anything?
-EMCC_FLAGS = -sMODULARIZE=1 -sEXPORT_ES6=1  							\
-			 -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPU8"]' 	\
+EMCC_FLAGS = -sMODULARIZE=1 -sEXPORT_ES6=1  										\
+			 -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPU8","HEAPF32"]' 	\
 			 -s EXPORTED_FUNCTIONS='["_malloc","_free"]'
 
 # check whether typescript is available, it's not a hard build dependency but
