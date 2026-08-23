@@ -90,6 +90,12 @@ init_gameboy_serial(gb_bus_t *bus, gb_irq_handler_t *irq)
 ###############################################################################
 ############################################################################ */
 
+uint16_t
+GB_serial_buffer_size(void)
+{
+    return serial.buf.size;
+}
+
 // caller should read size of buf before flushing it, as it will be set to 0
 uint8_t *
 GB_serial_buffer_flush(void)

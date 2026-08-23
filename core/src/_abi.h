@@ -67,6 +67,7 @@ GB_ABI gb_return_t GB_set_lcd_colors(uint32_t colors[4]);
 // serial.c
 // flush the serial out data buffer
 GB_ABI uint8_t    *GB_serial_buffer_flush(void);
+GB_ABI uint16_t    GB_serial_buffer_size(void);
 
 // apu.c
 // flush the audio buffer data
