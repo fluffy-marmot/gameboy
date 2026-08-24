@@ -62,7 +62,7 @@ GB_ABI gb_return_t GB_update_joypad(bool start, bool select, bool b,    bool a,
 // ppu.c
 // get display data for LCD screen
 GB_ABI uint32_t   *GB_get_lcd(void);
-GB_ABI gb_return_t GB_set_lcd_colors(uint32_t colors[4]);
+GB_ABI gb_return_t GB_set_lcd_colors(uint32_t clr0, uint32_t clr1, uint32_t clr2, uint32_t clr3);
 
 // serial.c
 // flush the serial out data buffer

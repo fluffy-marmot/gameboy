@@ -1,3 +1,24 @@
+:root {
+    --lcd-width: 160;
+    --lcd-height: 144;
+
+    --clr-background: black;
+    --clr-lcd-off: white;
+    --clr-border: darkslateblue;
+    --clr-border-selected: yellow;
+
+    --clr-sidebar: #1a1a1a;
+    --clr-sidebar-toggle: rgba(255, 255, 255, 0.35);
+    --clr-sidebar-toggle-hover: rgba(255, 255, 255, 0.85);
+
+    --sidebar-icon-size: 32px;
+    --sidebar-width: 100px;
+
+    --z-index-below-sidebar: 10;
+    --z-index-sidebar: 20;
+    --z-index-above-sidebar: 30;
+}
+
 html, body {
     height: 100%;
     margin: 0;
@@ -9,18 +30,18 @@ html, body {
     justify-content: center;
     height: 100vh;
     width: 100%;
-    background-color: black;
+    background-color: var(--clr-background);
 }
 
 #canvas-lcd {
-    background-color: cyan;
-    border: 2px solid darkslateblue;
+    background-color: var(--clr-lcd-off);
+    border: 2px solid var(--clr-border);
     margin: 10px;
-    aspect-ratio: 160 / 144;
+    aspect-ratio: var(--lcd-width) / var(--lcd-height);
     max-width: 100%;
     max-height: 100%;
-    min-width: 160px;
-    min-height: 144px;
+    min-width: calc(var(--lcd-width) * 1px);
+    min-height: calc(var(--lcd-height) * 1px);
     image-rendering: pixelated;
 }
 
@@ -29,14 +50,14 @@ html, body {
 
 #sidebar-toggle {
     position: fixed;
-    top: 4px;
+    bottom: 4px;
     left: 4px;
-    z-index: 30; /* above #sidebar's 20, and #sidebar-trigger's 10 */
-    width: 32px;
-    height: 32px;
+    z-index: var(--z-index-above-sidebar);
+    width: var(--sidebar-icon-size);
+    height: var(--sidebar-icon-size);
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.35); /* subtle, mostly-background by default */
+    color: var(--clr-sidebar-toggle);
     cursor: pointer;
     transition: color 0.15s ease-out;
     display: flex;
@@ -45,31 +66,62 @@ html, body {
     padding: 0;
 }
 #sidebar-toggle:hover {
-    color: rgba(255, 255, 255, 0.85); /* becomes clearly visible on hover */
+    color: var(--clr-sidebar-toggle-hover);
 }
 
 #sidebar-trigger {
     position: fixed;
     left: 0;
     top: 0;
-    width: 40px;
+    width: var(--sidebar-width);
     height: 100%;
-    z-index: 10;
+    z-index: var(--z-index-below-sidebar);
 }
 
 #sidebar {
+    padding: 4px;
     position: fixed;
     left: 0;
     top: 0;
     height: 100%;
-    width: 40px;
-    background: #1a1a1a;
+    width: var(--sidebar-width);
+    background: var(--clr-sidebar);
     color: white;
     transform: translateX(-100%);
     transition: transform 0.2s ease-out;
-    z-index: 20;
+    z-index: var(--z-index-sidebar);
 }
 
 #sidebar.open {
     transform: translateX(0);
+}
+
+#sidebar-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: start;
+}
+
+#sidebar-palette-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.palette-select {
+    display: flex;
+    border: 1px solid var(--clr-border);
+}
+
+.palette-select.selected {
+    border: 1px solid var(--clr-border-selected);
+}
+
+.palette-clr {
+    width: 20px;
+    height: 16px;
+    border: 1px solid var(--clr-border);
 }

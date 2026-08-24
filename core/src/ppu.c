@@ -136,7 +136,7 @@ static struct {
 } pixel_mixer;
 
 // Ordered as ABGR as written, but as RGBA as little endian
-static const uint32_t DEFAULT_LCD_COLORS[4] = {
+static const uint32_t DEFAULT_LCD[4] = {
     0xFFBFFFF4,
     0xFF41D99A,
     0xFF578060,
@@ -669,7 +669,7 @@ init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
 {
     memset(&ppu, 0, sizeof(gb_ppu_t));
     ppu.irq = irq;
-    GB_set_lcd_colors((uint32_t *) DEFAULT_LCD_COLORS);
+    GB_set_lcd_colors(DEFAULT_LCD[0], DEFAULT_LCD[1], DEFAULT_LCD[2], DEFAULT_LCD[3]);
     bus->interface_vram = &bus_vram;
     bus->interface_oam = &bus_oam;
     bus->interface_reg_ppu = &bus_registers_ppu;
@@ -690,7 +690,10 @@ uint32_t *GB_get_lcd(void) {
     return ppu.lcd.pixels;
 }
 
-gb_return_t GB_set_lcd_colors(uint32_t colors[4]) {
-    memcpy(ppu.lcd.colors, colors, 4 * sizeof(uint32_t));
+gb_return_t GB_set_lcd_colors(uint32_t clr0, uint32_t clr1, uint32_t clr2, uint32_t clr3) {
+    ppu.lcd.colors[0] = clr0;
+    ppu.lcd.colors[1] = clr1;
+    ppu.lcd.colors[2] = clr2;
+    ppu.lcd.colors[3] = clr3;
     return GB_RETURN_OK;
 }

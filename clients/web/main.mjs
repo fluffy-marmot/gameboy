@@ -14,6 +14,8 @@ const GB_update_joypad = GB_MODULE.cwrap('GB_update_joypad', null,
     ['boolean','boolean','boolean','boolean','boolean','boolean','boolean','boolean']);
 const GB_audio_buffer_size = GB_MODULE.cwrap('GB_audio_buffer_size', 'number', []);
 const GB_audio_buffer_flush = GB_MODULE.cwrap('GB_audio_buffer_flush', 'number', []);
+const GB_set_lcd_colors = GB_MODULE.cwrap('GB_set_lcd_colors', 'number',
+    ['number', 'number', 'number', 'number']);
 
 // main loop
 
@@ -241,8 +243,30 @@ trigger.addEventListener('mouseleave', maybeHide);
 sidebar.addEventListener('mouseenter', show);
 sidebar.addEventListener('mouseleave', maybeHide);
 
+// stuff having to do with palette selection divs
+
+document.querySelectorAll('.palette-clr').forEach(el => {
+    const gb_color = parseInt(el.dataset.color, 16);
+    const r = gb_color & 0xFF;
+    const g = (gb_color >> 8) & 0xFF;
+    const b = (gb_color >> 16) & 0xFF;
+    el.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+});
+
+document.querySelectorAll('.palette-select').forEach(el => {
+    el.addEventListener('click', (e) => {
+        document.querySelectorAll('.palette-select').forEach(elem => {
+            elem.classList.remove('selected');
+        });
+        el.classList.add('selected');
+        const clrs = Array.from(el.querySelectorAll('.palette-clr')).map(p => parseInt(p.dataset.color, 16));
+        GB_set_lcd_colors(clrs[0], clrs[1], clrs[2], clrs[3]);
+    });
+});
+
+
 // svg icons from bootstrap icons - only using a few so probably worth
-// just importing each SVG manually instead of adding a CDN dependency
+// just defining each SVG manually instead of adding a CDN dependency
 
 const CHEVRON_ICON_SVG = `
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">

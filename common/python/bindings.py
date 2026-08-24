@@ -431,7 +431,7 @@ GB.GB_test_single_instruction.argtypes = [c_int]
 GB.GB_get_lcd.argtypes = []
 GB.GB_get_lcd.restype = pointer(uint32)
 
-GB.GB_set_lcd_colors.argtypes = [4 * uint32]
+GB.GB_set_lcd_colors.argtypes = [uint32, uint32, uint32, uint32]
 GB.GB_set_lcd_colors.restype = None
 
 GB.GB_set_post_boot_state.argtypes = []

@@ -32,7 +32,7 @@ def GB_set_post_boot_state() -> None:
 
 # defaults to the colors required for image comparisons by Matt Currie tests
 def GB_set_lcd_colors(clr0: int=0xFFFFFFFF, clr1:int=0xFFAAAAAA, clr2:int=0xFF555555, clr3:int=0xFF000000):
-    GB.GB_set_lcd_colors((uint32 * 4)(clr0, clr1, clr2, clr3))
+    GB.GB_set_lcd_colors(clr0, clr1, clr2, clr3)
 
 def GB_emulate_frame() -> None:
     GB.GB_emulate_frame()
