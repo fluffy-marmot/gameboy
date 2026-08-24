@@ -12,7 +12,7 @@
     --clr-sidebar-toggle-hover: rgba(255, 255, 255, 0.85);
 
     --sidebar-icon-size: 32px;
-    --sidebar-width: 100px;
+    --sidebar-width: 160px;
 
     --z-index-below-sidebar: 10;
     --z-index-sidebar: 20;
@@ -100,7 +100,8 @@ html, body {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    align-items: start;
+    height: 100%;
+    min-height: 0;
 }
 
 #sidebar-palette-content {
@@ -124,4 +125,38 @@ html, body {
     width: 20px;
     height: 16px;
     border: 1px solid var(--clr-border);
+}
+
+#sidebar-roms-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#sidebar-roms-content summary, .rom-leaf {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#sidebar-roms-content details, .rom-leaf {
+    margin-left: 10px;
+    user-select: none;
+}
+
+#sidebar-roms-content .rom-leaf {
+    cursor: pointer;
+}
+
+#rom-tooltip {
+    display: none;
+    position: fixed;
+    background: var(--clr-sidebar);
+    border: 2px solid var(--clr-border);
+    padding: 0;
+    color: white;
+    z-index: var(--z-index-above-sidebar);
+    pointer-events: none;
+    white-space: nowrap;
 }
