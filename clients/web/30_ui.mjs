@@ -4,7 +4,7 @@ import {
 } from "./20_emulator.mjs";
 import {
     ROM_TREE,
-    CHEVRON_ICON_SVG, UNLOCKED_ICON_SVG, LOCKED_ICON_SVG,
+    CHEVRON_ICON_SVG, PIN_ICON_SVG, PIN_FILL_ICON_SVG,
     VOLUME_UP_SVG, VOLUME_DOWN_SVG, VOLUME_OFF_SVG, VOLUME_MUTE_SVG
 } from "./40_assets.mjs";
 
@@ -32,7 +32,7 @@ function maybeHideSidebar() {
 }
 function updateToggleIcon() {
     toggleButton.innerHTML =
-        pinned ? LOCKED_ICON_SVG : sidebar.classList.contains('open') ? UNLOCKED_ICON_SVG : CHEVRON_ICON_SVG;
+        pinned ? PIN_FILL_ICON_SVG : sidebar.classList.contains('open') ? PIN_ICON_SVG : CHEVRON_ICON_SVG;
 }
 updateToggleIcon();
 
