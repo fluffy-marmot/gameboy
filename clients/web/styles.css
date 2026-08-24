@@ -4,6 +4,7 @@
 
     --clr-background: black;
     --clr-lcd-off: white;
+
     --clr-border: darkslateblue;
     --clr-border-selected: yellow;
 
@@ -79,6 +80,8 @@ html, body {
 }
 
 #sidebar {
+    display: flex;
+    flex-direction: column;
     padding: 4px;
     position: fixed;
     left: 0;
@@ -96,11 +99,16 @@ html, body {
     transform: translateX(0);
 }
 
-#sidebar-content {
+#sidebar input[type="range"] {
+    accent-color: var(--clr-sidebar-toggle-hover);
+    cursor: pointer;
+}
+
+#sidebar-main-content {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    height: 100%;
     min-height: 0;
 }
 
@@ -122,7 +130,7 @@ html, body {
 }
 
 .palette-clr {
-    width: 20px;
+    width: calc((var(--sidebar-width) - 40px) / 4);
     height: 16px;
     border: 1px solid var(--clr-border);
 }
@@ -159,4 +167,28 @@ html, body {
     z-index: var(--z-index-above-sidebar);
     pointer-events: none;
     white-space: nowrap;
+}
+
+#sidebar-footer {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: end;
+    align-items: center;
+    min-height: calc(var(--sidebar-icon-size) + 8px);
+}
+
+#volume-control {
+    height: var(--sidebar-icon-size);
+    width: calc(var(--sidebar-width) - var(--sidebar-icon-size) - 10px);
+    display: flex;
+    align-items: center;
+}
+
+#volume-icon {
+    cursor: pointer;
+}
+
+#volume-slider {
+    min-width: 0;
+    flex: 1 1 auto;
 }

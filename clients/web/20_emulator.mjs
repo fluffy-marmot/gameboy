@@ -186,12 +186,17 @@ window.addEventListener('keyup', (e) => {
 
 const AUDIO_SAMPLE_RATE = 44100;
 let audioCtx;
+let gainNode;
 let nextAudioTime = 0;
+let gain = 1.0;
 
 // need this to deal with browser policy of not playing audio before some user action on the page
 function unlockAudio() {
     if (!audioCtx) {
         audioCtx = new AudioContext({ sampleRate: AUDIO_SAMPLE_RATE });
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = gain;
+        gainNode.connect(audioCtx.destination);
         audioCtx.resume();
     }
 }
@@ -218,7 +223,7 @@ function queueAudio() {
 
     const source = audioCtx.createBufferSource();
     source.buffer = audioBuffer;
-    source.connect(audioCtx.destination);
+    source.connect(gainNode);
 
     // playback fell behind — resync with a slight delay, is this enough?
     if (nextAudioTime < audioCtx.currentTime) {
@@ -226,4 +231,10 @@ function queueAudio() {
     }
     source.start(nextAudioTime);
     nextAudioTime += sampleCount / AUDIO_SAMPLE_RATE;
+}
+
+export function setAudioGain(value) {
+    gain = value;
+    if (gainNode)
+        gainNode.gain.value = value;
 }

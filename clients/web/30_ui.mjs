@@ -1,6 +1,12 @@
 
-import { GB_set_lcd_colors, startRom } from "./20_emulator.mjs";
-import { ROM_TREE, CHEVRON_ICON_SVG, UNLOCKED_ICON_SVG, LOCKED_ICON_SVG } from "./40_assets.mjs";
+import {
+    GB_set_lcd_colors, startRom, setAudioGain
+} from "./20_emulator.mjs";
+import {
+    ROM_TREE,
+    CHEVRON_ICON_SVG, UNLOCKED_ICON_SVG, LOCKED_ICON_SVG,
+    VOLUME_UP_SVG, VOLUME_DOWN_SVG, VOLUME_OFF_SVG, VOLUME_MUTE_SVG
+} from "./40_assets.mjs";
 
 /* ############################################################################
 ###############################################################################
@@ -42,6 +48,41 @@ trigger.addEventListener('mouseenter', showSidebar);
 trigger.addEventListener('mouseleave', maybeHideSidebar);
 sidebar.addEventListener('mouseenter', showSidebar);
 sidebar.addEventListener('mouseleave', maybeHideSidebar);
+
+/* ############################################################################
+###############################################################################
+        Volume control
+###############################################################################
+############################################################################ */
+
+let volume = 1.0;
+let muted = false;
+
+const volumeIcon = document.getElementById('volume-icon');
+const volumeSlider = document.getElementById('volume-slider');
+
+function updateVolume() {
+    volumeIcon.innerHTML = muted ? VOLUME_MUTE_SVG :
+    volume < 0.05 ? VOLUME_OFF_SVG : volume < 0.6 ? VOLUME_DOWN_SVG : VOLUME_UP_SVG;
+    setAudioGain(muted ? 0.0 : volume);
+}
+updateVolume();
+
+volumeIcon.addEventListener('click', (e) => {
+    muted = !muted;
+    volumeSlider.disabled = muted;
+    if (volumeSlider.disabled)
+        volumeSlider.value = 0.0;
+    else
+        volumeSlider.value = volume;
+
+    updateVolume();
+});
+
+volumeSlider.addEventListener('input', (e) => {
+    volume = parseFloat(volumeSlider.value);
+    updateVolume();
+});
 
 /* ############################################################################
 ###############################################################################
