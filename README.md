@@ -1,6 +1,6 @@
 # Gameboy Emulator
 
-This is a work in progress implementation of a Gameboy emulator. Kind of a fun project to have an excuse to learn more about C, which I enjoy, and have fun programming something low-level. 
+This is a work in progress implementation of a Gameboy emulator. Kind of a fun project to have an excuse to learn more about C, which I enjoy, and have fun programming something low-level.
 
 ### What's done
 

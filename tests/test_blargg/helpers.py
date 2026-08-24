@@ -25,7 +25,7 @@ def run_blargg_test_serial_output(testrom: Path, timeout_sec=20) -> None:
 
 def run_blargg_test_memory_signature(testrom: Path, timeout_sec=20) -> None:
     """
-    From Blargg's readme.txt: 
+    From Blargg's readme.txt:
     Output to memory
     ----------------
     Text output and the final result are also written to memory at $A000,
@@ -49,4 +49,3 @@ def run_blargg_test_memory_signature(testrom: Path, timeout_sec=20) -> None:
             pytest.fail(f"{testrom.stem}: FAILURE, result status: {external_ram[0]}", pytrace=False)
     else:
         pytest.fail(f"{testrom.stem}: FAILURE, invalid memory signature", pytrace=False)
-

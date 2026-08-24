@@ -25,15 +25,15 @@ typedef struct {
     uint8_t SCX;                                // viewport (scroll) x position
     uint8_t LY;                                 // LCD y coordinate
     uint8_t LYC;                                // LY compare
-    
-    uint8_t BGP;                                // background (and window) palette 
+
+    uint8_t BGP;                                // background (and window) palette
     uint8_t OBP[2];                             // object palettes OBP0 and OBP1
     uint8_t WY;                                 // window Y
     uint8_t WX;                                 // window X (plus 7)
 
     uint8_t vram[GB_DMG_VRAM_SIZE];             // video RAM - tile data for 384 tiles and two 32x32 tile maps
     uint8_t  oam[GB_DMG_OAM_SIZE];              // object attribute memory
-   
+
     /* -- PPU internal data -- */
     uint8_t lx;                                 // x coordinate + 8 within scanline (starts off screen)
     scanline_dot_t line_dot;                    // dot number of current scanline (first is 0)
@@ -43,7 +43,7 @@ typedef struct {
         uint8_t y;
     } obj_buffer[SCANLINE_MAX_OBJS];             // obj indexes stored by OAM scan
     uint8_t obj_buffer_size;
-        
+
     /* -- holding actual LCD color data that will be drawn on the screen */
     struct {
         uint32_t pixels[LCD_WIDTH * LCD_HEIGHT];

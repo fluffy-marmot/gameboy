@@ -11,4 +11,3 @@ mooneye_instr = sorted((DATA_MOONEYE_ACCEPTANCE / "instr").rglob("*.gb"))
 @pytest.mark.parametrize("testrom", mooneye_params(mooneye_instr))
 def test_mooneye_instr(testrom, cpu):
     run_mooneye_test(testrom, cpu)
-

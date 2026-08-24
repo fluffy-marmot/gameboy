@@ -48,11 +48,11 @@ select_interface(memaddr address)
     switch (address) {
     case MEMADDR_BOOT_ROM_LOCK:                                         return bus.interface_reg_bootlock;
 
-    case MEMADDR_IF:                                    
+    case MEMADDR_IF:
     case MEMADDR_IE:                                                    return bus.interface_reg_interrupt;
 
     case MEMADDR_DMA:                                                   return bus.interface_reg_dma;
-    
+
     case MEMADDR_JOYP:                                                  return bus.interface_reg_joypad;
 
     case MEMADDR_DIV:
@@ -76,7 +76,7 @@ select_interface(memaddr address)
     case MEMADDR_WX:                                                    return bus.interface_reg_ppu;
 
     default:                                                            return bus.interface_nop;
-    }    
+    }
 }
 
 // The main dispatcher interface using select_interface function to pass on bus requests
@@ -155,8 +155,8 @@ static void write_echo (memaddr address, uint8_t val) {
 static bus_interface_t bus_echo =  { .read = read_echo, .write = write_echo };
 
 // Boot ROM lock register - can only be written and turned on to unmap boot ROM
-static uint8_t read_reg_bootlock(memaddr) { 
-    return UNREADABLE;     
+static uint8_t read_reg_bootlock(memaddr) {
+    return UNREADABLE;
 }
 static void write_reg_bootlock(memaddr, uint8_t) {
     bus.BOOT_ROM_LOCK = USEPINS_BOOT_ROM_LOCK;
@@ -183,7 +183,7 @@ init_gameboy_bus(void)
 ###############################################################################
 
         client-facing ABI functions
-        
+
 ###############################################################################
 ############################################################################ */
 
@@ -199,7 +199,7 @@ void GB_test_memory_write(memaddr addr, uint8_t value) {
 gb_return_t
 GB_test_memory_wipe(void)
 {
-    if (mem_test != NULL) 
+    if (mem_test != NULL)
         memset(mem_test, 0, 64 * KiB);
     return GB_RETURN_OK;
 }

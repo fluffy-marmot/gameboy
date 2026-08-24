@@ -61,7 +61,7 @@ def check_blank_frame() -> bool:
 
 def save_lcd_png(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    Image.frombuffer("RGBA", (LCD_WIDTH, LCD_HEIGHT), LCD, "raw", "BGRA", 0, 1).save(path)
+    Image.frombuffer("RGBA", (LCD_WIDTH, LCD_HEIGHT), LCD, "raw", "RGBA", 0, 1).save(path)
 
 def get_cartridge_ram_size() -> int:
     return gb.cartridge.contents.data.ram_size

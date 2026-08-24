@@ -121,7 +121,7 @@ static struct {
     uint8_t data_low;
     uint8_t data_high;
     uint16_t tile_data_index;
-    
+
     uint8_t buf_index;
     bool index_done[10];
 } obj_fetcher;
@@ -135,24 +135,24 @@ static struct {
     uint8_t bg_pixels_len;
 } pixel_mixer;
 
-// Ordered as ARGB as written, but as BGRA as little endian
+// Ordered as ABGR as written, but as RGBA as little endian
 static const uint32_t DEFAULT_LCD_COLORS[4] = {
-    0xFFF4FFBF,
-    0xFF9AD941,
-    0xFF608057,
-    0xFF002B40
+    0xFFBFFFF4,
+    0xFF41D99A,
+    0xFF578060,
+    0xFF402B00
 };
 
 static gb_ppu_t ppu;
 
-static void 
+static void
 update_stat_interrupt(void)
 {
     if (PPU_ENABLED) {
         ppu.irq->update_stat_interrupt_line(
             /*
             The vblank case is a quirk on DMG mentioned in cycle-accurate GB docs and tested on hardware
-            by dtabacaru, the STAT_MD2 bit also seems to affect vblank 
+            by dtabacaru, the STAT_MD2 bit also seems to affect vblank
             */
             (STAT_LYC_INT_SELECT                          &&  STAT_EQL                      ) ||
             (STAT_MD0_INT_SELECT                          && (PPU_MODE == PPU_MODE_HBLANK  )) ||
@@ -188,14 +188,14 @@ read_ppu_reg(memaddr address)
     case MEMADDR_SCY:               return ppu.SCY;
     case MEMADDR_SCX:               return ppu.SCX;
     case MEMADDR_LY:                return ppu.LY;
-    case MEMADDR_LYC:               return ppu.LYC; 
+    case MEMADDR_LYC:               return ppu.LYC;
     case MEMADDR_BGP:               return ppu.BGP;
     case MEMADDR_OBP0:              return ppu.OBP[0];
     case MEMADDR_OBP1:              return ppu.OBP[1];
     case MEMADDR_WY:                return ppu.WY;
     case MEMADDR_WX:                return ppu.WX;
     default:                        return UNREADABLE;
-    }       
+    }
 }
 
 static void
@@ -222,7 +222,7 @@ write_ppu_reg(memaddr address, uint8_t val)
     case MEMADDR_STAT:              ppu.STAT   = (WRITEABLE_STAT & val) | (READONLY_STAT & ppu.STAT); break;
     case MEMADDR_SCY:               ppu.SCY    = val;                                                 break;
     case MEMADDR_SCX:               ppu.SCX    = val;                                                 break;
-    case MEMADDR_LY:                                                                                  break;                                 
+    case MEMADDR_LY:                                                                                  break;
     case MEMADDR_LYC:               ppu.LYC    = val; stat_compare_ly_lyc();                          break;
     case MEMADDR_BGP:               ppu.BGP    = val;                                                 break;
     case MEMADDR_OBP0:              ppu.OBP[0] = val;                                                 break;
@@ -257,7 +257,7 @@ write_vram(memaddr address, uint8_t val)
 }
 static bus_interface_t bus_vram = { .read = read_vram, .write = write_vram };
 
-static uint8_t 
+static uint8_t
 read_oam_corruption(memaddr address)
 {
     if (PPU_MODE != PPU_MODE_OAM_SCAN || !ADDR_OAM_BUG_RANGE(address))
@@ -266,7 +266,7 @@ read_oam_corruption(memaddr address)
     return UNREADABLE;
 }
 
-static void 
+static void
 write_oam_corruption(memaddr address, uint8_t)
 {
     if (PPU_MODE != PPU_MODE_OAM_SCAN || !ADDR_OAM_BUG_RANGE(address))
@@ -399,7 +399,7 @@ obj_y_offset(void)
     return y_offset;
 }
 
-// Returns a low or high byte of tile data using some tile index, some y row, using particular addressing mode 
+// Returns a low or high byte of tile data using some tile index, some y row, using particular addressing mode
 static uint8_t
 tile_data(uint8_t byte, tile_data_addressing_mode_t addressing, uint8_t tile_data_index, uint8_t y_offset)
 {
@@ -527,7 +527,7 @@ step_bg_fetcher(void)
 
     if (bg_fetcher.delay && bg_fetcher.delay--) return;
     switch (bg_fetcher.mode) {
-        
+
     case BG_GET_TILE:
         bg_fetcher.tile_data_index = VRAM(
             (bg_fetcher.window_active ? WIN_TILE_MAP : BG_TILE_MAP) + bg_fetcher.tile_map_index
@@ -597,7 +597,7 @@ step_mixer()
         bg_fetcher.delay = 1;
     } else
         pixel_mixer.bg_pixels_len--;
-        
+
     pixel_mixer.obj_pixels[pixel_mixer.obj_pixels_index++].color = 0;
     pixel_mixer.obj_pixels_index %= 8;
     obj_fetcher.mode = OBJ_CHECK_X;
@@ -682,7 +682,7 @@ init_gameboy_ppu(gb_bus_t *bus, gb_irq_handler_t *irq)
 ###############################################################################
 
         client-facing ABI functions
-        
+
 ###############################################################################
 ############################################################################ */
 

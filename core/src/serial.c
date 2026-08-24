@@ -26,7 +26,7 @@ read_serial_reg(memaddr address)
     case MEMADDR_SB:                            return serial.SB;
     case MEMADDR_SC:                            return (serial.SC & USEPINS_SC) | (USEPINS_SC ^ 0xFF);
     default:                                    return UNREADABLE;
-    }       
+    }
 }
 static void
 write_serial_reg(memaddr address, uint8_t val)
@@ -86,7 +86,7 @@ init_gameboy_serial(gb_bus_t *bus, gb_irq_handler_t *irq)
 ###############################################################################
 
         client-facing ABI functions
-        
+
 ###############################################################################
 ############################################################################ */
 

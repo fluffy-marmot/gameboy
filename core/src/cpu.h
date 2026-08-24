@@ -26,7 +26,7 @@ typedef struct {
             uint8_t E;                          // 0x03 0b011
             uint8_t H;                          // 0x04 0b100
             uint8_t L;                          // 0x05 0b101
-            uint8_t F;                          // z, n, h, c flags (zero, subtraction, half carry, carry)        
+            uint8_t F;                          // z, n, h, c flags (zero, subtraction, half carry, carry)
             uint8_t A;                          // 0x06 0b111
         };
     };

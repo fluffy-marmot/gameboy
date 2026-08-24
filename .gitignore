@@ -16,7 +16,7 @@ build/
 # logs
 logs/
 
-# python 
+# python
 __pycache__/
 *.pyc
 .venv/

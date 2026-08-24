@@ -78,7 +78,7 @@ read_bus_mbc1(memaddr address)
 
         if (ram_index < mbc1.cart->ram_size)
             return mbc1.cart->ram[ram_index];
-    } 
+    }
     return UNREADABLE;
 }
 static void

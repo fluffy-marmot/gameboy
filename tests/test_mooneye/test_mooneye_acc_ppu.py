@@ -11,4 +11,3 @@ mooneye_ppu = sorted((DATA_MOONEYE_ACCEPTANCE / "ppu").rglob("*.gb"))
 @pytest.mark.parametrize("testrom", mooneye_params(mooneye_ppu))
 def test_mooneye_ppu(testrom, cpu):
     run_mooneye_test(testrom, cpu)
-

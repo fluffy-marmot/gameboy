@@ -1,23 +1,52 @@
 import createGameBoyModule from "../../build/web/gameboy.mjs";
 
+// wasm bindings stuff
 
 const GB_RETURN_OK = 0;
-const GB_RETURN_RESYNC_VBLANK = 1;
+
+const GB_MODULE = await createGameBoyModule();
+
+const GB_emulate_frame = GB_MODULE.cwrap('GB_emulate_frame', 'number', []);
+const GB_set_post_boot_state = GB_MODULE.cwrap('GB_set_post_boot_state', 'number', []);
+const GB_load_rom = GB_MODULE.cwrap('GB_load_rom', 'number', ['number', 'number']);
+const GB_get_lcd = GB_MODULE.cwrap('GB_get_lcd', 'number', []);
+const GB_update_joypad = GB_MODULE.cwrap('GB_update_joypad', null,
+    ['boolean','boolean','boolean','boolean','boolean','boolean','boolean','boolean']);
+const GB_audio_buffer_size = GB_MODULE.cwrap('GB_audio_buffer_size', 'number', []);
+const GB_audio_buffer_flush = GB_MODULE.cwrap('GB_audio_buffer_flush', 'number', []);
+
+// main loop
+
+function loop(timestamp) {
+    if (isPaused)
+        return;
+    if (lastTimestamp === null)
+        lastTimestamp = timestamp;
+
+    frameTimer += Math.min(timestamp - lastTimestamp, MAX_CATCHUP_MS);
+    lastTimestamp = timestamp;
+
+    while (frameTimer >= FRAME_TIME_MS) {
+        // inverted b/c emulator interprets 0 bits as "key pressed"
+        GB_update_joypad(
+            !keyState.start, !keyState.select, !keyState.b, !keyState.a,
+            !keyState.down, !keyState.up, !keyState.left, !keyState.right
+        );
+        GB_emulate_frame();
+        drawFrame();
+        queueAudio();
+        frameTimer -= FRAME_TIME_MS;
+    }
+    requestAnimationFrame(loop);
+}
+
+// display stuff
 
 const LCD_WIDTH = 160;
 const LCD_HEIGHT = 144;
 
 const FRAME_TIME_MS = 1000.0 / 59.7275
 const MAX_CATCHUP_MS = 3 * FRAME_TIME_MS;
-
-const Module = await createGameBoyModule();
-const GB_emulate_frame = Module.cwrap('GB_emulate_frame', 'number', []);
-const GB_set_post_boot_state = Module.cwrap('GB_set_post_boot_state', 'number', []);
-const GB_get_lcd = Module.cwrap('GB_get_lcd', 'number', []);
-const GB_update_joypad = Module.cwrap('GB_update_joypad', null,
-    ['boolean','boolean','boolean','boolean','boolean','boolean','boolean','boolean']);
-const GB_audio_buffer_size = Module.cwrap('GB_audio_buffer_size', 'number', []);
-const GB_audio_buffer_flush = Module.cwrap('GB_audio_buffer_flush', 'number', []);
 
 const LCDPtr = GB_get_lcd();
 
@@ -32,55 +61,12 @@ let lastTimestamp = null;
 let isPaused = false;
 
 function drawFrame() {
-    const src = Module.HEAPU8.subarray(LCDPtr, LCDPtr + LCD_HEIGHT * LCD_WIDTH * 4);
-    const dst = imageData.data;
-    for (let i = 0; i < src.length; i += 4) {
-        dst[i]     = src[i + 2]; // R <- B,G,R,A source position 2
-        dst[i + 1] = src[i + 1]; // G stays put
-        dst[i + 2] = src[i];     // B <- source position 0
-        dst[i + 3] = src[i + 3]; // A stays put
-    }
+    const src = GB_MODULE.HEAPU8.subarray(LCDPtr, LCDPtr + LCD_HEIGHT * LCD_WIDTH * 4);
+    imageData.data.set(src);
     ctx.putImageData(imageData, 0, 0);
 }
 
-function loop(timestamp) {
-    if (isPaused)
-        return;
-
-    if (lastTimestamp === null)
-        lastTimestamp = timestamp;
-
-    let timeDelta = Math.min(timestamp - lastTimestamp, MAX_CATCHUP_MS);
-    lastTimestamp = timestamp;
-    frameTimer += timeDelta;
-
-    while (frameTimer >= FRAME_TIME_MS) {
-        GB_update_joypad(
-            !keyState.start, !keyState.select, !keyState.b, !keyState.a,
-            !keyState.down, !keyState.up, !keyState.left, !keyState.right
-        );
-        GB_emulate_frame();
-        drawFrame();
-        queueAudio();
-        frameTimer -= FRAME_TIME_MS;
-    }
-
-    requestAnimationFrame(loop);
-}
-
 // Loading ROMs
-
-async function loadRom(name) {
-    const response = await fetch(resolveRomPath(name));
-    if (!response.ok) throw new Error(`Failed to fetch ROM "${name}": ${response.status}`);
-    const romBytes = new Uint8Array(await response.arrayBuffer());
-    const romPtr = Module._malloc(romBytes.length);
-    Module.HEAPU8.set(romBytes, romPtr);
-    const loadRomFn = Module.cwrap('GB_load_rom', 'number', ['number', 'number']);
-    const result = loadRomFn(romPtr, romBytes.length);
-    Module._free(romPtr);
-    return result;
-}
 
 const ROM_ALIASES = {
     'acid2': '../../tests/testdata/dmg-acid2/dmg-acid2.gb',
@@ -93,13 +79,31 @@ function resolveRomPath(name) {
     return `../../romlib/${name}.gb`;
 }
 
+async function loadRom(name) {
+    const response = await fetch(resolveRomPath(name));
+    if (!response.ok) throw new Error(`Failed to fetch ROM "${name}": ${response.status}`);
+    const romBytes = new Uint8Array(await response.arrayBuffer());
+    const romPtr = GB_MODULE._malloc(romBytes.length);
+    GB_MODULE.HEAPU8.set(romBytes, romPtr);
+    const result = GB_load_rom(romPtr, romBytes.length);
+    GB_MODULE._free(romPtr);
+    return result;
+}
+
 // TODO: sanitize query param
 const romName = new URLSearchParams(window.location.search).get('rom');
 
 if (!romName) {
     console.error('No ?rom=<name> query parameter');
 } else {
-    const result = await loadRom(romName);
+    let result
+    try {
+        result = await loadRom(romName);
+    } catch (e) {
+        console.error(`Failed to load ROM "${romName}":`, e);
+        result = null;
+    }
+
     if (result !== GB_RETURN_OK) {
         console.error(`Failed to load ROM "${romName}", GB_load_rom returned ${result}`);
     } else {
@@ -148,25 +152,25 @@ const audioCtx = new AudioContext({ sampleRate: AUDIO_SAMPLE_RATE });
 let nextStartTime = 0;
 let audioStarted = false;
 
+// need this to deal with browser policy of not playing audio before some user action on the page
 function unlockAudio() {
     if (!audioStarted) {
-        audioCtx.resume();
         audioStarted = true;
+        audioCtx.resume();
     }
-    isPaused = false;
 }
 window.addEventListener('keydown', unlockAudio, { once: true });
+window.addEventListener('click', unlockAudio, { once: true });
 
 function queueAudio() {
     if (!audioStarted)
         return;
 
-    const sampleCount = GB_audio_buffer_size(); // stereo pairs
+    const sampleCount = GB_audio_buffer_size();
     if (sampleCount === 0) return;
 
-    const ptr = GB_audio_buffer_flush();
-    const floatIndex = ptr / 4; // byte pointer -> HEAPF32 index
-    const interleaved = Module.HEAPF32.subarray(floatIndex, floatIndex + sampleCount * 2);
+    const floatIndex = GB_audio_buffer_flush() / 4; // byte pointer -> HEAPF32 index
+    const interleaved = GB_MODULE.HEAPF32.subarray(floatIndex, floatIndex + sampleCount * 2); // stereo
 
     const audioBuffer = audioCtx.createBuffer(2, sampleCount, AUDIO_SAMPLE_RATE);
     const left = audioBuffer.getChannelData(0);
@@ -180,15 +184,15 @@ function queueAudio() {
     source.buffer = audioBuffer;
     source.connect(audioCtx.destination);
 
-    const now = audioCtx.currentTime;
-    if (nextStartTime < now) {
-        nextStartTime = now + 0.05; // fell behind — resync with a little headroom instead of bursting
+    // playback fell behind — resync with a slight delay, is this enough?
+    if (nextStartTime < audioCtx.currentTime) {
+        nextStartTime = audioCtx.currentTime + 0.05;
     }
     source.start(nextStartTime);
     nextStartTime += sampleCount / AUDIO_SAMPLE_RATE;
 }
 
-// stop loop and audio playback to prevent super annoying audio blips from loop running 1 sec (?)
+// stop loop and audio playback to prevent super annoying audio blips from loop running 1 / sec (?)
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         isPaused = true;
@@ -200,3 +204,63 @@ document.addEventListener('visibilitychange', () => {
         requestAnimationFrame(loop);
     }
 });
+
+// sidebar
+
+let pinned = false;
+
+const toggleButton = document.getElementById('sidebar-toggle');
+const sidebar = document.getElementById('sidebar');
+const trigger = document.getElementById('sidebar-trigger');
+
+function show() {
+    sidebar.classList.add('open');
+    updateIcon();
+}
+function maybeHide() {
+    if (!pinned) {
+        sidebar.classList.remove('open');
+        updateIcon();
+    }
+}
+function updateIcon() {
+    toggleButton.innerHTML =
+        pinned ? LOCKED_ICON_SVG : sidebar.classList.contains('open') ? UNLOCKED_ICON_SVG : CHEVRON_ICON_SVG;
+}
+
+toggleButton.addEventListener('click', () => {
+    pinned = !pinned;
+    sidebar.classList.toggle('open', pinned);
+    updateIcon();
+});
+
+toggleButton.addEventListener('mouseenter', show);
+toggleButton.addEventListener('mouseleave', maybeHide);
+trigger.addEventListener('mouseenter', show);
+trigger.addEventListener('mouseleave', maybeHide);
+sidebar.addEventListener('mouseenter', show);
+sidebar.addEventListener('mouseleave', maybeHide);
+
+// svg icons from bootstrap icons - only using a few so probably worth
+// just importing each SVG manually instead of adding a CDN dependency
+
+const CHEVRON_ICON_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+<path fill-rule="evenodd" d="M4.146 3.646a.5.5 0 0 0 0 .708L7.793 8l-3.647 3.646a.5.5 0 0 0 .708.708l4-4a.5.5
+0 0 0 0-.708l-4-4a.5.5 0 0 0-.708 0M11.5 1a.5.5 0 0 1 .5.5v13a.5.5 0 0 1-1 0v-13a.5.5 0 0 1 .5-.5"/></svg>
+`
+const UNLOCKED_ICON_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+<path fill-rule="evenodd" d="M8 0c1.07 0 2.041.42 2.759 1.104l.14.14.062.08a.5.5 0 0
+1-.71.675l-.076-.066-.216-.205A3 3 0 0 0 5 4v2h6.5A2.5 2.5 0 0 1 14 8.5v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5
+2.5 0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4M4.5 7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5
+15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7z"/></svg>
+`
+const LOCKED_ICON_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+<path fill-rule="evenodd" d="M8 0a4 4 0 0 1 4 4v2.05a2.5 2.5 0 0 1 2 2.45v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5
+0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4M4.5 7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5
+1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7zM8 1a3 3 0 0 0-3 3v2h6V4a3 3 0 0 0-3-3"/></svg>
+`
+
+updateIcon();

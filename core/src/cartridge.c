@@ -6,12 +6,12 @@
 
 static gb_cartridge_t cartridge;
 
-static uint8_t 
+static uint8_t
 read_cart (memaddr address)
 {
     if (cartridge.mbc_bus)
         return cartridge.mbc_bus->read(address);
-    
+
     if ADDR_BELOW(ADDR_END_ROM_BANK)
         return cartridge.data.rom[address];
     else if ((size_t) (address - ADDR_START_WRAM_CARTRIDGE) < cartridge.data.ram_size)
@@ -81,7 +81,7 @@ validate_header_ram_size(void)
     cartridge.data.ram_size = 0;
 
     switch (cartridge.header.ram_size_id) {
-    case MBC_RAM_SIZE_NONE:                                                                     break;  
+    case MBC_RAM_SIZE_NONE:                                                                     break;
     case MBC_RAM_SIZE_2KiB:                     cartridge.data.ram_size =   2 * KiB;            break;
     case MBC_RAM_SIZE_8KiB:                     cartridge.data.ram_size =   8 * KiB;            break;
     case MBC_RAM_SIZE_32KiB:                    cartridge.data.ram_size =  32 * KiB;            break;
@@ -92,7 +92,7 @@ validate_header_ram_size(void)
     }
     if (cartridge.data.ram_size > 0)
         cartridge.data.ram = calloc(cartridge.data.ram_size, sizeof(uint8_t));
-    
+
     return GB_RETURN_OK;
 }
 
@@ -117,7 +117,7 @@ select_mbc_controller(void)
     case MBC_TYPE_MBC3:
     case MBC_TYPE_MBC3_RAM:
     case MBC_TYPE_MBC3_BBRAM:                   init_gameboy_mbc3(&cartridge, use_rtc);         break;
-    
+
     case MBC_TYPE_MBC5_RUMBLE:
     case MBC_TYPE_MBC5_RUMBLE_RAM:
     case MBC_TYPE_MBC5_RUMBLE_BBRAM:            use_rumble = true;                  /* fall through */
@@ -156,7 +156,7 @@ init_cartridge(gb_bus_t *bus)
 ###############################################################################
 
         client-facing ABI functions
-        
+
 ###############################################################################
 ############################################################################ */
 

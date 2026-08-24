@@ -32,9 +32,9 @@ typedef struct {
     bus_interface_t *interface_reg_joypad;
     bus_interface_t *interface_reg_serial;
     bus_interface_t *interface_reg_dma;
-    
+
     bus_interface_t *interface_ppu_dma_direct;
-    
+
     bus_interface_t *interface_oam_corruption;
     bus_interface_t *interface_nop;
 

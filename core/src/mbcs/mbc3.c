@@ -40,14 +40,14 @@ read_bus_mbc3(memaddr address)
     } else if (ADDR_RANGE(ADDR_START_ROM_BANK, ADDR_END_ROM_BANK)) {
         return mbc3.cart->rom[resolved_rom_index(address)];
     } else if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) {
-        if (mbc3.RAMG != RAMG_ENABLE_ACCESSS) 
+        if (mbc3.RAMG != RAMG_ENABLE_ACCESSS)
             return UNREADABLE;
 
         if (mbc3.BANK_RAM <= 0b11 && mbc3.cart->ram_size > 0)
             return mbc3.cart->ram[resolved_ram_index(address)];
         else if (mbc3.rtc != NULL)
             return mbc3.rtc->bus_rtc->read(address);
-    } 
+    }
     return UNREADABLE;
 }
 
@@ -65,7 +65,7 @@ write_bus_mbc3(memaddr address, uint8_t val)
     } else if (ADDR_RANGE(RTC_LATCH_ACCESS_LOW, RTC_LATCH_ACCESS_HIGH) && mbc3.rtc != NULL) {
         mbc3.rtc->bus_rtc->write(address, val);
     } else if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) {
-        if (mbc3.RAMG != RAMG_ENABLE_ACCESSS) 
+        if (mbc3.RAMG != RAMG_ENABLE_ACCESSS)
             return;
 
         if (mbc3.BANK_RAM <= 0b11 && mbc3.cart->ram_size > 0)

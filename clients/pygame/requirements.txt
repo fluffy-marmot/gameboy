@@ -1,3 +1,4 @@
 pygame-ce
 pillow
 sounddevice
+pre-commit

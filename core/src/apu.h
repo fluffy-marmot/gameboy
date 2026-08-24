@@ -44,15 +44,15 @@ typedef struct {
     uint16_t LFSR;
 } noise_data_t;
 
-// Important not to move first 5 members of the struct: besides buffer, 
-/* when APU is turned off, waveram, DIV_APU aren't zeroed out, along w/ length timer bits */ 
+// Important not to move first 5 members of the struct: besides buffer,
+/* when APU is turned off, waveram, DIV_APU aren't zeroed out, along w/ length timer bits */
 typedef struct {
     audio_buffer_t buf;
     int sample_timer;
 
     uint8_t waveram[GB_DMG_WAVERAM_SIZE];       // 16 bytes of RAM for channel 3 samples
     uint8_t DIV_APU;                            // counter driving the APU
-    
+
     uint8_t NR52;                               // audio master control
     uint8_t NR51;                               // sound panning
     uint8_t NR50;                               // master volume and VIN panning
@@ -78,7 +78,7 @@ typedef struct {
     uint8_t NR42;                               // channel 4 volume & envelope
     uint8_t NR43;                               // channel 4 frequency & randomness
     uint8_t NR44;                               // channel 4 control
-    
+
     struct {
         uint8_t len_timer;
         envelope_data_t envelope;

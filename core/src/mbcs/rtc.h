@@ -25,7 +25,7 @@ typedef struct {
 typedef struct {
     rtc_clock_t clock;
     rtc_clock_t clock_latched;
-    
+
     uint8_t selected;
     uint8_t latch;
     uint8_t oscillator_step;

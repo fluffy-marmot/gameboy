@@ -45,9 +45,9 @@ read_bus_mbc5(memaddr address)
     } else if (ADDR_RANGE(ADDR_START_ROM_BANK, ADDR_END_ROM_BANK)) {
         return mbc5.cart->rom[resolved_rom_index(address)];
     } else if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) {
-        if (mbc5.RAMG == RAMG_ENABLE_ACCESSS && mbc5.cart->ram_size > 0) 
+        if (mbc5.RAMG == RAMG_ENABLE_ACCESSS && mbc5.cart->ram_size > 0)
             return mbc5.cart->ram[resolved_ram_index(address)];
-    } 
+    }
     return UNREADABLE;
 }
 
@@ -63,7 +63,7 @@ write_bus_mbc5(memaddr address, uint8_t val)
     } else if (ADDR_RANGE(BANK_RAM_WRITE_ACCESS_LOW, BANK_RAM_WRITE_ACCESS_HIGH)) {
         mbc5.BANK_RAM = val & USEPINS_BANK_RAM;
     } else if (ADDR_RANGE(ADDR_START_WRAM_CARTRIDGE, ADDR_END_WRAM_CARTRIDGE)) {
-        if (mbc5.RAMG == RAMG_ENABLE_ACCESSS && mbc5.cart->ram_size > 0) 
+        if (mbc5.RAMG == RAMG_ENABLE_ACCESSS && mbc5.cart->ram_size > 0)
             mbc5.cart->ram[resolved_ram_index(address)] = val;
     }
 }

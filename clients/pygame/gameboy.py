@@ -24,6 +24,7 @@ CONFIG.read(BASE_DIR / "clients" / "pygame" / "config.ini")
 romname = None
 cartridge_hash = None
 
+
 def load_keybinds() -> None:
     keybinds = CONFIG["keybinds"]
     KEYBINDS["start"]  = pygame.key.key_code(keybinds.get("start", "return"))
@@ -74,6 +75,7 @@ def load_rom() -> None:
     except FileNotFoundError:
         sys.exit(f"Couldn't find ROM file: {romlib}/{rom}")
 
+
 def load_bbram() -> None:
     bbram_config = CONFIG["bbram"].get("config", "")
     if bbram_config in ["hash", "name"]:
@@ -88,6 +90,7 @@ def load_bbram() -> None:
         else:
             print(f"No existing BBRAM file found for this ROM")
 
+
 def save_bbram() -> None:
     bbram_config = CONFIG["bbram"].get("config", "")
     if bbram_config in ["hash", "name"]:
@@ -99,13 +102,13 @@ def save_bbram() -> None:
         filename.parent.mkdir(parents=True, exist_ok=True)
         gb_save_bbram(filename)
         print(f"Saved BBRAM contents to {filename.name}")
-        
+
 
 def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
     screen.fill((0, 0, 0))
     dest_rect = render_surface.get_rect().fit(screen.get_rect())
     if not check_blank_frame():
-        render_surface = pygame.image.frombuffer(LCD, (LCD_WIDTH, LCD_HEIGHT), "BGRA")
+        render_surface = pygame.image.frombuffer(LCD, (LCD_WIDTH, LCD_HEIGHT), "RGBA")
         scaled = pygame.transform.scale(render_surface, dest_rect.size)
         screen.blit(scaled, dest_rect)
     else:
@@ -172,7 +175,7 @@ def main() -> None:
 
     # call without arguments to set colors used by ppu test suites
     # GB_set_lcd_colors()
-    
+
     frame_times = deque(maxlen=120)
     frame = 0
     pygame.display.set_caption(f"Gameboy")
@@ -209,7 +212,7 @@ def main() -> None:
             print(f"Serial output: {output}")
 
         audio_player.push(GB_audio_buffer_flush())
-        
+
         window_draw(screen, render_surface)
         pygame.display.flip()
 
@@ -218,7 +221,7 @@ def main() -> None:
         if frame  % 120 == 0:
             pygame.display.set_caption(f"Gameboy - {sum(frame_times) // len(frame_times):>5} μs/frame")
         clock.tick(59.7275)
-            
+
 
 if __name__ == "__main__":
     main()

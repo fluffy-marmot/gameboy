@@ -54,7 +54,7 @@
 #define ADDR_START_WRAM_2                       0xD000
 #define ADDR_END_WRAM_2                             0xDFFF
 #define ADDR_START_ECHO_MEM                     0xE000
-#define ADDR_END_ECHO_MEM                           0xFDFF                                                      
+#define ADDR_END_ECHO_MEM                           0xFDFF
 #define ADDR_START_OAM_MEM                      0xFE00
 #define ADDR_END_OAM_MEM                            0xFE9F
 #define ADDR_START_UNUSABLE                     0xFEA0
@@ -79,7 +79,7 @@
 Blocks: 128 tiles x 16 bytes each = 2048 KiB / block
 Maps: : 32x32 tile indices        = 1024 KiB / map */
 
-#define ADDR_TILE_DATA_BLOCK_0                  0x8000      
+#define ADDR_TILE_DATA_BLOCK_0                  0x8000
 #define ADDR_TILE_DATA_BLOCK_1                  0x8800
 #define ADDR_TILE_DATA_BLOCK_2                  0x9000
 #define ADDR_TILE_MAP_0                         0x9800
@@ -89,7 +89,7 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 /* --Addressable hardware registers-- */
 //////////////////////////////////////////////////////
 
-// Joypad 
+// Joypad
 #define MEMADDR_JOYP                            0xFF00
 
 // Serial registers
@@ -164,41 +164,41 @@ typedef uint16_t memaddr;
 
 typedef enum {
     MBC_TYPE_NONE_PLAIN_ROM                   = 0x00,
-    MBC_TYPE_MBC1                             = 0x01,   
-    MBC_TYPE_MBC1_RAM                         = 0x02,   
-    MBC_TYPE_MBC1_BBRAM                       = 0x03,   
-    MBC_TYPE_MBC2                             = 0x05,   
-    MBC_TYPE_MBC2_BBRAM                       = 0x06,   
-    MBC_TYPE_NONE_RAM                         = 0x08,   
-    MBC_TYPE_NONE_BBRAM                       = 0x09,   
-    MBC_TYPE_MMM01                            = 0x0B,   
-    MBC_TYPE_MMM01_RAM                        = 0x0C,   
+    MBC_TYPE_MBC1                             = 0x01,
+    MBC_TYPE_MBC1_RAM                         = 0x02,
+    MBC_TYPE_MBC1_BBRAM                       = 0x03,
+    MBC_TYPE_MBC2                             = 0x05,
+    MBC_TYPE_MBC2_BBRAM                       = 0x06,
+    MBC_TYPE_NONE_RAM                         = 0x08,
+    MBC_TYPE_NONE_BBRAM                       = 0x09,
+    MBC_TYPE_MMM01                            = 0x0B,
+    MBC_TYPE_MMM01_RAM                        = 0x0C,
     MBC_TYPE_MMM01_BBRAM                      = 0x0D,
-    MBC_TYPE_MBC3_RTCLOCK                     = 0x0F,   
+    MBC_TYPE_MBC3_RTCLOCK                     = 0x0F,
     MBC_TYPE_MBC3_RTCLOCK_BBRAM               = 0x10,
-    MBC_TYPE_MBC3                             = 0x11,   
-    MBC_TYPE_MBC3_RAM                         = 0x12,   
-    MBC_TYPE_MBC3_BBRAM                       = 0x13, 
-    MBC_TYPE_MBC5                             = 0x19,   
-    MBC_TYPE_MBC5_RAM                         = 0x1A,   
-    MBC_TYPE_MBC5_BBRAM                       = 0x1B, 
-    MBC_TYPE_MBC5_RUMBLE                      = 0x1C,   
-    MBC_TYPE_MBC5_RUMBLE_RAM                  = 0x1D,   
-    MBC_TYPE_MBC5_RUMBLE_BBRAM                = 0x1E,     
-    MBC_TYPE_MBC6                             = 0x20,   
-    MBC_TYPE_MBC7                             = 0x22,   
+    MBC_TYPE_MBC3                             = 0x11,
+    MBC_TYPE_MBC3_RAM                         = 0x12,
+    MBC_TYPE_MBC3_BBRAM                       = 0x13,
+    MBC_TYPE_MBC5                             = 0x19,
+    MBC_TYPE_MBC5_RAM                         = 0x1A,
+    MBC_TYPE_MBC5_BBRAM                       = 0x1B,
+    MBC_TYPE_MBC5_RUMBLE                      = 0x1C,
+    MBC_TYPE_MBC5_RUMBLE_RAM                  = 0x1D,
+    MBC_TYPE_MBC5_RUMBLE_BBRAM                = 0x1E,
+    MBC_TYPE_MBC6                             = 0x20,
+    MBC_TYPE_MBC7                             = 0x22,
     MBC_TYPE_POCKET_CAMERA                    = 0XFC,
-    MBC_TYPE_BANDAI_TAMAS                     = 0xFD,   
-    MBC_TYPE_HuC3                             = 0xFE,   
-    MBC_TYPE_HuC1                             = 0xFF  
+    MBC_TYPE_BANDAI_TAMAS                     = 0xFD,
+    MBC_TYPE_HuC3                             = 0xFE,
+    MBC_TYPE_HuC1                             = 0xFF
 } mbc_type_t;
 
 // each ROM bank is 16KiB
 typedef enum {
     MBC_ROM_SIZE_32KiB                        = 0x00,               //  no banks
-    MBC_ROM_SIZE_64KiB                        = 0x01,               //   4 banks   
+    MBC_ROM_SIZE_64KiB                        = 0x01,               //   4 banks
     MBC_ROM_SIZE_128KiB                       = 0x02,               //   8 banks
-    MBC_ROM_SIZE_256KiB                       = 0x03,               //  16 banks 
+    MBC_ROM_SIZE_256KiB                       = 0x03,               //  16 banks
     MBC_ROM_SIZE_512KiB                       = 0x04,               //  32 banks
     MBC_ROM_SIZE_1MiB                         = 0x05,               //  64 banks
     MBC_ROM_SIZE_2MiB                         = 0x06,               // 128 banks
@@ -210,12 +210,12 @@ typedef enum {
 } mbc_rom_size_t;
 
 typedef enum {
-    MBC_RAM_SIZE_NONE                         = 0x00,               //      none             
-    MBC_RAM_SIZE_2KiB                         = 0x01,               //  no banks 
+    MBC_RAM_SIZE_NONE                         = 0x00,               //      none
+    MBC_RAM_SIZE_2KiB                         = 0x01,               //  no banks
     MBC_RAM_SIZE_8KiB                         = 0x02,               //  no banks
     MBC_RAM_SIZE_32KiB                        = 0x03,               //   4 banks
     MBC_RAM_SIZE_128KiB                       = 0x04,               //  16 banks
-    MBC_RAM_SIZE_64KiB                        = 0x05,               //   8 banks 
+    MBC_RAM_SIZE_64KiB                        = 0x05,               //   8 banks
 } mbc_ram_size_t;
 
 // Because of hardware design, default when memory is inaccessible is 1 bits

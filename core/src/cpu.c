@@ -53,7 +53,7 @@
 static gb_cpu_t cpu;
 
 /*
-https://gbdev.io/pandocs/OAM_Corruption_Bug.html 
+https://gbdev.io/pandocs/OAM_Corruption_Bug.html
 
 This is needed to trigger a check for the quirky OAM corruption bug. A lot of the cases are handled naturally by
 actual bus / read writes, but it's necessary to use a separate interface in my design for situations triggering
@@ -155,7 +155,7 @@ memory_write_rr_nn (void)
 /* ############################################################################
 ###############################################################################
 
-        Load helpers and instructions                  
+        Load helpers and instructions
 
 ###############################################################################
 ############################################################################ */
@@ -171,7 +171,7 @@ load_HL_SPel(void)
 static void
 load_HL_SPeh(void)
 {
-    cpu.H = (cpu.SP + *(int8_t *) &cpu.Z) >> 8; 
+    cpu.H = (cpu.SP + *(int8_t *) &cpu.Z) >> 8;
 }
 
 // Load 8-bit value of Z to register A
@@ -258,7 +258,7 @@ static const instruction_t LD_r_HL = {
     .cycle_count = 2
 };
 
-/* 
+/*
 Load from register (indirect HL)
 LD (HL) r: load to the address specified by HL, data from the 8-bit register r
 */
@@ -460,7 +460,7 @@ static const instruction_t LD_HL_SPe = {
 /* ############################################################################
 ###############################################################################
 
-        Add and add with carry helpers and instructions                  
+        Add and add with carry helpers and instructions
 
 ###############################################################################
 ############################################################################ */
@@ -468,7 +468,7 @@ static const instruction_t LD_HL_SPe = {
 /*
 Helper for adding two 8-bit values and setting both carry flags
 */
-static uint8_t 
+static uint8_t
 add_and_set_carry_flags(uint8_t val1, uint8_t val2, uint8_t carry)
 {
     uint8_t nibble = (val1 & MASK_NIBBLE_L) + (val2 & MASK_NIBBLE_L) + carry;
@@ -515,7 +515,7 @@ add_rr_to_HLl()
 
 static void
 add_rr_to_HLh()
-{ 
+{
     uint8_t reg16 = IR_REG_16;
     if (reg16 == MASK_REG_SPorAF)
         add_to_reg(&cpu.H, cpu.SP >> 8, FLAG_C);
@@ -535,7 +535,7 @@ static const instruction_t ADD_r = {
 };
 
 /*
-Add with carry (register) 
+Add with carry (register)
 ADC r: Adds to the 8-bit A register, the carry flag and the 8-bit r register, and
 stores the result back into the A register
 */
@@ -605,7 +605,7 @@ static const instruction_t ADD_SP_e = {
 /* ############################################################################
 ###############################################################################
 
-        Subtract, subtract with carry, and compare helpers and instructions                  
+        Subtract, subtract with carry, and compare helpers and instructions
 
 ###############################################################################
 ############################################################################ */
@@ -613,7 +613,7 @@ static const instruction_t ADD_SP_e = {
 /*
 Helper for subtracting two 8-bit values and setting both carry flags
 */
-static uint8_t 
+static uint8_t
 sub_and_set_carry_flags(uint8_t val1, uint16_t val2, uint8_t carry)
 {
     if ((val1 & MASK_NIBBLE_L) < (val2 & MASK_NIBBLE_L) + carry) SET_H; else CLR_H;
@@ -660,7 +660,7 @@ static const instruction_t SUB_r = {
 };
 
 /*
-Subtract with carry (register) 
+Subtract with carry (register)
 SBC r: Subtracts from the 8-bit A register, the carry flag and the 8-bit r register, and stores the result back
 into the A register
 */
@@ -729,7 +729,7 @@ static const instruction_t CP_HL = {
     .cycle_count = 2
 };
 
-/* 
+/*
 Compare (immediate)
 CP n: Subtracts from the 8-bit register A, the immediate data n, and updates flags based on the result; This
 instruction is basically identical to SUB n, but doesn't update the A register
@@ -742,7 +742,7 @@ static const instruction_t CP_n = {
 /* ############################################################################
 ###############################################################################
 
-        Increment and decrement helpers and instructions                  
+        Increment and decrement helpers and instructions
 
 ###############################################################################
 ############################################################################ */
@@ -1830,7 +1830,7 @@ fetch_instruction(void)
 }
 
 /*
-disabling overlapping_fetch option is only for CPU tests that expect to examine the 
+disabling overlapping_fetch option is only for CPU tests that expect to examine the
 state of registers "between" the execution of the instruction's mcycle and next instruction's fetch
 */
 void

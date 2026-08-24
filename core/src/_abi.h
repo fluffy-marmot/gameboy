@@ -56,7 +56,7 @@ GB_ABI gb_return_t GB_test_single_instruction(int mcycles);
 
 // joypad.c
 // allow client to update states of joypad controller's 8 buttons (false means pressed button)
-GB_ABI gb_return_t GB_update_joypad(bool start, bool select, bool b,    bool a, 
+GB_ABI gb_return_t GB_update_joypad(bool start, bool select, bool b,    bool a,
                                     bool down,  bool up,     bool left, bool right);
 
 // ppu.c

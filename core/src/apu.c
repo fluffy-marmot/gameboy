@@ -115,7 +115,7 @@
 #define USEPINS_NR24                            0b11000111
 
 #define NR24_BIT_TRIGGER                        0b10000000
-#define NR24_BIT_LENGTH_ENABLE                  0b01000000 
+#define NR24_BIT_LENGTH_ENABLE                  0b01000000
 #define NR24_BITS_PERIOD_HIGH                   0b00000111
 
 #define CH2_PERIOD                              (((apu.NR24 & NR24_BITS_PERIOD_HIGH) << 8) | apu.NR23)
@@ -340,7 +340,7 @@ trigger_ch1(void)
     // length timer
     if (apu.ch1.len_timer == 0) {
         apu.ch1.len_timer = SHORT_TIMER;
-        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0 
+        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0
         tick_length_timer1();
     }
 
@@ -366,7 +366,7 @@ trigger_ch2(void)
     // length timer
     if (apu.ch2.len_timer == 0) {
         apu.ch2.len_timer = SHORT_TIMER;
-        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0 
+        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0
         tick_length_timer2();
     }
 
@@ -387,7 +387,7 @@ trigger_ch3(void)
     // long length timer
     if (apu.ch3.len_timer == 0) {
         apu.ch3.len_timer = LONG_TIMER;
-        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0 
+        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0
         tick_length_timer3();
     }
 
@@ -402,7 +402,7 @@ trigger_ch4(void)
     // length timer
     if (apu.ch4.len_timer == 0) {
         apu.ch4.len_timer = SHORT_TIMER;
-        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0 
+        // Due to quirk tested by Blargg's 03-trigger test, if clock enable bit and DIV-APU % 0
         tick_length_timer4();
     }
     // TODO ?? "except that shift being equal to 14 or 15 stops the channel from being clocked entirely."
@@ -546,7 +546,7 @@ apu_power_off(void)
     apu.ch4.len_timer = ch4_len_timer;
 }
 
-static uint8_t 
+static uint8_t
 read_apu_reg (memaddr address)
 {
     // Haven't figured out a proper way to handle waveram bus conflicts
@@ -641,7 +641,7 @@ write_apu_reg(memaddr address, uint8_t val)
         apu.NR11 = val;
         apu.ch1.len_timer = SHORT_TIMER - CH1_INIT_LENGTH_TIMER;
         break;
-    case MEMADDR_NR12:                          
+    case MEMADDR_NR12:
         apu.NR12 = val;
         if (!CH1_DAC_ENABLED) DISABLE_CH(1);
         else if (CH1_ON && (val & MASK_NIBBLE_L) == ZOMBIE_MODE_NIBBLE_VAL)
@@ -685,7 +685,7 @@ write_apu_reg(memaddr address, uint8_t val)
         apu.NR30 = val | (USEPINS_NR30 ^ 0xFF);
         if (!CH3_DAC_ENABLED) DISABLE_CH(3);
         break;
-    case MEMADDR_NR31: 
+    case MEMADDR_NR31:
         apu.NR31 = val;
         apu.ch3.len_timer = LONG_TIMER - val;
         break;
@@ -724,7 +724,7 @@ write_apu_reg(memaddr address, uint8_t val)
 static bus_interface_t bus_registers_apu =  { .read = read_apu_reg, .write = write_apu_reg };
 
 // emit samples only at rate of AUDIO_SAMPLE_RATE
-void 
+void
 cycle_tcycle_apu_emit_sample(void) {
     apu.sample_timer += AUDIO_SAMPLE_RATE;
     if (apu.sample_timer > DOTS_PER_SECOND) {
@@ -808,7 +808,7 @@ init_gameboy_apu(gb_bus_t *bus)
 ###############################################################################
 
         client-facing ABI functions
-        
+
 ###############################################################################
 ############################################################################ */
 

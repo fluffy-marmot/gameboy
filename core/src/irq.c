@@ -8,7 +8,7 @@ static gb_irq_handler_t irq_handler;
 static uint8_t stat_interrupt_line;
 
 // trigger STAT interrupts only on low to high transitions
-static void 
+static void
 update_stat_interrupt_line(uint8_t new_value)
 {
     if (!stat_interrupt_line && new_value)
@@ -42,7 +42,7 @@ call_interrupt(interrupt_t interrupt)
 
 static uint8_t
 read_interrupt_registers(memaddr address)
-{ 
+{
     switch (address) {
     case MEMADDR_IF:                            return irq_handler.IF | ~USEPINS_IF;
     case MEMADDR_IE:                            return irq_handler.IE;

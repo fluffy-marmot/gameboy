@@ -30,20 +30,20 @@ read_timers_reg(memaddr address)
     case MEMADDR_TMA:                           return timers.TMA;
     case MEMADDR_TAC:                           return timers.TAC | (USEPINS_TAC ^ 0xFF);
     default:                                    return UNREADABLE;
-    }       
+    }
 }
 static void
 write_timers_reg(memaddr address, uint8_t val)
 {
     switch (address) {
     case MEMADDR_DIV:
-        timers.DIV  = 0x0000;                     
+        timers.DIV  = 0x0000;
         break;
-    case MEMADDR_TMA:                           
-        timers.TMA  = val;                        
+    case MEMADDR_TMA:
+        timers.TMA  = val;
         break;
-    case MEMADDR_TAC:                           
-        timers.TAC  = val | (USEPINS_TAC ^ 0xFF); 
+    case MEMADDR_TAC:
+        timers.TAC  = val | (USEPINS_TAC ^ 0xFF);
         break;
     case MEMADDR_TIMA:
         if (timers.tima_overflow_cycles != 1)   timers.TIMA = val;
