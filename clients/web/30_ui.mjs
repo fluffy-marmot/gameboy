@@ -1,6 +1,6 @@
 
 import {
-    GB_set_lcd_colors, startRom, setAudioGain
+    startRom, setPalette, setAudioGain
 } from "./20_emulator.mjs";
 import {
     ROM_TREE,
@@ -105,10 +105,16 @@ document.querySelectorAll('.palette-select').forEach(el => {
             elem.classList.remove('selected');
         });
         el.classList.add('selected');
-        const clrs = Array.from(el.querySelectorAll('.palette-clr')).map(p => parseInt(p.dataset.color, 16));
-        GB_set_lcd_colors(clrs[0], clrs[1], clrs[2], clrs[3]);
+        useSelectedPalette();
     });
 });
+
+function useSelectedPalette() {
+    const palette = document.querySelector('.palette-select.selected');
+    if (!palette) return;
+    setPalette(Array.from(palette.querySelectorAll('.palette-clr')).map(p => parseInt(p.dataset.color, 16)));
+}
+useSelectedPalette();
 
 /* ############################################################################
 ###############################################################################

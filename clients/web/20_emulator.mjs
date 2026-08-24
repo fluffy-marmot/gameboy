@@ -9,6 +9,7 @@ import createGameBoyModule from "../../build/web/gameboy.mjs";
 const GB_RETURN_OK = 0;
 const GB_MODULE = await createGameBoyModule();
 
+const GB_reboot_system          = GB_MODULE.cwrap('GB_reboot_system', 'number', []);
 const GB_emulate_frame          = GB_MODULE.cwrap('GB_emulate_frame', 'number', []);
 const GB_set_post_boot_state    = GB_MODULE.cwrap('GB_set_post_boot_state', 'number', []);
 const GB_load_rom               = GB_MODULE.cwrap('GB_load_rom', 'number', ['number', 'number']);
@@ -17,8 +18,7 @@ const GB_audio_buffer_size      = GB_MODULE.cwrap('GB_audio_buffer_size', 'numbe
 const GB_audio_buffer_flush     = GB_MODULE.cwrap('GB_audio_buffer_flush', 'number', []);
 const GB_update_joypad          = GB_MODULE.cwrap('GB_update_joypad', null,
     ['boolean','boolean','boolean','boolean','boolean','boolean','boolean','boolean']);
-
-export const GB_set_lcd_colors  = GB_MODULE.cwrap('GB_set_lcd_colors', 'number',
+const GB_set_lcd_colors  = GB_MODULE.cwrap('GB_set_lcd_colors', 'number',
     ['number', 'number', 'number', 'number']);
 
 /* ############################################################################
@@ -91,6 +91,13 @@ canvas.height = LCD_HEIGHT;
 const ctx = canvas.getContext('2d');
 const imageData = ctx.createImageData(LCD_WIDTH, LCD_HEIGHT);
 
+let palette;
+
+export function setPalette(colors) {
+    palette = colors;
+    GB_set_lcd_colors(palette[0], palette[1], palette[2], palette[3]);
+}
+
 function drawFrame() {
     const src = GB_MODULE.HEAPU8.subarray(LCDPtr, LCDPtr + LCD_HEIGHT * LCD_WIDTH * 4);
     imageData.data.set(src);
@@ -109,6 +116,7 @@ async function loadRom(romPath) {
     const romBytes = new Uint8Array(await response.arrayBuffer());
     const romPtr = GB_MODULE._malloc(romBytes.length);
     GB_MODULE.HEAPU8.set(romBytes, romPtr);
+    GB_reboot_system();
     const result = GB_load_rom(romPtr, romBytes.length);
     GB_MODULE._free(romPtr);
     return result;
@@ -126,6 +134,7 @@ export async function startRom(romPath) {
         console.error(`Failed to load ROM at "${romPath}", GB_load_rom returned ${result}`);
     } else {
         GB_set_post_boot_state();
+        GB_set_lcd_colors(palette[0], palette[1], palette[2], palette[3]);
         frameTimer = 0;
         lastTimestamp = null;
         if (isPaused) {
