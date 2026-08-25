@@ -56,6 +56,10 @@ def GB_audio_buffer_flush() -> list[float] | None:
         return None
     return GB.GB_audio_buffer_flush()[:buffer_size * 2]
 
+def GB_cartridge_header_as_json() -> str:
+    json_str = GB.GB_cartridge_header_as_json()
+    return json_str.decode('ascii', errors='backslashreplace') if json_str else None
+
 def check_blank_frame() -> bool:
     return gb.ppu.contents.lcd.blank_frames > 0
 

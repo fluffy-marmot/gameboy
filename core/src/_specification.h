@@ -166,7 +166,7 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 #define CARTRIDGE_HEADER_ENTRY_POINT            0x0100              //  4 bytes
 #define CARTRIDGE_HEADER_NINTENDO_LOGO          0x0104              // 48 bytes
 #define CARTRIDGE_HEADER_TITLE                  0x0134              // 16 bytes
-#define CARTRIDGE_HEADER_MANUFACTURER_CODE      0x013F              //  4 bytes
+#define CARTRIDGE_HEADER_MANUFACTURER           0x013F              //  4 bytes
 #define CARTRIDGE_HEADER_CGB_FLAG               0x0143              //  1 byte
 #define CARTRIDGE_HEADER_NEW_LICENSEE_CODE      0x0144              //  2 bytes
 #define CARTRIDGE_HEADER_SGB_FLAG               0x0146              //  1 byte
@@ -175,9 +175,12 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 #define CARTRIDGE_HEADER_RAM_SIZE               0x0149              //  1 byte
 #define CARTRIDGE_HEADER_DESTINATION_CODE       0x014A              //  1 byte
 #define CARTRIDGE_HEADER_OLD_LICENSEE_CODE      0x014B              //  1 byte
-#define CARTRIDGE_HEADER_MASK_ROM_V_NUMBER      0x014C              //  1 byte
+#define CARTRIDGE_HEADER_ROM_VERSION            0x014C              //  1 byte
 #define CARTRIDGE_HEADER_CHECKSUM               0x014D              //  1 byte
 #define CARTRIDGE_HEADER_GLOBAL_CHECKSUM        0x014E              //  2 bytes
+
+#define ADDR_START_HEADER_CHECKSUM_RANGE        0x0134
+#define ADDR_END_HEADER_CHECKSUM_RANGE          0x014C
 
 typedef enum {
     CGB_FLAG_BACKWARDS_COMPATIBLE             = 0x80,
@@ -214,7 +217,7 @@ typedef enum {
     MBC_TYPE_MBC6                             = 0x20,
     MBC_TYPE_MBC7                             = 0x22,
     MBC_TYPE_POCKET_CAMERA                    = 0XFC,
-    MBC_TYPE_BANDAI_TAMAS                     = 0xFD,
+    MBC_TYPE_BANDAI_TAMA5                     = 0xFD,
     MBC_TYPE_HuC3                             = 0xFE,
     MBC_TYPE_HuC1                             = 0xFF
 } header_mbc_type_t;
@@ -248,7 +251,7 @@ typedef enum {
 typedef enum {
     HEADER_DESTINATION_CODE_JAPAN             = 0x00,
     HEADER_DESTINATION_CODE_OVERSEAS_ONLY     = 0X01
-} header_destination_code_t;
+} header_des_code_t;
 
 // licensee enum generated via Claude based on Pandocs list
 // https://gbdev.io/pandocs/The_Cartridge_Header.html#014b--old-licensee-code

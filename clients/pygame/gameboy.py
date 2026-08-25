@@ -178,6 +178,8 @@ def main() -> None:
     if GB_uses_bbram():
         load_bbram()
 
+    print(GB_cartridge_header_as_json())
+
     # call without arguments to set colors used by ppu test suites
     # GB_set_lcd_colors()
 

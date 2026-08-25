@@ -9,16 +9,17 @@ import createGameBoyModule from "../../build/web/gameboy.mjs";
 const GB_RETURN_OK = 0;
 const GB_MODULE = await createGameBoyModule();
 
-const GB_reboot_system          = GB_MODULE.cwrap('GB_reboot_system', 'number', []);
-const GB_emulate_frame          = GB_MODULE.cwrap('GB_emulate_frame', 'number', []);
-const GB_set_post_boot_state    = GB_MODULE.cwrap('GB_set_post_boot_state', 'number', []);
-const GB_load_rom               = GB_MODULE.cwrap('GB_load_rom', 'number', ['number', 'number']);
-const GB_get_lcd                = GB_MODULE.cwrap('GB_get_lcd', 'number', []);
-const GB_audio_buffer_size      = GB_MODULE.cwrap('GB_audio_buffer_size', 'number', []);
-const GB_audio_buffer_flush     = GB_MODULE.cwrap('GB_audio_buffer_flush', 'number', []);
-const GB_update_joypad          = GB_MODULE.cwrap('GB_update_joypad', null,
+const GB_reboot_system              = GB_MODULE.cwrap('GB_reboot_system', 'number', []);
+const GB_emulate_frame              = GB_MODULE.cwrap('GB_emulate_frame', 'number', []);
+const GB_set_post_boot_state        = GB_MODULE.cwrap('GB_set_post_boot_state', 'number', []);
+const GB_load_rom                   = GB_MODULE.cwrap('GB_load_rom', 'number', ['number', 'number']);
+const GB_cartridge_header_as_json   = GB_MODULE.cwrap('GB_cartridge_header_as_json', 'string', []);
+const GB_get_lcd                    = GB_MODULE.cwrap('GB_get_lcd', 'number', []);
+const GB_audio_buffer_size          = GB_MODULE.cwrap('GB_audio_buffer_size', 'number', []);
+const GB_audio_buffer_flush         = GB_MODULE.cwrap('GB_audio_buffer_flush', 'number', []);
+const GB_update_joypad              = GB_MODULE.cwrap('GB_update_joypad', null,
     ['boolean','boolean','boolean','boolean','boolean','boolean','boolean','boolean']);
-const GB_set_lcd_colors  = GB_MODULE.cwrap('GB_set_lcd_colors', 'number',
+const GB_set_lcd_colors             = GB_MODULE.cwrap('GB_set_lcd_colors', 'number',
     ['number', 'number', 'number', 'number']);
 
 /* ############################################################################
@@ -135,6 +136,7 @@ export async function startRom(romPath) {
     } else {
         GB_set_post_boot_state();
         GB_set_lcd_colors(palette[0], palette[1], palette[2], palette[3]);
+        console.log(GB_cartridge_header_as_json());
         frameTimer = 0;
         lastTimestamp = null;
         if (isPaused) {

@@ -14,6 +14,7 @@ typedef enum {
     GB_RETURN_OPCODE_BREAKPOINT_TIMEOUT,
     GB_ERROR,
     GB_ERROR_MALLOC,
+    GB_ERROR_JSON_FORMAT,
     GB_ERROR_BOOTROM_SIZE,
     GB_ERROR_ROM_SIZE_MINIMUM,
     GB_ERROR_ROM_SIZE_HEADER_MISMATCH,
@@ -43,6 +44,8 @@ GB_ABI gb_return_t GB_load_rom(const uint8_t *data, size_t size);
 GB_ABI bool        GB_uses_bbram(void);
 GB_ABI bool        GB_uses_rtc(void);
 GB_ABI bool        GB_uses_rumble(void);
+
+GB_ABI char*       GB_cartridge_header_as_json(void);
 
 GB_ABI gb_return_t GB_load_bbram(const uint8_t *data, size_t size);
 

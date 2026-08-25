@@ -25,6 +25,7 @@ uint16 = ct.c_uint16
 uint32 = ct.c_uint32
 pointer = ct.POINTER
 void_p = ct.c_void_p
+char_p = ct.c_char_p
 struct = ct.Structure
 function = ct.CFUNCTYPE
 size_t = ct.c_size_t
@@ -54,11 +55,33 @@ class cart_data_t(struct):
         ("ram_size", size_t),
     ]
 
+class cartridge_header_readable_t(struct):
+    _fields_ = [
+        ("logo_ok", char_p),
+        ("title", char_p),
+        ("manufacturer", char_p),
+        ("cgb_flag", char_p),
+        ("licensee", char_p),
+        ("sgb_flag", char_p),
+        ("mbc_type", char_p),
+        ("rom_size", char_p),
+        ("ram_size", char_p),
+        ("destination", char_p),
+        ("checksum_ok", char_p),
+        ("global_checksum_ok", char_p),
+    ]
+
 class cartridge_header(struct):
     _fields_ = [
         ("mbc_type", c_int),
         ("rom_size_id", c_int),
         ("ram_size_id", c_int),
+        ("cgb_flag", c_int),
+        ("sgb_flag", c_int),
+        ("destination_code", c_int),
+        ("rom_version", uint8),
+        ("readable", cartridge_header_readable_t),
+        ("json", char_p),
     ]
 
 class instruction(struct):
@@ -458,6 +481,9 @@ GB.GB_uses_rtc.restype = c_bool
 
 GB.GB_uses_rumble.argtypes = []
 GB.GB_uses_rumble.restype = c_bool
+
+GB.GB_cartridge_header_as_json.argtypes = []
+GB.GB_cartridge_header_as_json.restype = char_p
 
 GB.GB_serial_buffer_flush.argtypes = []
 GB.GB_serial_buffer_flush.restype = pointer(uint8)
