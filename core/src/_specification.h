@@ -156,6 +156,10 @@ Maps: : 32x32 tile indices        = 1024 KiB / map */
 /* -- Various conventions relating to cartridge header and MBC -- */
 //////////////////////////////////////////////////////
 
+#define CARTRIDGE_HEADER_NINTENDO_LOGO_START    0x0104
+#define CARTRIDGE_HEADER_NINTENDO_LOGO_END      0x0133
+
+#define CARTRIDGE_HEADER_TITLE                  0x0134
 #define CARTRIDGE_HEADER_MBC_TYPE               0x0147
 #define CARTRIDGE_HEADER_ROM_SIZE               0x0148
 #define CARTRIDGE_HEADER_RAM_SIZE               0x0149

@@ -17,10 +17,12 @@ from common.python.common import *
 BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 SCALE = 6.5
 KEYBINDS = {}
+LCD_RECT = pygame.Rect(0, 0, LCD_WIDTH, LCD_HEIGHT)
 
 CONFIG = configparser.ConfigParser()
 CONFIG.read(BASE_DIR / "clients" / "pygame" / "config.ini")
 
+scale_buffer = {"surface": None, "dest_rect": None}
 romname = None
 cartridge_hash = None
 
@@ -104,13 +106,17 @@ def save_bbram() -> None:
         print(f"Saved BBRAM contents to {filename.name}")
 
 
-def window_draw(screen: pygame.Surface, render_surface: pygame.Surface) -> None:
-    screen.fill((0, 0, 0))
-    dest_rect = render_surface.get_rect().fit(screen.get_rect())
+def window_draw(screen: pygame.Surface) -> None:
+    dest_rect = LCD_RECT.fit(screen.get_rect())
+    if dest_rect != scale_buffer["dest_rect"]:
+        screen.fill((0, 0, 0))
+        scale_buffer["dest_rect"] = dest_rect
+        scale_buffer["surface"] = pygame.Surface(dest_rect.size).convert(screen)
+
     if not check_blank_frame():
-        render_surface = pygame.image.frombuffer(LCD, (LCD_WIDTH, LCD_HEIGHT), "RGBA")
-        scaled = pygame.transform.scale(render_surface, dest_rect.size)
-        screen.blit(scaled, dest_rect)
+        render_surface = pygame.image.frombuffer(LCD, (LCD_WIDTH, LCD_HEIGHT), "RGBA").convert(screen)
+        pygame.transform.scale(render_surface, dest_rect.size, scale_buffer["surface"])
+        screen.blit(scale_buffer["surface"], dest_rect)
     else:
         screen.fill(color="white", rect=dest_rect)
 
@@ -162,7 +168,6 @@ class AudioPlayer:
 def main() -> None:
     pygame.init()
     screen = pygame.display.set_mode((LCD_WIDTH * SCALE, LCD_HEIGHT * SCALE))
-    render_surface = pygame.Surface((LCD_WIDTH, LCD_HEIGHT))
 
     audio_player = AudioPlayer(AUDIO_SAMPLE_RATE)
 
@@ -213,7 +218,7 @@ def main() -> None:
 
         audio_player.push(GB_audio_buffer_flush())
 
-        window_draw(screen, render_surface)
+        window_draw(screen)
         pygame.display.flip()
 
         frame += 1
