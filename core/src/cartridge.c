@@ -4,6 +4,12 @@
 #include "mbcs/mbc3.h"
 #include "mbcs/mbc5.h"
 
+const uint8_t NINTENDO_LOGO[] = {
+    0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
+    0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
+    0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
+};
+
 static gb_cartridge_t cartridge;
 
 static uint8_t
@@ -31,27 +37,6 @@ write_cart(memaddr address, uint8_t val)
 }
 
 static bus_interface_t bus_cart =  { .read = read_cart, .write = write_cart };
-
-// TODO move this to mbc1 file, it seems specific to that
-static uint8_t
-rom_bank_bitmask(void)
-{
-    switch (cartridge.header.rom_size_id) {
-    case MBC_ROM_SIZE_32KiB:                    return 0b00000001;
-    case MBC_ROM_SIZE_64KiB:                    return 0b00000011;
-    case MBC_ROM_SIZE_128KiB:                   return 0b00000111;
-    case MBC_ROM_SIZE_256KiB:                   return 0b00001111;
-    case MBC_ROM_SIZE_512KiB:
-    case MBC_ROM_SIZE_1MiB:
-    case MBC_ROM_SIZE_2MiB:
-    case MBC_ROM_SIZE_4MiB:
-    case MBC_ROM_SIZE_8MiB:
-    case MBC_ROM_SIZE_1152KiB:
-    case MBC_ROM_SIZE_1280KiB:
-    case MBC_ROM_SIZE_1536KiB:
-    default:                                    return 0b00011111;
-    }
-}
 
 static size_t
 reported_header_rom_size(void)
@@ -99,7 +84,7 @@ validate_header_ram_size(void)
 static gb_return_t
 select_mbc_controller(void)
 {
-    uint8_t bm = rom_bank_bitmask();
+    header_rom_size_t rom_size_id = cartridge.header.rom_size_id;
     bool use_rtc = false;
     bool use_rumble = false;
 
@@ -110,7 +95,7 @@ select_mbc_controller(void)
 
     case MBC_TYPE_MBC1:
     case MBC_TYPE_MBC1_RAM:
-    case MBC_TYPE_MBC1_BBRAM:                   init_gameboy_mbc1(&cartridge, bm);              break;
+    case MBC_TYPE_MBC1_BBRAM:                   init_gameboy_mbc1(&cartridge, rom_size_id);     break;
 
     case MBC_TYPE_MBC3_RTCLOCK:
     case MBC_TYPE_MBC3_RTCLOCK_BBRAM:           use_rtc = true;                     /* fall through */

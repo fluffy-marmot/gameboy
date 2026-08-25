@@ -15,6 +15,7 @@ export const ROM_TREE = dir({
         bart: rom(`${ROMLIB}/bart.gb`),
         drmario: rom(`${ROMLIB}/drmario.gb`),
         kirby: rom(`${ROMLIB}/kirby.gb`),
+        indy: rom(`${ROMLIB}/indy.gb`),
         metroid2: rom(`${ROMLIB}/metroid2.gb`),
         pinball: rom(`${ROMLIB}/pinball.gb`),
         pokeblue: rom(`${ROMLIB}/pokeblue.gb`),

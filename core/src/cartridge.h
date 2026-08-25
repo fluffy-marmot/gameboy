@@ -14,9 +14,9 @@ typedef struct {
 
 typedef struct {
     struct {
-        mbc_type_t     mbc_type;
-        mbc_rom_size_t rom_size_id;
-        mbc_ram_size_t ram_size_id;
+        header_mbc_type_t mbc_type;
+        header_rom_size_t rom_size_id;
+        header_ram_size_t ram_size_id;
     } header;
 
     cart_data_t data;

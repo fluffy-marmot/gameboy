@@ -13,7 +13,7 @@ typedef struct {
     cart_data_t *cart;
 } gb_mbc1_t;
 
-void init_gameboy_mbc1(gb_cartridge_t *, uint8_t);
+void init_gameboy_mbc1(gb_cartridge_t *, header_rom_size_t);
 
 #endif
 /*

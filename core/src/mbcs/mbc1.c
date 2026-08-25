@@ -81,6 +81,7 @@ read_bus_mbc1(memaddr address)
     }
     return UNREADABLE;
 }
+
 static void
 write_bus_mbc1(memaddr address, uint8_t val)
 {
@@ -106,12 +107,32 @@ write_bus_mbc1(memaddr address, uint8_t val)
 }
 static bus_interface_t bus_mbc1 = { .read = read_bus_mbc1, .write = write_bus_mbc1 };
 
+static uint8_t
+rom_bank_bitmask(header_rom_size_t rom_size_id)
+{
+    switch (rom_size_id) {
+    case MBC_ROM_SIZE_32KiB:                    return 0b00000001;
+    case MBC_ROM_SIZE_64KiB:                    return 0b00000011;
+    case MBC_ROM_SIZE_128KiB:                   return 0b00000111;
+    case MBC_ROM_SIZE_256KiB:                   return 0b00001111;
+    case MBC_ROM_SIZE_512KiB:
+    case MBC_ROM_SIZE_1MiB:
+    case MBC_ROM_SIZE_2MiB:
+    case MBC_ROM_SIZE_4MiB:
+    case MBC_ROM_SIZE_8MiB:
+    case MBC_ROM_SIZE_1152KiB:
+    case MBC_ROM_SIZE_1280KiB:
+    case MBC_ROM_SIZE_1536KiB:
+    default:                                    return 0b00011111;
+    }
+}
+
 void
-init_gameboy_mbc1(gb_cartridge_t *cartridge, uint8_t rom_bank_bitmask)
+init_gameboy_mbc1(gb_cartridge_t *cartridge, header_rom_size_t rom_size_id)
 {
     memset(&mbc1, 0, sizeof(gb_mbc1_t));
     mbc1.BANK1 = BANK1_INITIAL;
-    mbc1.rom_bank_bitmask = rom_bank_bitmask;
+    mbc1.rom_bank_bitmask = rom_bank_bitmask(rom_size_id);
     mbc1.cart = &cartridge->data;
     cartridge->mbc_bus = &bus_mbc1;
 }
