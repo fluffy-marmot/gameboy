@@ -1,11 +1,12 @@
 
 import {
-    startRom, setPalette, setAudioGain
+    startRom, setPalette, setAudioGain, setHeaderVisibility
 } from "./20_emulator.mjs";
 import {
     ROM_TREE,
     CHEVRON_ICON_SVG, PIN_ICON_SVG, PIN_FILL_ICON_SVG,
-    VOLUME_UP_SVG, VOLUME_DOWN_SVG, VOLUME_OFF_SVG, VOLUME_MUTE_SVG
+    VOLUME_UP_SVG, VOLUME_DOWN_SVG, VOLUME_OFF_SVG, VOLUME_MUTE_SVG,
+    HEADER_CARD_SVG
 } from "./40_assets.mjs";
 
 /* ############################################################################
@@ -49,17 +50,25 @@ trigger.addEventListener('mouseleave', maybeHideSidebar);
 sidebar.addEventListener('mouseenter', showSidebar);
 sidebar.addEventListener('mouseleave', maybeHideSidebar);
 
+/* Icon that shows header info when hovering mouse */
+
+const headerButton = document.getElementById('header-button');
+headerButton.innerHTML = HEADER_CARD_SVG;
+
+headerButton.addEventListener('mouseenter', () => { setHeaderVisibility(true);  });
+headerButton.addEventListener('mouseleave', () => { setHeaderVisibility(false); });
+
 /* ############################################################################
 ###############################################################################
         Volume control
 ###############################################################################
 ############################################################################ */
 
-let volume = 1.0;
-let muted = false;
-
 const volumeIcon = document.getElementById('volume-icon');
 const volumeSlider = document.getElementById('volume-slider');
+
+let volume = parseFloat(volumeSlider.value);
+let muted = false;
 
 function updateVolume() {
     volumeIcon.innerHTML = muted ? VOLUME_MUTE_SVG :
@@ -71,10 +80,7 @@ updateVolume();
 volumeIcon.addEventListener('click', (e) => {
     muted = !muted;
     volumeSlider.disabled = muted;
-    if (volumeSlider.disabled)
-        volumeSlider.value = 0.0;
-    else
-        volumeSlider.value = volume;
+    volumeSlider.value = muted ? 0.0 : volume;
 
     updateVolume();
 });

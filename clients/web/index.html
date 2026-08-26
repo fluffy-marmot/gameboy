@@ -9,11 +9,11 @@
 </head>
 <body>
 
-    <button id="sidebar-toggle" aria-pressed="false" aria-label="toggle-menu"></button>
+    <button id="sidebar-toggle" class="icon-button" aria-pressed="false" aria-label="toggle-menu"></button>
     <div id="sidebar-trigger"></div>
     <nav id="sidebar">
         <div id="sidebar-main-content">
-            Palette:
+            <details open><summary>🎨 Palette</summary>
             <div id="sidebar-palette-content">
                 <div class="palette-select selected">
                     <div class="palette-clr clr0" data-color="FFBFFFF4"></div>
@@ -40,19 +40,28 @@
                     <div class="palette-clr clr3" data-color="FF000000"></div>
                 </div>
             </div>
+            </details>
 
-            ROMs:
             <div id="sidebar-roms-content"></div>
         </div>
+
         <div id="sidebar-footer">
-            <label id="volume-control"><div id="volume-icon"></div>
-                <input id="volume-slider" type="range" min="0" max="1.0" step="0.01" value="1.0">
-            </label>
+            <div id="footer-buttons">
+                <button id="header-button" class="icon-button" aria-pressed="false" aria-label="header-info"></button>
+            </div>
+            <div id="volume-container">
+                <label id="volume-control"><div id="volume-icon"></div>
+                    <input id="volume-slider" type="range" min="0" max="1.0" step="0.01" value="1.0">
+                </label>
+            </div>
         </div>
     </nav>
 
-    <div id="canvas-container">
-        <canvas id="canvas-lcd" width="160" height="144"></canvas>
+    <div id="background-container">
+        <div id="lcd-container">
+            <canvas id="canvas-lcd" width="160" height="144"></canvas>
+            <canvas id="canvas-header" width="160" height="144"></canvas>
+        </div>
     </div>
 </body>
 </html>

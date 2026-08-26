@@ -5,6 +5,7 @@
 ############################################################################ */
 
 import createGameBoyModule from "../../build/web/gameboy.mjs";
+import { crc32 } from "./10_main.mjs";
 
 const GB_RETURN_OK = 0;
 const GB_MODULE = await createGameBoyModule();
@@ -86,10 +87,11 @@ const MAX_CATCHUP_MS = 3 * FRAME_TIME_MS;
 
 const LCDPtr = GB_get_lcd();
 
-const canvas = document.getElementById('canvas-lcd');
-canvas.width = LCD_WIDTH;
-canvas.height = LCD_HEIGHT;
-const ctx = canvas.getContext('2d');
+const canvasLcd = document.getElementById('canvas-lcd');
+export const canvasHeader = document.getElementById('canvas-header');
+canvasLcd.width = LCD_WIDTH;
+canvasLcd.height = LCD_HEIGHT;
+const ctx = canvasLcd.getContext('2d');
 const imageData = ctx.createImageData(LCD_WIDTH, LCD_HEIGHT);
 
 let palette;
@@ -120,29 +122,39 @@ async function loadRom(romPath) {
     GB_reboot_system();
     const result = GB_load_rom(romPtr, romBytes.length);
     GB_MODULE._free(romPtr);
-    return result;
+    return {'result': result, 'hash': crc32(romBytes)};
 }
 
+let showHeaderTimer = null;
 export async function startRom(romPath) {
-    let result;
+    let loadResult;
     try {
-        result = await loadRom(romPath);
+        loadResult = await loadRom(romPath);
     } catch (e) {
         console.error(`Failed to load ROM at "${romPath}":`, e);
         return;
     }
-    if (result !== GB_RETURN_OK) {
-        console.error(`Failed to load ROM at "${romPath}", GB_load_rom returned ${result}`);
+    if (loadResult.result !== GB_RETURN_OK) {
+        console.error(`Failed to load ROM at "${romPath}", GB_load_rom returned ${loadResult.result}`);
     } else {
+        const headerJson = JSON.parse(GB_cartridge_header_as_json());
+        console.log(headerJson);
+        drawHeader(headerJson, loadResult.hash);
+        setHeaderVisibility(true);
+
         GB_set_post_boot_state();
         GB_set_lcd_colors(palette[0], palette[1], palette[2], palette[3]);
-        console.log(GB_cartridge_header_as_json());
+        ctx.clearRect(0, 0, LCD_WIDTH, LCD_HEIGHT);
         frameTimer = 0;
         lastTimestamp = null;
-        if (isPaused) {
+        isPaused = true;
+        clearTimeout(showHeaderTimer);
+        showHeaderTimer = setTimeout(() => {
             isPaused = false;
             requestAnimationFrame(loop);
-        }
+            if (!document.getElementById('header-button').matches(':hover'))
+                setHeaderVisibility(false);
+        }, 2000);
     }
 }
 
@@ -151,6 +163,54 @@ export async function startRom(romPath) {
 // if (!romName) {
 //     console.error('No ?rom=<name> query parameter');
 // } else {
+
+/* ############################################################################
+###############################################################################
+        Display cartridge header info on overlay
+###############################################################################
+############################################################################ */
+
+export function setHeaderVisibility(visible) {
+    canvasHeader.classList.toggle('visible', visible);
+}
+
+function drawHeader(headerJson, hash) {
+    const headerCtx = canvasHeader.getContext('2d');
+    const EDGE = 4;
+
+    // need to draw char by char to keep integer coordinates or the precision drifts by later chars
+    // and produces antialiasing, which isn't good for the pixelated font
+    function drawText(text, x, y) {
+        for (const ch of text) {
+            headerCtx.fillText(ch, Math.round(x), y);
+            x += headerCtx.measureText(ch).width;
+        }
+    }
+    headerCtx.font = '8px "DedicOOL"';
+    headerCtx.textBaseline = 'top';
+    headerCtx.fillStyle = 'green';
+    headerCtx.clearRect(0, 0, LCD_WIDTH, LCD_HEIGHT);
+    const byte_ralign = LCD_WIDTH - EDGE - headerCtx.measureText('0x00').width;
+    drawText(headerJson.title || '- NO TITLE -', EDGE, EDGE);
+    drawText(headerJson.mbc_type, EDGE, 12);
+    drawText(headerJson.mbc_type_id, byte_ralign, 12);
+    drawText(`CART ROM: ${headerJson.rom_size}`, EDGE, 20);
+    drawText(headerJson.rom_size_id, byte_ralign, 20);
+    drawText(`CART RAM: ${headerJson.ram_size}`, EDGE, 28);
+    drawText(headerJson.ram_size_id, byte_ralign, 28);
+    drawText(`CGB: ${headerJson.cgb_flag}`, EDGE, 44);
+    drawText(`SGB: ${headerJson.sgb_flag}`, EDGE, 52);
+    drawText(`Logo: ${headerJson.logo_ok}`, EDGE, 68);
+    drawText(`Checksum header: ${headerJson.checksum_ok}`, EDGE, 76);
+    drawText(`Checksum global: ${headerJson.global_checksum_ok}`, EDGE, 84);
+    drawText(`CRC32 Hash: ${hash}`, EDGE, 92);
+
+    drawText(`Destination: ${headerJson.destination}`, EDGE, 108);
+    drawText(`Manufacturer: ${headerJson.manufacturer || '-'}`, EDGE, 116);
+    drawText(`Licensee: ${headerJson.licensee || '-'}`, EDGE, 124);
+    drawText('ROM Version:', EDGE, 132);
+    drawText(headerJson.rom_version, byte_ralign, 132);
+}
 
 /* ############################################################################
 ###############################################################################

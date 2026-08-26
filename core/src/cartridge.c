@@ -270,7 +270,7 @@ static void
 read_cartridge_header_ram_size(void)
 {
     switch (cartridge.header.ram_size_id) {
-    case MBC_RAM_SIZE_NONE:                     cartridge.header.readable.ram_size = "None";    break;
+    case MBC_RAM_SIZE_NONE:                     cartridge.header.readable.ram_size = "-";    break;
     case MBC_RAM_SIZE_2KiB:                     cartridge.header.readable.ram_size = "2 KiB";   break;
     case MBC_RAM_SIZE_8KiB:                     cartridge.header.readable.ram_size = "8 KiB";   break;
     case MBC_RAM_SIZE_32KiB:                    cartridge.header.readable.ram_size = "32 KiB";  break;
@@ -383,7 +383,7 @@ read_cartridge_header(void)
     }
 
     switch (cartridge.header.sgb_flag) {
-    case SGB_FLAG_SGB_FUNCTIONS_SUPPORT:        cartridge.header.readable.sgb_flag = "Yes";        break;
+    case SGB_FLAG_SGB_FUNCTIONS_SUPPORT:        cartridge.header.readable.sgb_flag = "Supported";  break;
     default:                                    cartridge.header.readable.sgb_flag = "No";         break;
     }
 

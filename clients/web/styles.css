@@ -9,15 +9,15 @@
     --clr-border-selected: yellow;
 
     --clr-sidebar: #1a1a1a;
-    --clr-sidebar-toggle: rgba(255, 255, 255, 0.35);
-    --clr-sidebar-toggle-hover: rgba(255, 255, 255, 0.85);
+    --clr-icon-button: rgba(255, 255, 255, 0.35);
+    --clr-icon-button-hover: rgba(255, 255, 255, 0.85);
 
     --sidebar-icon-size: 32px;
     --sidebar-width: 160px;
 
-    --z-index-below-sidebar: 10;
-    --z-index-sidebar: 20;
-    --z-index-above-sidebar: 30;
+    --z-index-below: 10;
+    --z-index-middle: 20;
+    --z-index-above: 30;
 }
 
 html, body {
@@ -26,7 +26,7 @@ html, body {
     overflow: hidden;
 }
 
-#canvas-container {
+#background-container {
     display: flex;
     justify-content: center;
     height: 100vh;
@@ -34,31 +34,53 @@ html, body {
     background-color: var(--clr-background);
 }
 
-#canvas-lcd {
-    background-color: var(--clr-lcd-off);
+/* LCD stuff including header overlay canvas */
+
+#lcd-container {
+    position: relative;
     border: 2px solid var(--clr-border);
-    margin: 10px;
     aspect-ratio: var(--lcd-width) / var(--lcd-height);
     max-width: 100%;
     max-height: 100%;
     min-width: calc(var(--lcd-width) * 1px);
     min-height: calc(var(--lcd-height) * 1px);
+    margin: 10px;
+}
+
+#lcd-container canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     image-rendering: pixelated;
 }
 
+#canvas-lcd {
+    background-color: var(--clr-lcd-off);
+    z-index: var(--z-index-middle);
+}
+
+#canvas-header {
+    background-color: rgba(0, 5, 0, 0.92);
+    z-index: var(--z-index-above);
+    opacity: 0;
+    transition: opacity 0.75s ease-out;
+    pointer-events: none;
+}
+
+#canvas-header.visible {
+    opacity: 1;
+    transition: opacity 0.15s ease-in;
+}
 
 /* Sidebar stuff */
 
-#sidebar-toggle {
-    position: fixed;
-    bottom: 4px;
-    left: 4px;
-    z-index: var(--z-index-above-sidebar);
+.icon-button {
     width: var(--sidebar-icon-size);
     height: var(--sidebar-icon-size);
     background: transparent;
     border: none;
-    color: var(--clr-sidebar-toggle);
+    color: var(--clr-icon-button);
     cursor: pointer;
     transition: color 0.15s ease-out;
     display: flex;
@@ -66,8 +88,16 @@ html, body {
     justify-content: center;
     padding: 0;
 }
-#sidebar-toggle:hover {
-    color: var(--clr-sidebar-toggle-hover);
+
+.icon-button:hover {
+    color: var(--clr-icon-button-hover);
+}
+
+#sidebar-toggle {
+    position: fixed;
+    bottom: 4px;
+    left: 4px;
+    z-index: var(--z-index-above);
 }
 
 #sidebar-trigger {
@@ -76,7 +106,7 @@ html, body {
     top: 0;
     width: var(--sidebar-width);
     height: 100%;
-    z-index: var(--z-index-below-sidebar);
+    z-index: var(--z-index-below);
 }
 
 #sidebar {
@@ -92,7 +122,7 @@ html, body {
     color: white;
     transform: translateX(-100%);
     transition: transform 0.2s ease-out;
-    z-index: var(--z-index-sidebar);
+    z-index: var(--z-index-middle);
 }
 
 #sidebar.open {
@@ -100,7 +130,7 @@ html, body {
 }
 
 #sidebar input[type="range"] {
-    accent-color: var(--clr-sidebar-toggle-hover);
+    accent-color: var(--clr-icon-button-hover);
     cursor: pointer;
 }
 
@@ -164,12 +194,20 @@ html, body {
     border: 2px solid var(--clr-border);
     padding: 0;
     color: white;
-    z-index: var(--z-index-above-sidebar);
+    z-index: var(--z-index-above);
     pointer-events: none;
     white-space: nowrap;
 }
 
 #sidebar-footer {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: start;
+    flex-direction: column;
+    min-height: var(--sidebar-icon-size);
+}
+
+#volume-container {
     flex: 0 0 auto;
     display: flex;
     justify-content: end;
