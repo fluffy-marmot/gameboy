@@ -331,10 +331,11 @@ build_cartridge_header_json_helper(char *buf, size_t maxlen)
     JSON("\"destination\": \"%s\",",            S(cartridge.header.readable.destination));
     JSON("\"checksum_ok\": \"%s\",",            S(cartridge.header.readable.checksum_ok));
     JSON("\"global_checksum_ok\": \"%s\",",     S(cartridge.header.readable.global_checksum_ok));
-    JSON("\"rom_version\": \"0x%02X\",",         cartridge.header.rom_version);
-    JSON("\"mbc_type_id\": \"0x%02X\",",         cartridge.header.mbc_type);
-    JSON("\"rom_size_id\": \"0x%02X\",",         cartridge.header.rom_size_id);
-    JSON("\"ram_size_id\": \"0x%02X\"}",         cartridge.header.ram_size_id);
+    JSON("\"rom_version\": \"0x%02X\",",          cartridge.header.rom_version);
+    JSON("\"mbc_type_id\": \"0x%02X\",",          cartridge.header.mbc_type);
+    JSON("\"rom_size_id\": \"0x%02X\",",          cartridge.header.rom_size_id);
+    JSON("\"ram_size_id\": \"0x%02X\",",          cartridge.header.ram_size_id);
+    JSON("\"bbram_numbytes\": %zu}",            GB_uses_bbram() ? cartridge.data.ram_size : 0);
 
     #undef S
     #undef BUF_PTR
@@ -401,9 +402,6 @@ read_cartridge_header(void)
     return_status = read_cartridge_header_title_and_manufacturer();
     if (return_status != GB_RETURN_OK)
         return return_status;
-    return_status = build_cartridge_header_json();
-    if (return_status != GB_RETURN_OK)
-        return return_status;
 
     return GB_RETURN_OK;
 }
@@ -428,6 +426,12 @@ init_cartridge(gb_bus_t *bus)
 
 ###############################################################################
 ############################################################################ */
+
+uint8_t*
+GB_get_cartridge_ram(void)
+{
+    return cartridge.data.ram;
+}
 
 bool
 GB_uses_rumble(void)
@@ -505,8 +509,7 @@ GB_load_rom(const uint8_t *data, size_t size)
     TRY(validate_header_rom_size(size));
     TRY(validate_header_ram_size());
     TRY(select_mbc_controller());
-
-    // printf("ROM header: %X %X %X\n", cartridge.header.mbc_type, cartridge.header.rom_size_id, cartridge.header.ram_size_id);
+    TRY(build_cartridge_header_json());
 
     #undef TRY
     return GB_RETURN_OK;

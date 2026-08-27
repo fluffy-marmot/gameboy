@@ -23,6 +23,7 @@ def GB_load_bbram(bbram_file: Path) -> None:
         GB.GB_load_bbram(buf, len(bbram_data))
 
 def gb_save_bbram(bbram_file: Path) -> None:
+    # TODO this should probably use an ABI function instead...
     bbram_data = ct.string_at(gb.cartridge.contents.data.ram, get_cartridge_ram_size())
     with open(bbram_file, "wb") as f:
         f.write(bbram_data)

@@ -9,7 +9,7 @@
 </head>
 <body>
 
-    <button id="sidebar-toggle" class="icon-button" aria-pressed="false" aria-label="toggle-menu"></button>
+    <button id="sidebar-toggle" class="icon-button" aria-pressed="false" aria-label="Toggle Sidebar"></button>
     <div id="sidebar-trigger"></div>
     <nav id="sidebar">
         <div id="sidebar-main-content">
@@ -42,12 +42,19 @@
             </div>
             </details>
 
-            <div id="sidebar-roms-content"></div>
+            <div id="sidebar-roms-content">
+            <details id="library-user" class="main-node" open><summary>💾 My ROMs</summary></details>
+            <details id="library-server" class="main-node" open><summary>📦 Server ROMs</summary></details>
+            <details id="library-tests" class="main-node"><summary>📋 Test ROMs</summary></details>
+            </div>
         </div>
 
         <div id="sidebar-footer">
             <div id="footer-buttons">
-                <button id="header-button" class="icon-button" aria-pressed="false" aria-label="header-info"></button>
+                <button id="header-button" class="icon-button" aria-label="Header Info"></button>
+                <button id="upload-rom-button" class="icon-button" aria-label="Upload ROM"></button>
+
+                <input type="file" id="upload-rom-input" accept=".gb">
             </div>
             <div id="volume-container">
                 <label id="volume-control"><div id="volume-icon"></div>
@@ -60,7 +67,7 @@
     <div id="background-container">
         <div id="lcd-container">
             <canvas id="canvas-lcd" width="160" height="144"></canvas>
-            <canvas id="canvas-header" width="160" height="144"></canvas>
+            <canvas id="canvas-header" class="visible" width="160" height="144"></canvas>
         </div>
     </div>
 </body>

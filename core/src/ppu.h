@@ -41,7 +41,7 @@ typedef struct {
         uint8_t oam_index;
         uint8_t x;
         uint8_t y;
-    } obj_buffer[SCANLINE_MAX_OBJS];             // obj indexes stored by OAM scan
+    } obj_buffer[SCANLINE_MAX_OBJS];            // obj indexes stored by OAM scan
     uint8_t obj_buffer_size;
 
     /* -- holding actual LCD color data that will be drawn on the screen */

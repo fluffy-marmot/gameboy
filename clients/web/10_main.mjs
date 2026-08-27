@@ -8,7 +8,7 @@ document.fonts.add(dedicoolFont);
 
 // CRC32 algorithm by Claude
 let CRC32_TABLE;
-export function crc32(bytes) {
+export function get_crc32(bytes) {
     if (!CRC32_TABLE) {
         CRC32_TABLE = new Uint32Array(256);
         for (let n = 0; n < 256; n++) {

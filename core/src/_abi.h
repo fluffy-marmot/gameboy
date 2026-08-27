@@ -34,8 +34,8 @@ GB_ABI gb_return_t GB_load_bootrom(const uint8_t *data, size_t size);
 GB_ABI gb_return_t GB_test_memory_mode_enable(void);
 GB_ABI gb_return_t GB_test_memory_mode_disable(void);
 GB_ABI gb_return_t GB_test_memory_wipe(void);
-GB_ABI        void GB_test_memory_write(memaddr address, uint8_t value);
-GB_ABI     uint8_t GB_test_memory_read (memaddr address);
+GB_ABI void        GB_test_memory_write(memaddr address, uint8_t value);
+GB_ABI uint8_t     GB_test_memory_read (memaddr address);
 
 // cartridge.c
 // load ROM program cartridge data (abi client handles file reading)
@@ -48,6 +48,7 @@ GB_ABI bool        GB_uses_rumble(void);
 GB_ABI char*       GB_cartridge_header_as_json(void);
 
 GB_ABI gb_return_t GB_load_bbram(const uint8_t *data, size_t size);
+GB_ABI uint8_t*    GB_get_cartridge_ram(void);
 
 // emulator.c
 GB_ABI gb_return_t GB_reboot_system(void);

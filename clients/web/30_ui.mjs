@@ -1,4 +1,4 @@
-
+import * as DB from './15_persistence.mjs';
 import {
     startRom, setPalette, setAudioGain, setHeaderVisibility
 } from "./20_emulator.mjs";
@@ -6,7 +6,7 @@ import {
     ROM_TREE,
     CHEVRON_ICON_SVG, PIN_ICON_SVG, PIN_FILL_ICON_SVG,
     VOLUME_UP_SVG, VOLUME_DOWN_SVG, VOLUME_OFF_SVG, VOLUME_MUTE_SVG,
-    HEADER_CARD_SVG
+    HEADER_CARD_SVG, UPLOAD_FILE_SVG
 } from "./40_assets.mjs";
 
 /* ############################################################################
@@ -40,6 +40,7 @@ updateToggleIcon();
 toggleButton.addEventListener('click', () => {
     pinned = !pinned;
     sidebar.classList.toggle('open', pinned);
+    toggleButton.ariaPressed = pinned ? 'true' : 'false';
     updateToggleIcon();
 });
 
@@ -51,12 +52,15 @@ sidebar.addEventListener('mouseenter', showSidebar);
 sidebar.addEventListener('mouseleave', maybeHideSidebar);
 
 /* Icon that shows header info when hovering mouse */
-
 const headerButton = document.getElementById('header-button');
 headerButton.innerHTML = HEADER_CARD_SVG;
-
 headerButton.addEventListener('mouseenter', () => { setHeaderVisibility(true);  });
 headerButton.addEventListener('mouseleave', () => { setHeaderVisibility(false); });
+
+/* Upload ROM file button that triggers file input */
+const uploadRomButton = document.getElementById('upload-rom-button');
+uploadRomButton.innerHTML = UPLOAD_FILE_SVG;
+uploadRomButton.addEventListener('click', () => { uploadRomInput.click(); });
 
 /* ############################################################################
 ###############################################################################
@@ -128,6 +132,26 @@ useSelectedPalette();
 ###############################################################################
 ############################################################################ */
 
+// On load, Build ROM Tree of available user, server, and test ROMs
+const libraryUser = document.querySelector('#library-user');
+const libraryServer = document.querySelector('#library-server');
+const libraryTests = document.querySelector('#library-tests');
+const rom_containers = { libraryServer, libraryTests };
+
+// fill in user ROMs based on contents of IndexedDB
+libraryUser.style.display = 'none';
+(await DB.loadLib()).forEach(async libEntry => {
+    if (await DB.hasRomData(libEntry.crc32)) {
+        const nodeDiv = document.createElement('div');
+        nodeDiv.classList.add('rom-leaf', 'user-rom-leaf');
+        nodeDiv.textContent = libEntry.title;
+        nodeDiv.dataset.crc32 = libEntry.crc32;
+        libraryUser.append(nodeDiv);
+        libraryUser.style.display = 'block';
+    }
+});
+
+// recursively fill in server and test ROMs into categories
 function renderRomTreeNode(name, node) {
     if (node.type == 'dir') {
         const nodeDetails = document.createElement('details');
@@ -140,25 +164,48 @@ function renderRomTreeNode(name, node) {
         return nodeDetails;
     } else {
         const nodeDiv = document.createElement('div');
-        nodeDiv.classList.add('rom-leaf');
+        nodeDiv.classList.add('rom-leaf', 'server-rom-leaf');
         nodeDiv.textContent = name;
         nodeDiv.dataset.path = node.path;
         return nodeDiv;
     }
 }
 
-// Build tree based on ROM_TREE
-const romsDiv = document.querySelector('#sidebar-roms-content');
-Object.entries(ROM_TREE.children).forEach(([name, node]) => {
-    const categoryNode = renderRomTreeNode(name, node);
-    categoryNode.style.marginLeft = 0;
-    romsDiv.append(categoryNode);
+// server and test ROM categories
+Object.entries(ROM_TREE.children).forEach(([libName, lib]) => {
+    Object.entries(lib.children).forEach(([name, node]) => {
+        rom_containers[libName].append(renderRomTreeNode(name, node));
+    });
 });
 
-romsDiv.addEventListener('click', (e) => {
+const romsDiv = document.querySelector('#sidebar-roms-content');
+romsDiv.addEventListener('click', async (e) => {
     const leaf = e.target.closest('.rom-leaf');
     if (!leaf) return;
-    startRom(leaf.dataset.path);
+    let romBytes = null;
+    if (leaf.classList.contains('server-rom-leaf')) {
+        const response = await fetch(leaf.dataset.path);
+        if (!response.ok) {
+            console.log(`Failed to fetch ROM at "${leaf.dataset.path}": ${response.status}`);
+            return;
+        }
+        romBytes = new Uint8Array(await response.arrayBuffer());
+        startRom(romBytes, true);
+    } else if (leaf.classList.contains('user-rom-leaf')) {
+        romBytes = await DB.loadRomData(leaf.dataset.crc32);
+        startRom(romBytes, false);
+    }
+});
+
+// Handle ROM file uploads
+const uploadRomInput = document.querySelector('#upload-rom-input');
+uploadRomInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const romBytes = new Uint8Array(await file.arrayBuffer());
+    // TODO add a new leaf for the rom...? need proper ordering
+    startRom(romBytes, false);
 });
 
 /* ############################################################################

@@ -5,16 +5,19 @@
 ############################################################################ */
 
 import createGameBoyModule from "../../build/web/gameboy.mjs";
-import { crc32 } from "./10_main.mjs";
+import { get_crc32 } from "./10_main.mjs";
+import * as DB from './15_persistence.mjs';
 
 const GB_RETURN_OK = 0;
 const GB_MODULE = await createGameBoyModule();
 
 const GB_reboot_system              = GB_MODULE.cwrap('GB_reboot_system', 'number', []);
-const GB_emulate_frame              = GB_MODULE.cwrap('GB_emulate_frame', 'number', []);
 const GB_set_post_boot_state        = GB_MODULE.cwrap('GB_set_post_boot_state', 'number', []);
 const GB_load_rom                   = GB_MODULE.cwrap('GB_load_rom', 'number', ['number', 'number']);
+const GB_load_bbram                 = GB_MODULE.cwrap('GB_load_bbram', 'number', ['number', 'number']);
+const GB_get_cartridge_ram          = GB_MODULE.cwrap('GB_get_cartridge_ram', 'number', []);
 const GB_cartridge_header_as_json   = GB_MODULE.cwrap('GB_cartridge_header_as_json', 'string', []);
+const GB_emulate_frame              = GB_MODULE.cwrap('GB_emulate_frame', 'number', []);
 const GB_get_lcd                    = GB_MODULE.cwrap('GB_get_lcd', 'number', []);
 const GB_audio_buffer_size          = GB_MODULE.cwrap('GB_audio_buffer_size', 'number', []);
 const GB_audio_buffer_flush         = GB_MODULE.cwrap('GB_audio_buffer_flush', 'number', []);
@@ -62,6 +65,9 @@ function loop(timestamp) {
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         isPaused = true;
+        // do a last bbram save when user switches tabs, in case they don't come back
+        if (currentRom.bbramSize > 0 && currentRom.bbramPtr)
+            saveBbram().catch(console.error);
         if (audioCtx)
             audioCtx.suspend();
     } else {
@@ -113,49 +119,86 @@ function drawFrame() {
 ###############################################################################
 ############################################################################ */
 
-async function loadRom(romPath) {
-    const response = await fetch(romPath);
-    if (!response.ok) throw new Error(`Failed to fetch ROM at "${romPath}": ${response.status}`);
-    const romBytes = new Uint8Array(await response.arrayBuffer());
-    const romPtr = GB_MODULE._malloc(romBytes.length);
-    GB_MODULE.HEAPU8.set(romBytes, romPtr);
-    GB_reboot_system();
-    const result = GB_load_rom(romPtr, romBytes.length);
-    GB_MODULE._free(romPtr);
-    return {'result': result, 'hash': crc32(romBytes)};
-}
-
+let currentRom = {};
 let showHeaderTimer = null;
-export async function startRom(romPath) {
+let saveBbramInterval = null;
+const BBRAM_SAVE_INTERVAL = 10000;
+
+export async function startRom(romBytes, serverRom) {
+    // cleanup of previous program state
+    currentRom = { crc32: '', title: '', server: false, bbramSize: 0, bbramPtr: null };
+    clearInterval(saveBbramInterval);
+    GB_reboot_system();
+
     let loadResult;
+    let crc32;
     try {
-        loadResult = await loadRom(romPath);
+        const romPtr = GB_MODULE._malloc(romBytes.length);
+        GB_MODULE.HEAPU8.set(romBytes, romPtr);
+        loadResult = GB_load_rom(romPtr, romBytes.length);
+        GB_MODULE._free(romPtr);
+        crc32 = get_crc32(romBytes);
     } catch (e) {
-        console.error(`Failed to load ROM at "${romPath}":`, e);
+        console.error('Failed to load ROM', e);
         return;
     }
-    if (loadResult.result !== GB_RETURN_OK) {
-        console.error(`Failed to load ROM at "${romPath}", GB_load_rom returned ${loadResult.result}`);
-    } else {
-        const headerJson = JSON.parse(GB_cartridge_header_as_json());
-        console.log(headerJson);
-        drawHeader(headerJson, loadResult.hash);
-        setHeaderVisibility(true);
-
-        GB_set_post_boot_state();
-        GB_set_lcd_colors(palette[0], palette[1], palette[2], palette[3]);
-        ctx.clearRect(0, 0, LCD_WIDTH, LCD_HEIGHT);
-        frameTimer = 0;
-        lastTimestamp = null;
-        isPaused = true;
-        clearTimeout(showHeaderTimer);
-        showHeaderTimer = setTimeout(() => {
-            isPaused = false;
-            requestAnimationFrame(loop);
-            if (!document.getElementById('header-button').matches(':hover'))
-                setHeaderVisibility(false);
-        }, 2000);
+    if (loadResult !== GB_RETURN_OK) {
+        console.error(`Failed to load ROM with CRC32 hash "${crc32}", GB_load_rom returned ${loadResult}`);
+        return;
     }
+    const headerJson = JSON.parse(GB_cartridge_header_as_json());
+    const bbramSize = headerJson.bbram_numbytes;
+    drawHeader(headerJson, crc32);
+    setHeaderVisibility(true);
+    currentRom = { crc32, title: headerJson.title, server: serverRom, bbramSize };
+
+    // Update IndexedDB lib as needed
+    if (await DB.hasLibEntry(crc32))
+        await DB.updateLibEntryLastPlayed(crc32);
+    else
+        await DB.saveLibEntry(crc32, headerJson, romBytes.length, bbramSize);
+
+    if (!serverRom && !(await DB.hasRomData(crc32)))
+        await DB.saveRomData(crc32, romBytes);
+
+    if (bbramSize > 0) {
+        if (await DB.hasBbramData(crc32)) {
+            console.log(`loading existing BBRAM data for cartridge ${crc32}`);
+            const bbramData = await DB.loadBbramData(crc32);
+            if (bbramData.length == bbramSize) {
+                const bbramPtr = GB_MODULE._malloc(bbramSize);
+                GB_MODULE.HEAPU8.set(bbramData, bbramPtr);
+                GB_load_bbram(bbramPtr, bbramSize);
+                GB_MODULE._free(bbramPtr);
+            } else
+                console.error(`Saved BBRAM size mismatch ${bbramData.length} vs ${bbramSize}, skipping load`);
+        }
+        currentRom.bbramPtr = GB_get_cartridge_ram();
+        saveBbramInterval = setInterval( () => {
+            if (!isPaused) saveBbram().catch(console.error);
+        }, BBRAM_SAVE_INTERVAL);
+    }
+
+    GB_set_post_boot_state();
+    GB_set_lcd_colors(palette[0], palette[1], palette[2], palette[3]);
+
+    ctx.clearRect(0, 0, LCD_WIDTH, LCD_HEIGHT);
+    frameTimer = 0;
+    lastTimestamp = null;
+    isPaused = true;
+
+    clearTimeout(showHeaderTimer);
+    showHeaderTimer = setTimeout(() => {
+        isPaused = false;
+        requestAnimationFrame(loop);
+        if (!document.getElementById('header-button').matches(':hover'))
+            setHeaderVisibility(false);
+    }, 2000);
+}
+
+async function saveBbram() {
+    await DB.saveBbramData(currentRom.crc32,
+        GB_MODULE.HEAPU8.subarray(currentRom.bbramPtr, currentRom.bbramPtr + currentRom.bbramSize));
 }
 
 // TODO: alternate way to load rom via query param, for direct links?
@@ -171,10 +214,11 @@ export async function startRom(romPath) {
 ############################################################################ */
 
 export function setHeaderVisibility(visible) {
-    canvasHeader.classList.toggle('visible', visible);
+    if (currentRom.crc32)
+        canvasHeader.classList.toggle('visible', visible);
 }
 
-function drawHeader(headerJson, hash) {
+function drawHeader(headerJson, crc32) {
     const headerCtx = canvasHeader.getContext('2d');
     const EDGE = 4;
 
@@ -203,7 +247,7 @@ function drawHeader(headerJson, hash) {
     drawText(`Logo: ${headerJson.logo_ok}`, EDGE, 68);
     drawText(`Checksum header: ${headerJson.checksum_ok}`, EDGE, 76);
     drawText(`Checksum global: ${headerJson.global_checksum_ok}`, EDGE, 84);
-    drawText(`CRC32 Hash: ${hash}`, EDGE, 92);
+    drawText(`CRC32 Hash: ${crc32}`, EDGE, 92);
 
     drawText(`Destination: ${headerJson.destination}`, EDGE, 108);
     drawText(`Manufacturer: ${headerJson.manufacturer || '-'}`, EDGE, 116);
