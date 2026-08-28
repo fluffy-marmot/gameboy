@@ -96,7 +96,8 @@ const MAX_CATCHUP_MS = 3 * FRAME_TIME_MS;
 const LCDPtr = GB_get_lcd();
 
 const canvasLcd = document.getElementById('canvas-lcd');
-export const canvasHeader = document.getElementById('canvas-header');
+export const canvasHeader = document.querySelector('.canvas-header');
+export const canvasInfo = document.querySelector('.canvas-info');
 canvasLcd.width = LCD_WIDTH;
 canvasLcd.height = LCD_HEIGHT;
 const ctx = canvasLcd.getContext('2d');
@@ -216,23 +217,29 @@ async function saveBbram() {
 ############################################################################ */
 
 export function setHeaderVisibility(visible) {
-    if (!currentRom.crc32 && visible)
+    if (!currentRom.crc32)
         return;
     canvasHeader.classList.toggle('visible', visible);
+}
+
+
+
+// need to draw char by char to keep integer coordinates or the precision drifts by later chars
+// and produces antialiasing, which isn't good for the pixelated font
+function drawTextHelper(ctx, text, x, y) {
+    y = Math.round(y);
+    for (const ch of text) {
+        ctx.fillText(ch, Math.round(x), y);
+            x += ctx.measureText(ch).width;
+    }
 }
 
 function drawHeader(headerJson, crc32) {
     const headerCtx = canvasHeader.getContext('2d');
     const EDGE = 4;
 
-    // need to draw char by char to keep integer coordinates or the precision drifts by later chars
-    // and produces antialiasing, which isn't good for the pixelated font
-    function drawText(text, x, y) {
-        for (const ch of text) {
-            headerCtx.fillText(ch, Math.round(x), y);
-            x += headerCtx.measureText(ch).width;
-        }
-    }
+    const drawText = (text, x, y) => drawTextHelper(headerCtx, text, x, y);
+
     headerCtx.font = '8px "DedicOOL"';
     headerCtx.textBaseline = 'top';
     headerCtx.fillStyle = 'green';
@@ -265,31 +272,69 @@ function drawHeader(headerJson, crc32) {
 ###############################################################################
 ############################################################################ */
 
-const keyState = {
-    start: false, select: false, b: false, a: false,
-    down: false, up: false, left: false, right: false,
-};
+let keyState
+let keyMap;
+let keyEditMode = false;
+let keyEditControl;
 
-const KEYMAP = {
-    'Enter': 'start',
-    'Space': 'select',
-    'KeyA': 'b',
-    'KeyS': 'a',
-    'KeyK': 'down',
-    'KeyI': 'up',
-    'KeyJ': 'left',
-    'KeyL': 'right',
-};
+export function updateKeyBindings() {
+    keyState = {
+        start: false, select: false, b: false, a: false,
+        down: false, up: false, left: false, right: false,
+    };
+    keyMap = {};
+    for (const [control, keyBind] of Object.entries(DB.settings.joypad)) {
+        if (keyBind)
+            keyMap[keyBind] = control;
+        document.querySelector(`.joypad-row[data-control="${control}"] .joypad-key-pill`).textContent = keyBind;
+    }
+}
+updateKeyBindings();
+
+document.querySelectorAll('.joypad-update').forEach(button => {
+    button.addEventListener('click', (e) => {
+        keyEditMode = true;
+        keyEditControl = button.closest('.joypad-row').dataset.control;
+        canvasInfo.classList.add('visible');
+
+        const infoCtx = canvasInfo.getContext('2d');
+        const drawCenterText = (text, y) => {
+            drawTextHelper(infoCtx, text, (LCD_WIDTH - infoCtx.measureText(text).width) / 2, y);
+        }
+        infoCtx.font = '8px "DedicOOL"';
+        infoCtx.fillStyle = 'green';
+        infoCtx.clearRect(0, 0, LCD_WIDTH, LCD_HEIGHT);
+
+        drawCenterText('Press new key for', LCD_HEIGHT / 3);
+        infoCtx.font = '24px "DedicOOL"';
+        drawCenterText(keyEditControl, LCD_HEIGHT * 2 / 3);
+    });
+});
 
 window.addEventListener('keydown', (e) => {
-    const button = KEYMAP[e.code];
-    if (button) {
-        keyState[button] = true;
+    if (keyEditMode) {
         e.preventDefault();
+        if (e.code !== 'Escape') {
+            for (const [control, keyBind] of Object.entries(DB.settings.joypad)) {
+            if (keyBind == e.code)
+                DB.settings.joypad[control] = null;
+            }
+            DB.settings.joypad[keyEditControl] = e.code;
+            DB.updateSetting('joypad', DB.settings.joypad);
+            updateKeyBindings();
+        }
+        canvasInfo.classList.remove('visible');
+        keyEditMode = false;
+    } else {
+        const button = keyMap[e.code];
+        if (button) {
+            keyState[button] = true;
+            e.preventDefault();
+        }
     }
 });
 window.addEventListener('keyup', (e) => {
-    const button = KEYMAP[e.code];
+    const button = keyMap[e.code];
     if (button) {
         keyState[button] = false;
         e.preventDefault();

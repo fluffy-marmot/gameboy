@@ -13,6 +13,7 @@
     <div id="sidebar-trigger"></div>
     <nav id="sidebar">
         <div id="sidebar-main-content">
+
             <details id="section-palette" open><summary>🎨 Palette</summary>
             <div id="sidebar-palette-content">
                 <div class="palette-select selected">
@@ -38,6 +39,51 @@
                     <div id="custom-clr1" class="palette-clr clr1"></div>
                     <div id="custom-clr2" class="palette-clr clr2"></div>
                     <div id="custom-clr3" class="palette-clr clr3"></div>
+                </div>
+            </div>
+
+            </details>
+            <details id="section-joypad"><summary>🕹️ Joypad</summary>
+            <div id="sidebar-joypad-content">
+                <div class="joypad-row" data-control="up">
+                    <span class="joypad-label">Up</span>
+                    <span class="joypad-key"><span class="joypad-key-pill"></span></span>
+                    <button class="icon-button joypad-update" aria-label="Edit Input"></button>
+                </div>
+                <div class="joypad-row" data-control="down">
+                    <span class="joypad-label">Down</span>
+                    <span class="joypad-key"><span class="joypad-key-pill"></span></span>
+                    <button class="icon-button joypad-update" aria-label="Edit Input"></button>
+                </div>
+                <div class="joypad-row" data-control="left">
+                    <span class="joypad-label">Left</span>
+                    <span class="joypad-key"><span class="joypad-key-pill"></span></span>
+                    <button class="icon-button joypad-update" aria-label="Edit Input"></button>
+                </div>
+                <div class="joypad-row" data-control="right">
+                    <span class="joypad-label">Right</span>
+                    <span class="joypad-key"><span class="joypad-key-pill"></span></span>
+                    <button class="icon-button joypad-update" aria-label="Edit Input"></button>
+                </div>
+                <div class="joypad-row" data-control="a">
+                    <span class="joypad-label">A</span>
+                    <span class="joypad-key"><span class="joypad-key-pill"></span></span>
+                    <button class="icon-button joypad-update" aria-label="Edit Input"></button>
+                </div>
+                <div class="joypad-row" data-control="b">
+                    <span class="joypad-label">B</span>
+                    <span class="joypad-key"><span class="joypad-key-pill"></span></span>
+                    <button class="icon-button joypad-update" aria-label="Edit Input"></button>
+                </div>
+                <div class="joypad-row" data-control="start">
+                    <span class="joypad-label">Start</span>
+                    <span class="joypad-key"><span class="joypad-key-pill"></span></span>
+                    <button class="icon-button joypad-update" aria-label="Edit Input"></button>
+                </div>
+                <div class="joypad-row" data-control="select">
+                    <span class="joypad-label">Select</span>
+                    <span class="joypad-key"><span class="joypad-key-pill"></span></span>
+                    <button class="icon-button joypad-update" aria-label="Edit Input"></button>
                 </div>
             </div>
             </details>
@@ -67,7 +113,8 @@
     <div id="background-container">
         <div id="lcd-container">
             <canvas id="canvas-lcd" width="160" height="144"></canvas>
-            <canvas id="canvas-header" class="visible" width="160" height="144"></canvas>
+            <canvas class="canvas-header lcd-overlay visible" width="160" height="144"></canvas>
+            <canvas class="canvas-info lcd-overlay" width="160" height="144"></canvas>
         </div>
     </div>
 </body>

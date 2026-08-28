@@ -15,9 +15,20 @@ const DEFAULT_SETTINGS = {
     customPalette: [0xFFFFFF, 0xFFFF00, 0xFF00FF, 0x000000],
     sectionOpen: {
         'section-palette': true,
+        'section-joypad': false,
         'section-lib-user': true,
         'section-lib-server': true,
         'section-lib-tests': false
+    },
+    joypad: {
+        start: 'Enter',
+        select: 'Space',
+        a: 'KeyS',
+        b: 'KeyA',
+        up: 'KeyI',
+        down: 'KeyK',
+        left: 'KeyJ',
+        right: 'KeyL'
     }
 };
 

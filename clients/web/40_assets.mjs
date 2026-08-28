@@ -259,6 +259,7 @@ export const ROM_TREE = dir({
 
 const ICON_REG = 32;
 const ICON_SML = 24;
+const ICON_TINY = 12;
 
 export const CHEVRON_ICON_SVG = `
 <svg xmlns="http://www.w3.org/2000/svg" width="${ICON_REG}" height="${ICON_REG}" fill="currentColor"
@@ -326,4 +327,12 @@ export const UPLOAD_FILE_SVG = `
 viewBox="0 0 16 16"><path d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1
 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z"/><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2
 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/></svg>
+`
+export const PENCIL_EDIT_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="${ICON_TINY}" height="${ICON_TINY}" fill="currentColor"
+viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707
+0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0
+.316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0
+2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1
+.5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
 `

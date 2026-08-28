@@ -5,6 +5,7 @@ import {
 import {
     ROM_TREE,
     CHEVRON_ICON_SVG, PIN_ICON_SVG, PIN_FILL_ICON_SVG,
+    PENCIL_EDIT_SVG,
     VOLUME_UP_SVG, VOLUME_DOWN_SVG, VOLUME_OFF_SVG, VOLUME_MUTE_SVG,
     HEADER_CARD_SVG, UPLOAD_FILE_SVG
 } from "./40_assets.mjs";
@@ -98,6 +99,16 @@ volumeSlider.addEventListener('input', (e) => {
 
 volumeSlider.addEventListener('change', (e) => {
     DB.updateSetting('volume', volume);
+});
+
+/* ############################################################################
+###############################################################################
+        Joypad Controls Editing
+###############################################################################
+############################################################################ */
+
+document.querySelectorAll('.joypad-update').forEach(el => {
+    el.innerHTML = PENCIL_EDIT_SVG;
 });
 
 /* ############################################################################
