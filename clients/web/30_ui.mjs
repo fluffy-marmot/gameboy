@@ -15,8 +15,6 @@ import {
 ###############################################################################
 ############################################################################ */
 
-let pinned = false;
-
 const toggleButton = document.getElementById('sidebar-toggle');
 const sidebar = document.getElementById('sidebar');
 const trigger = document.getElementById('sidebar-trigger');
@@ -26,21 +24,20 @@ function showSidebar() {
     updateToggleIcon();
 }
 function maybeHideSidebar() {
-    if (!pinned) {
+    if (!DB.settings.pinned) {
         sidebar.classList.remove('open');
         updateToggleIcon();
     }
 }
 function updateToggleIcon() {
-    toggleButton.innerHTML =
-        pinned ? PIN_FILL_ICON_SVG : sidebar.classList.contains('open') ? PIN_ICON_SVG : CHEVRON_ICON_SVG;
+    toggleButton.innerHTML = DB.settings.pinned ?
+        PIN_FILL_ICON_SVG : (sidebar.classList.contains('open') ? PIN_ICON_SVG : CHEVRON_ICON_SVG);
+    toggleButton.ariaPressed = DB.settings.pinned ? 'true' : 'false';
 }
-updateToggleIcon();
 
 toggleButton.addEventListener('click', () => {
-    pinned = !pinned;
-    sidebar.classList.toggle('open', pinned);
-    toggleButton.ariaPressed = pinned ? 'true' : 'false';
+    DB.updateSetting('pinned', !DB.settings.pinned);
+    sidebar.classList.toggle('open', DB.settings.pinned);
     updateToggleIcon();
 });
 
@@ -50,6 +47,11 @@ trigger.addEventListener('mouseenter', showSidebar);
 trigger.addEventListener('mouseleave', maybeHideSidebar);
 sidebar.addEventListener('mouseenter', showSidebar);
 sidebar.addEventListener('mouseleave', maybeHideSidebar);
+
+// for initial look, based on current settings
+if (DB.settings.pinned)
+    showSidebar();
+updateToggleIcon()
 
 /* Icon that shows header info when hovering mouse */
 const headerButton = document.getElementById('header-button');
@@ -71,27 +73,31 @@ uploadRomButton.addEventListener('click', () => { uploadRomInput.click(); });
 const volumeIcon = document.getElementById('volume-icon');
 const volumeSlider = document.getElementById('volume-slider');
 
-let volume = parseFloat(volumeSlider.value);
-let muted = false;
+// keep this value separate from DB.settings becasuse slider input event can spam rapid changes
+let volume = DB.settings.volume;
+volumeSlider.value = DB.settings.muted ? 0.0 : volume;
 
 function updateVolume() {
-    volumeIcon.innerHTML = muted ? VOLUME_MUTE_SVG :
-    volume < 0.05 ? VOLUME_OFF_SVG : volume < 0.6 ? VOLUME_DOWN_SVG : VOLUME_UP_SVG;
-    setAudioGain(muted ? 0.0 : volume);
+    volumeSlider.disabled = DB.settings.muted;
+    volumeIcon.innerHTML = DB.settings.muted ? VOLUME_MUTE_SVG :
+        volume < 0.05 ? VOLUME_OFF_SVG : volume < 0.6 ? VOLUME_DOWN_SVG : VOLUME_UP_SVG;
+    setAudioGain(DB.settings.muted ? 0.0 : volume);
 }
 updateVolume();
 
 volumeIcon.addEventListener('click', (e) => {
-    muted = !muted;
-    volumeSlider.disabled = muted;
-    volumeSlider.value = muted ? 0.0 : volume;
-
+    DB.updateSetting('muted', !DB.settings.muted);
+    volumeSlider.value = DB.settings.muted ? 0.0 : volume;
     updateVolume();
 });
 
 volumeSlider.addEventListener('input', (e) => {
     volume = parseFloat(volumeSlider.value);
     updateVolume();
+});
+
+volumeSlider.addEventListener('change', (e) => {
+    DB.updateSetting('volume', volume);
 });
 
 /* ############################################################################
@@ -109,14 +115,16 @@ document.querySelectorAll('.palette-clr').forEach(el => {
     el.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
 });
 
-document.querySelectorAll('.palette-select').forEach(el => {
+document.querySelectorAll('.palette-select').forEach((el, idx) => {
     el.addEventListener('click', (e) => {
         document.querySelectorAll('.palette-select').forEach(elem => {
             elem.classList.remove('selected');
         });
         el.classList.add('selected');
         useSelectedPalette();
+        DB.updateSetting('palette', idx);
     });
+    el.classList.toggle('selected', idx == DB.settings.palette);
 });
 
 function useSelectedPalette() {

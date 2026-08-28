@@ -1,3 +1,35 @@
+
+/* ############################################################################
+###############################################################################
+LocalStorage for saving UI settings across sessions
+###############################################################################
+############################################################################ */
+
+const SETTINGS_KEY = 'gameboy-settings';
+
+const DEFAULT_SETTINGS = {
+    palette: 0,
+    customPalette: null,
+    volume: 1.0,
+    muted: false,
+    pinned: false
+};
+
+function loadSettings() {
+    let storedSettings = {};
+    try {
+        storedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) ?? {};
+    } catch {}
+    return { ...DEFAULT_SETTINGS, ...storedSettings };
+}
+
+export const settings = loadSettings();
+
+export function updateSetting(key, value) {
+    settings[key] = value;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
 /* ############################################################################
 ###############################################################################
         IndexedDB for saving ROM lib metadata, ROMs, BBRAM, bootroms
@@ -11,13 +43,13 @@ roms    : crc32, data
 bbram   : crc32, data
 bootroms: id, name, data - not added yet, but no need to update version later
 */
+const DATABASE_NAME = 'gameboy-library';
+const DATABASE_VERSION  = 1;
 
 const DB_LIBRARY  = 'library';
 const DB_ROMS     = 'roms';
 const DB_BBRAM    = 'bbram';
 const DB_BOOTROMS = 'bootroms';
-
-const DB_VERSION  = 1;
 
 function promisifyRequest(request) {
     return new Promise((resolve, reject) => {
@@ -27,7 +59,7 @@ function promisifyRequest(request) {
 }
 
 function openDb() {
-    const request = indexedDB.open('gameboy-library', DB_VERSION);
+    const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
     request.onupgradeneeded = () => {
         const db = request.result;
         db.createObjectStore(DB_LIBRARY,  { keyPath: 'crc32' });
@@ -69,17 +101,9 @@ export async function loadLib() {
     return await getAllRecords(DB_LIBRARY);
 }
 
-export async function saveLibEntry(crc32, header, romSize, bbramSize) {
-    await putRecord(DB_LIBRARY, {
-        crc32,
-        title: header.title,
-        header,
-        romSize,
-        bbramSize,
-        dateAdded: Date.now(),
-        dateLastPlayed: Date.now(),
-        dbVersion: DB_VERSION
-    });
+export async function saveLibEntry(crc32, title, header, romSize, bbramSize) {
+    await putRecord(DB_LIBRARY, { crc32, title, header, romSize, bbramSize,
+        dateAdded: Date.now(), dateLastPlayed: Date.now(), dbVersion: DATABASE_VERSION });
 }
 
 export async function loadLibEntry(crc32) {

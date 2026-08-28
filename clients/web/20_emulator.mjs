@@ -1,3 +1,6 @@
+import { get_crc32 } from "./10_main.mjs";
+import * as DB from './15_persistence.mjs';
+
 /* ############################################################################
 ###############################################################################
         WASM Bindings
@@ -5,8 +8,6 @@
 ############################################################################ */
 
 import createGameBoyModule from "../../build/web/gameboy.mjs";
-import { get_crc32 } from "./10_main.mjs";
-import * as DB from './15_persistence.mjs';
 
 const GB_RETURN_OK = 0;
 const GB_MODULE = await createGameBoyModule();
@@ -71,6 +72,7 @@ document.addEventListener('visibilitychange', () => {
         if (audioCtx)
             audioCtx.suspend();
     } else {
+        // TODO this needs a guard for whether rom is loaded?
         isPaused = false;
         lastTimestamp = null;
         requestAnimationFrame(loop);
@@ -149,14 +151,14 @@ export async function startRom(romBytes, serverRom) {
     const headerJson = JSON.parse(GB_cartridge_header_as_json());
     const bbramSize = headerJson.bbram_numbytes;
     drawHeader(headerJson, crc32);
-    setHeaderVisibility(true);
     currentRom = { crc32, title: headerJson.title, server: serverRom, bbramSize };
+    setHeaderVisibility(true);
 
     // Update IndexedDB lib as needed
     if (await DB.hasLibEntry(crc32))
         await DB.updateLibEntryLastPlayed(crc32);
     else
-        await DB.saveLibEntry(crc32, headerJson, romBytes.length, bbramSize);
+        await DB.saveLibEntry(crc32, headerJson.title, headerJson, romBytes.length, bbramSize);
 
     if (!serverRom && !(await DB.hasRomData(crc32)))
         await DB.saveRomData(crc32, romBytes);
@@ -214,8 +216,9 @@ async function saveBbram() {
 ############################################################################ */
 
 export function setHeaderVisibility(visible) {
-    if (currentRom.crc32)
-        canvasHeader.classList.toggle('visible', visible);
+    if (!currentRom.crc32 && visible)
+        return;
+    canvasHeader.classList.toggle('visible', visible);
 }
 
 function drawHeader(headerJson, crc32) {
