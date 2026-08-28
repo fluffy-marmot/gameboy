@@ -6,6 +6,16 @@ const dedicoolFont = new FontFace("DedicOOL", "url(dedicool.ttf)");
 await dedicoolFont.load();
 document.fonts.add(dedicoolFont);
 
+// need to draw char by char to keep integer coordinates or the precision drifts by later chars
+// and produces antialiasing, which isn't good for the pixelated font
+export function drawTextHelper(ctx, text, x, y) {
+    y = Math.round(y);
+    for (const ch of text) {
+        ctx.fillText(ch, Math.round(x), y);
+        x += ctx.measureText(ch).width;
+    }
+}
+
 // CRC32 algorithm by Claude
 let CRC32_TABLE;
 export function get_crc32(bytes) {

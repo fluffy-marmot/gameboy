@@ -1,5 +1,7 @@
+import { drawTextHelper } from './10_main.mjs';
 import * as DB from './15_persistence.mjs';
 import {
+    LCD_WIDTH, LCD_HEIGHT, gbJoypad,
     startRom, setPalette, setAudioGain, setHeaderVisibility
 } from "./20_emulator.mjs";
 import {
@@ -54,16 +56,26 @@ if (DB.settings.pinned)
     showSidebar();
 updateToggleIcon()
 
-/* Icon that shows header info when hovering mouse */
+// Icon that shows header info when hovering mouse
 const headerButton = document.getElementById('header-button');
 headerButton.innerHTML = HEADER_CARD_SVG;
 headerButton.addEventListener('mouseenter', () => { setHeaderVisibility(true);  });
 headerButton.addEventListener('mouseleave', () => { setHeaderVisibility(false); });
 
-/* Upload ROM file button that triggers file input */
+// Upload ROM file button that triggers file input
 const uploadRomButton = document.getElementById('upload-rom-button');
 uploadRomButton.innerHTML = UPLOAD_FILE_SVG;
 uploadRomButton.addEventListener('click', () => { uploadRomInput.click(); });
+
+// Set initial expanded / collapsed state of main sidebar sections, based on settings
+document.getElementById('sidebar-main-content').querySelectorAll(':scope > details, :scope > div > details')
+.forEach(section => {
+    section.open = DB.settings.sectionOpen[section.id];
+    section.addEventListener('toggle', (e) => {
+        DB.settings.sectionOpen[section.id] = section.open
+        DB.updateSetting('sectionOpen', DB.settings.sectionOpen);
+    });
+});
 
 /* ############################################################################
 ###############################################################################
@@ -106,6 +118,60 @@ volumeSlider.addEventListener('change', (e) => {
         Joypad Controls Editing
 ###############################################################################
 ############################################################################ */
+
+let keyEditControl;
+const canvasInfo = document.querySelector('.canvas-info');
+const infoCtx = canvasInfo.getContext('2d');
+infoCtx.fillStyle = 'green';
+
+function drawCenterText(text, y) {
+    drawTextHelper(infoCtx, text, (LCD_WIDTH - infoCtx.measureText(text).width) / 2, y);
+}
+
+function updateKeyBindings() {
+    gbJoypad.keyState = {
+        start: false, select: false, b: false, a: false,
+        down: false, up: false, left: false, right: false,
+    };
+    gbJoypad.keyMap = {};
+    for (const [control, keyBind] of Object.entries(DB.settings.joypad)) {
+        if (keyBind)
+            gbJoypad.keyMap[keyBind] = control;
+        document.querySelector(`.joypad-row[data-control="${control}"] .joypad-key-pill`).textContent = keyBind;
+    }
+}
+updateKeyBindings();
+
+document.querySelectorAll('.joypad-update').forEach(button => {
+    button.addEventListener('click', (e) => {
+        gbJoypad.keyEditMode = true;
+        keyEditControl = button.closest('.joypad-row').dataset.control;
+        canvasInfo.classList.add('visible');
+
+        infoCtx.clearRect(0, 0, LCD_WIDTH, LCD_HEIGHT);
+
+        infoCtx.font = '8px "DedicOOL"';
+        drawCenterText('Press new key for', LCD_HEIGHT / 3);
+        infoCtx.font = '24px "DedicOOL"';
+        drawCenterText(keyEditControl, LCD_HEIGHT * 2 / 3);
+    });
+});
+
+window.addEventListener('keydown', (e) => {
+    if (!gbJoypad.keyEditMode) return;
+    e.preventDefault();
+    if (e.code !== 'Escape') {
+        for (const [control, keyBind] of Object.entries(DB.settings.joypad)) {
+        if (keyBind == e.code)
+            DB.settings.joypad[control] = null;
+        }
+        DB.settings.joypad[keyEditControl] = e.code;
+        DB.updateSetting('joypad', DB.settings.joypad);
+        updateKeyBindings();
+    }
+    canvasInfo.classList.remove('visible');
+    gbJoypad.keyEditMode = false;
+});
 
 document.querySelectorAll('.joypad-update').forEach(el => {
     el.innerHTML = PENCIL_EDIT_SVG;
@@ -216,6 +282,7 @@ Object.entries(ROM_TREE.children).forEach(([libName, lib]) => {
     });
 });
 
+// launch a ROM when clicked
 const romsDiv = document.querySelector('#sidebar-roms-content');
 romsDiv.addEventListener('click', async (e) => {
     const leaf = e.target.closest('.rom-leaf');
@@ -235,24 +302,50 @@ romsDiv.addEventListener('click', async (e) => {
     }
 });
 
-// Handle ROM file uploads
+/* ############################################################################
+###############################################################################
+        ROM Uploads
+###############################################################################
+############################################################################ */
+
+async function launchRomFile(file) {
+    if (!file) return;
+    const romBytes = new Uint8Array(await file.arrayBuffer());
+    startRom(romBytes, false);
+}
+
 const uploadRomInput = document.querySelector('#upload-rom-input');
 uploadRomInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const romBytes = new Uint8Array(await file.arrayBuffer());
     // TODO add a new leaf for the rom...? need proper ordering
-    startRom(romBytes, false);
+    launchRomFile(e.target.files[0]);
 });
 
-document.getElementById('sidebar-main-content').querySelectorAll(':scope > details, :scope > div > details')
-.forEach(section => {
-    section.open = DB.settings.sectionOpen[section.id];
-    section.addEventListener('toggle', (e) => {
-        DB.settings.sectionOpen[section.id] = section.open
-        DB.updateSetting('sectionOpen', DB.settings.sectionOpen);
-    });
+// Handle drag-and-drop file uploads in same place while we're at it
+const lcdContainer = document.getElementById('lcd-container');
+
+lcdContainer.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    gbJoypad.keyEditMode = false;
+    canvasInfo.classList.add('visible');
+    infoCtx.clearRect(0, 0, LCD_WIDTH, LCD_HEIGHT);
+    infoCtx.font = '16px "DedicOOL"';
+    drawCenterText('Import ROM', LCD_HEIGHT / 2);
+    infoCtx.font = '32px "DedicOOL"';
+    drawCenterText('↑', LCD_HEIGHT * 3 / 4);
+});
+
+lcdContainer.addEventListener('dragover', (e) => {
+    e.preventDefault();
+});
+
+lcdContainer.addEventListener('dragleave', (e) => {
+    canvasInfo.classList.remove('visible');
+});
+
+lcdContainer.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    canvasInfo.classList.remove('visible');
+    launchRomFile(e.dataTransfer.files[0]);
 });
 
 /* ############################################################################

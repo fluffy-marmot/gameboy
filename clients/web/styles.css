@@ -64,6 +64,7 @@ html, body {
     width: 100%;
     height: 100%;
     image-rendering: pixelated;
+    pointer-events: none;
 }
 
 #canvas-lcd {
@@ -75,7 +76,6 @@ html, body {
     background-color: rgb(var(--clr-lcd-info-overlays) / 0.92);
     z-index: var(--z-index-above);
     opacity: 0;
-    pointer-events: none;
 }
 
 .lcd-overlay.visible {

@@ -1,4 +1,4 @@
-import { get_crc32 } from "./10_main.mjs";
+import { get_crc32, drawTextHelper } from "./10_main.mjs";
 import * as DB from './15_persistence.mjs';
 
 /* ############################################################################
@@ -50,8 +50,8 @@ function loop(timestamp) {
 
         // inverted b/c emulator interprets 0 bits as "key pressed"
         GB_update_joypad(
-            !keyState.start, !keyState.select, !keyState.b,    !keyState.a,
-            !keyState.down,  !keyState.up,     !keyState.left, !keyState.right
+            !gbJoypad.keyState.start, !gbJoypad.keyState.select, !gbJoypad.keyState.b, !gbJoypad.keyState.a,
+            !gbJoypad.keyState.down, !gbJoypad.keyState.up, !gbJoypad.keyState.left, !gbJoypad.keyState.right
         );
         GB_emulate_frame();
         drawFrame();
@@ -87,8 +87,8 @@ document.addEventListener('visibilitychange', () => {
 ###############################################################################
 ############################################################################ */
 
-const LCD_WIDTH = 160;
-const LCD_HEIGHT = 144;
+export const LCD_WIDTH = 160;
+export const LCD_HEIGHT = 144;
 
 const FRAME_TIME_MS = 1000.0 / 59.7275
 const MAX_CATCHUP_MS = 3 * FRAME_TIME_MS;
@@ -97,7 +97,6 @@ const LCDPtr = GB_get_lcd();
 
 const canvasLcd = document.getElementById('canvas-lcd');
 export const canvasHeader = document.querySelector('.canvas-header');
-export const canvasInfo = document.querySelector('.canvas-info');
 canvasLcd.width = LCD_WIDTH;
 canvasLcd.height = LCD_HEIGHT;
 const ctx = canvasLcd.getContext('2d');
@@ -204,34 +203,16 @@ async function saveBbram() {
         GB_MODULE.HEAPU8.subarray(currentRom.bbramPtr, currentRom.bbramPtr + currentRom.bbramSize));
 }
 
-// TODO: alternate way to load rom via query param, for direct links?
-// const romName = new URLSearchParams(window.location.search).get('rom');
-// if (!romName) {
-//     console.error('No ?rom=<name> query parameter');
-// } else {
-
 /* ############################################################################
 ###############################################################################
         Display cartridge header info on overlay
 ###############################################################################
 ############################################################################ */
 
-export function setHeaderVisibility(visible) {
-    if (!currentRom.crc32)
-        return;
-    canvasHeader.classList.toggle('visible', visible);
-}
-
-
-
-// need to draw char by char to keep integer coordinates or the precision drifts by later chars
-// and produces antialiasing, which isn't good for the pixelated font
-function drawTextHelper(ctx, text, x, y) {
-    y = Math.round(y);
-    for (const ch of text) {
-        ctx.fillText(ch, Math.round(x), y);
-            x += ctx.measureText(ch).width;
-    }
+export function setHeaderVisibility(intendedVisible) {
+    if (!currentRom.crc32) return;
+    if (intendedVisible && gbJoypad.keyEditMode) return;
+    canvasHeader.classList.toggle('visible', intendedVisible);
 }
 
 function drawHeader(headerJson, crc32) {
@@ -266,77 +247,32 @@ function drawHeader(headerJson, crc32) {
     drawText(headerJson.rom_version, byte_ralign, 132);
 }
 
+// TODO: alternate way to load rom via query param, for direct links?
+// const romName = new URLSearchParams(window.location.search).get('rom');
+// if (!romName) {
+//     console.error('No ?rom=<name> query parameter');
+// } else {
+
 /* ############################################################################
 ###############################################################################
         Joypad
 ###############################################################################
 ############################################################################ */
 
-let keyState
-let keyMap;
-let keyEditMode = false;
-let keyEditControl;
-
-export function updateKeyBindings() {
-    keyState = {
-        start: false, select: false, b: false, a: false,
-        down: false, up: false, left: false, right: false,
-    };
-    keyMap = {};
-    for (const [control, keyBind] of Object.entries(DB.settings.joypad)) {
-        if (keyBind)
-            keyMap[keyBind] = control;
-        document.querySelector(`.joypad-row[data-control="${control}"] .joypad-key-pill`).textContent = keyBind;
-    }
-}
-updateKeyBindings();
-
-document.querySelectorAll('.joypad-update').forEach(button => {
-    button.addEventListener('click', (e) => {
-        keyEditMode = true;
-        keyEditControl = button.closest('.joypad-row').dataset.control;
-        canvasInfo.classList.add('visible');
-
-        const infoCtx = canvasInfo.getContext('2d');
-        const drawCenterText = (text, y) => {
-            drawTextHelper(infoCtx, text, (LCD_WIDTH - infoCtx.measureText(text).width) / 2, y);
-        }
-        infoCtx.font = '8px "DedicOOL"';
-        infoCtx.fillStyle = 'green';
-        infoCtx.clearRect(0, 0, LCD_WIDTH, LCD_HEIGHT);
-
-        drawCenterText('Press new key for', LCD_HEIGHT / 3);
-        infoCtx.font = '24px "DedicOOL"';
-        drawCenterText(keyEditControl, LCD_HEIGHT * 2 / 3);
-    });
-});
+export const gbJoypad = { keyState: {}, keyMap: {}, keyEditMode: false };
 
 window.addEventListener('keydown', (e) => {
-    if (keyEditMode) {
+    if (gbJoypad.keyEditMode) return;
+    const button = gbJoypad.keyMap[e.code];
+    if (button) {
+        gbJoypad.keyState[button] = true;
         e.preventDefault();
-        if (e.code !== 'Escape') {
-            for (const [control, keyBind] of Object.entries(DB.settings.joypad)) {
-            if (keyBind == e.code)
-                DB.settings.joypad[control] = null;
-            }
-            DB.settings.joypad[keyEditControl] = e.code;
-            DB.updateSetting('joypad', DB.settings.joypad);
-            updateKeyBindings();
-        }
-        canvasInfo.classList.remove('visible');
-        keyEditMode = false;
-    } else {
-        const button = keyMap[e.code];
-        if (button) {
-            keyState[button] = true;
-            e.preventDefault();
-        }
     }
 });
 window.addEventListener('keyup', (e) => {
-    const button = keyMap[e.code];
+    const button = gbJoypad.keyMap[e.code];
     if (button) {
-        keyState[button] = false;
+        gbJoypad.keyState[button] = false;
         e.preventDefault();
     }
 });
