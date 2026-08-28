@@ -13,7 +13,7 @@
     <div id="sidebar-trigger"></div>
     <nav id="sidebar">
         <div id="sidebar-main-content">
-            <details open><summary>🎨 Palette</summary>
+            <details id="section-palette" open><summary>🎨 Palette</summary>
             <div id="sidebar-palette-content">
                 <div class="palette-select selected">
                     <div class="palette-clr clr0" data-color="FFBFFFF4"></div>
@@ -34,18 +34,18 @@
                     <div class="palette-clr clr3" data-color="FF000000"></div>
                 </div>
                 <div class="palette-select">
-                    <div class="palette-clr clr0" data-color="FFFFFFFF"></div>
-                    <div class="palette-clr clr1" data-color="FFFFFF00"></div>
-                    <div class="palette-clr clr2" data-color="FFFF00FF"></div>
-                    <div class="palette-clr clr3" data-color="FF000000"></div>
+                    <div id="custom-clr0" class="palette-clr clr0"></div>
+                    <div id="custom-clr1" class="palette-clr clr1"></div>
+                    <div id="custom-clr2" class="palette-clr clr2"></div>
+                    <div id="custom-clr3" class="palette-clr clr3"></div>
                 </div>
             </div>
             </details>
 
             <div id="sidebar-roms-content">
-            <details id="library-user" class="main-node" open><summary>💾 My ROMs</summary></details>
-            <details id="library-server" class="main-node" open><summary>📦 Server ROMs</summary></details>
-            <details id="library-tests" class="main-node"><summary>📋 Test ROMs</summary></details>
+            <details id="section-lib-user" class="main-node" open><summary>💾 My ROMs</summary></details>
+            <details id="section-lib-server" class="main-node" open><summary>📦 Server ROMs</summary></details>
+            <details id="section-lib-tests" class="main-node"><summary>📋 Test ROMs</summary></details>
             </div>
         </div>
 

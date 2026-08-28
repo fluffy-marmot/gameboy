@@ -8,11 +8,17 @@ LocalStorage for saving UI settings across sessions
 const SETTINGS_KEY = 'gameboy-settings';
 
 const DEFAULT_SETTINGS = {
-    palette: 0,
-    customPalette: null,
+    pinned: false,
     volume: 1.0,
     muted: false,
-    pinned: false
+    palette: 0,
+    customPalette: [0xFFFFFF, 0xFFFF00, 0xFF00FF, 0x000000],
+    sectionOpen: {
+        'section-palette': true,
+        'section-lib-user': true,
+        'section-lib-server': true,
+        'section-lib-tests': false
+    }
 };
 
 function loadSettings() {
@@ -20,7 +26,7 @@ function loadSettings() {
     try {
         storedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) ?? {};
     } catch {}
-    return { ...DEFAULT_SETTINGS, ...storedSettings };
+    return structuredClone({ ...DEFAULT_SETTINGS, ...storedSettings });
 }
 
 export const settings = loadSettings();

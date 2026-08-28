@@ -106,6 +106,25 @@ volumeSlider.addEventListener('change', (e) => {
 ###############################################################################
 ############################################################################ */
 
+const colorHelper = (clr) => `FF${clr.toString(16).toUpperCase().padStart(6, '0')}`;
+
+// set up the custom (4th) palette and customize it via query parameters if needed
+const params = new URLSearchParams(window.location.search);
+const customPalette = [...DB.settings.customPalette];
+let colorImported = false;
+for (let i = 0; i < 4; i++) {
+    const importedClr = parseInt(params.get(`color${i}`), 16);
+    if (!isNaN(importedClr)) {
+        colorImported = true;
+        customPalette[i] = importedClr & 0xFFFFFF;
+    }
+    document.getElementById(`custom-clr${i}`).dataset.color = colorHelper(customPalette[i]);
+}
+if (colorImported) {
+    DB.updateSetting('customPalette', customPalette);
+    DB.updateSetting('palette', 3);
+}
+
 // on page load, set colors from data attributes, the format is friendlier for other things
 document.querySelectorAll('.palette-clr').forEach(el => {
     const gb_color = parseInt(el.dataset.color, 16);
@@ -136,14 +155,14 @@ useSelectedPalette();
 
 /* ############################################################################
 ###############################################################################
-        ROM Selection Tree
+        ROM Selection Trees
 ###############################################################################
 ############################################################################ */
 
 // On load, Build ROM Tree of available user, server, and test ROMs
-const libraryUser = document.querySelector('#library-user');
-const libraryServer = document.querySelector('#library-server');
-const libraryTests = document.querySelector('#library-tests');
+const libraryUser = document.querySelector('#section-lib-user');
+const libraryServer = document.querySelector('#section-lib-server');
+const libraryTests = document.querySelector('#section-lib-tests');
 const rom_containers = { libraryServer, libraryTests };
 
 // fill in user ROMs based on contents of IndexedDB
@@ -159,7 +178,7 @@ libraryUser.style.display = 'none';
     }
 });
 
-// recursively fill in server and test ROMs into categories
+// helper for recursively filling in server and test ROMs into categories
 function renderRomTreeNode(name, node) {
     if (node.type == 'dir') {
         const nodeDetails = document.createElement('details');
@@ -214,6 +233,15 @@ uploadRomInput.addEventListener('change', async (e) => {
     const romBytes = new Uint8Array(await file.arrayBuffer());
     // TODO add a new leaf for the rom...? need proper ordering
     startRom(romBytes, false);
+});
+
+document.getElementById('sidebar-main-content').querySelectorAll(':scope > details, :scope > div > details')
+.forEach(section => {
+    section.open = DB.settings.sectionOpen[section.id];
+    section.addEventListener('toggle', (e) => {
+        DB.settings.sectionOpen[section.id] = section.open
+        DB.updateSetting('sectionOpen', DB.settings.sectionOpen);
+    });
 });
 
 /* ############################################################################
