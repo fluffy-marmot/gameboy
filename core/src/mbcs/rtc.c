@@ -53,6 +53,7 @@ write_bus_rtc(memaddr address, uint8_t val)
             memcpy(&rtc.clock_latched, &rtc.clock, sizeof(rtc_clock_t));
         }
     } else if (ADDR_RANGE(RTC_REGISTER_ACCESS_LOW, RTC_REGISTER_ACCESS_HIGH)) {
+        // TODO: seems like this shouldn't also affect the latched value, Ashiepaws guide is wrong?
         switch (rtc.selected) {
         case RTC_SELECTED_S:
             rtc.clock_latched.RTC_S = rtc.clock.RTC_S = val & USEPINS_RTC_S;

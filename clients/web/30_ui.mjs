@@ -4,13 +4,7 @@ import {
     LCD_WIDTH, LCD_HEIGHT, gbJoypad,
     startRom, setPalette, setAudioGain, setHeaderVisibility
 } from "./20_emulator.mjs";
-import {
-    ROM_TREE,
-    CHEVRON_ICON_SVG, PIN_ICON_SVG, PIN_FILL_ICON_SVG,
-    PENCIL_EDIT_SVG,
-    VOLUME_UP_SVG, VOLUME_DOWN_SVG, VOLUME_OFF_SVG, VOLUME_MUTE_SVG,
-    HEADER_CARD_SVG, UPLOAD_FILE_SVG, FULLSCREEN_SVG
-} from "./40_assets.mjs";
+import * as SVG from "./40_assets.mjs";
 
 /* ############################################################################
 ###############################################################################
@@ -36,14 +30,13 @@ function maybeHideSidebar() {
 function updateToggleIcon() {
     toggleButton.classList.toggle('fs-visible', DB.settings.pinned);
     toggleButton.innerHTML = DB.settings.pinned ?
-        PIN_FILL_ICON_SVG : (sidebar.classList.contains('open') ? PIN_ICON_SVG : CHEVRON_ICON_SVG);
+        SVG.PIN_FILL_ICON : (sidebar.classList.contains('open') ? SVG.PIN_ICON : SVG.CHEVRON_ICON);
     toggleButton.ariaPressed = DB.settings.pinned ? 'true' : 'false';
 }
 
 toggleButton.addEventListener('click', () => {
     DB.updateSetting('pinned', !DB.settings.pinned);
-    sidebar.classList.toggle('open', DB.settings.pinned);
-    updateToggleIcon();
+    showSidebar();
 });
 
 toggleButton.addEventListener('mouseenter', showSidebar);
@@ -60,23 +53,26 @@ updateToggleIcon()
 
 // Icon that shows header info when hovering mouse
 const headerButton = document.getElementById('header-button');
-headerButton.innerHTML = HEADER_CARD_SVG;
+headerButton.innerHTML = SVG.HEADER_CARD;
 headerButton.addEventListener('mouseenter', (e) => { setHeaderVisibility(true);  });
 headerButton.addEventListener('mouseleave', (e) => { setHeaderVisibility(false); });
 
 // Upload ROM file button that triggers file input
 const uploadRomButton = document.getElementById('upload-rom-button');
-uploadRomButton.innerHTML = UPLOAD_FILE_SVG;
+uploadRomButton.innerHTML = SVG.UPLOAD_FILE;
 uploadRomButton.addEventListener('click', (e) => { uploadRomInput.click(); });
 
 const fullscreenButton = document.getElementById('fullscreen-button');
-fullscreenButton.innerHTML = FULLSCREEN_SVG;
+fullscreenButton.innerHTML = SVG.FULLSCREEN;
 fullscreenButton.addEventListener('click', (e) => {
     if (document.fullscreenElement)
         document.exitFullscreen();
     else
         document.body.requestFullscreen().catch(console.error);
 });
+
+const githubButton = document.getElementById('github-button');
+githubButton.innerHTML = SVG.GITHUB;
 
 // Set initial expanded / collapsed state of main sidebar sections, based on settings
 document.getElementById('sidebar-main-content').querySelectorAll(':scope > details, :scope > div > details')
@@ -103,8 +99,8 @@ volumeSlider.value = DB.settings.muted ? 0.0 : volume;
 
 function updateVolume() {
     volumeSlider.disabled = DB.settings.muted;
-    volumeIcon.innerHTML = DB.settings.muted ? VOLUME_MUTE_SVG :
-        volume < 0.05 ? VOLUME_OFF_SVG : volume < 0.6 ? VOLUME_DOWN_SVG : VOLUME_UP_SVG;
+    volumeIcon.innerHTML = DB.settings.muted ? SVG.VOLUME_MUTE :
+        volume < 0.05 ? SVG.VOLUME_OFF : volume < 0.6 ? SVG.VOLUME_DOWN : SVG.VOLUME_UP;
     setAudioGain(DB.settings.muted ? 0.0 : volume);
 }
 updateVolume();
@@ -185,7 +181,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 document.querySelectorAll('.joypad-update').forEach(el => {
-    el.innerHTML = PENCIL_EDIT_SVG;
+    el.innerHTML = SVG.PENCIL_EDIT;
 });
 
 /* ############################################################################
@@ -266,6 +262,31 @@ libraryUser.style.display = 'none';
     }
 });
 
+const serverRoms = { libraryServer: {}, libraryTests: {} };
+async function getServerRomsManifests() {
+    // start a fetch for the tests manifest that is always used
+    const testsPromise = fetch('_roms-tests.json');
+
+    // potentially load an extra server-side library provided by a query parameter
+    // if one has ever been provided, it's also saved to persistent settings
+    if (params.has('load-library'))
+        DB.updateSetting('extraServerLibrary', params.get('load-library'));
+    if (DB.settings.extraServerLibrary) {
+        const libResponse = await fetch(DB.settings.extraServerLibrary);
+        if (!libResponse.ok)
+            console.log(`Failed to fetch ${DB.settings.extraServerLibrary} manifest: ${libResponse.status}`);
+        else
+            serverRoms.libraryServer = await libResponse.json();
+    }
+
+    const testsResponse = await testsPromise;
+    if (!testsResponse.ok)
+        console.log(`Failed to fetch test roms manifest: ${testsResponse.status}`);
+    else
+        serverRoms.libraryTests = await testsResponse.json();
+}
+await getServerRomsManifests();
+
 // helper for recursively filling in server and test ROMs into categories
 function renderRomTreeNode(name, node) {
     if (node.type == 'dir') {
@@ -287,7 +308,11 @@ function renderRomTreeNode(name, node) {
 }
 
 // server and test ROM categories
-Object.entries(ROM_TREE.children).forEach(([libName, lib]) => {
+Object.entries(serverRoms).forEach(([libName, lib]) => {
+    if (!lib.children) {
+        rom_containers[libName].style.display = 'none';
+        return;
+    }
     Object.entries(lib.children).forEach(([name, node]) => {
         rom_containers[libName].append(renderRomTreeNode(name, node));
     });

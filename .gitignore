@@ -26,3 +26,5 @@ scratchpad/
 
 # quick and dirty temporary dev-only IndexedDB inspector
 clients/web/debug_db.html
+# generated list of roms that can be loaded from server
+clients/web/*.json

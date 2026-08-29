@@ -29,7 +29,8 @@ const DEFAULT_SETTINGS = {
         down: 'KeyK',
         left: 'KeyJ',
         right: 'KeyL'
-    }
+    },
+    extraServerLibrary: null
 };
 
 function loadSettings() {
