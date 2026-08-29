@@ -249,16 +249,22 @@ const libraryServer = document.querySelector('#section-lib-server');
 const libraryTests = document.querySelector('#section-lib-tests');
 const rom_containers = { libraryServer, libraryTests };
 
+const titleCase = (str) => str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+
 // fill in user ROMs based on contents of IndexedDB
 libraryUser.style.display = 'none';
+
+function addUserLibRom(title, crc32) {
+    const nodeDiv = document.createElement('div');
+    nodeDiv.classList.add('rom-leaf', 'user-rom-leaf');
+    nodeDiv.textContent = titleCase(title);
+    nodeDiv.dataset.crc32 = crc32;
+    libraryUser.append(nodeDiv);
+    libraryUser.style.display = 'block';
+}
 (await DB.loadLib()).forEach(async libEntry => {
     if (await DB.hasRomData(libEntry.crc32)) {
-        const nodeDiv = document.createElement('div');
-        nodeDiv.classList.add('rom-leaf', 'user-rom-leaf');
-        nodeDiv.textContent = libEntry.title;
-        nodeDiv.dataset.crc32 = libEntry.crc32;
-        libraryUser.append(nodeDiv);
-        libraryUser.style.display = 'block';
+        addUserLibRom(libEntry.title, libEntry.crc32);
     }
 });
 
@@ -272,7 +278,7 @@ async function getServerRomsManifests() {
     if (params.has('load-library'))
         DB.updateSetting('extraServerLibrary', params.get('load-library'));
     if (DB.settings.extraServerLibrary) {
-        const libResponse = await fetch(DB.settings.extraServerLibrary);
+        const libResponse = await fetch(DB.settings.extraServerLibrary, { cache: 'no-cache' });
         if (!libResponse.ok)
             console.log(`Failed to fetch ${DB.settings.extraServerLibrary} manifest: ${libResponse.status}`);
         else
@@ -344,16 +350,24 @@ romsDiv.addEventListener('click', async (e) => {
 ###############################################################################
 ############################################################################ */
 
+// reject uploads above this size, no point in trying to process large files
+const MAX_ROM_SIZE = 8 * 1024 * 1024;
+
 async function launchRomFile(file) {
     if (!file) return;
+    if (file.size > MAX_ROM_SIZE) {
+        console.log(`"${file.name}": ${file.size} bytes exceeds max ROM size of ${MAX_ROM_SIZE} bytes`);
+        return;
+    }
     const romBytes = new Uint8Array(await file.arrayBuffer());
-    startRom(romBytes, false);
+    const result = await startRom(romBytes, false);
+    if (result && result.crc32 && !document.querySelector(`.user-rom-leaf[data-crc32="${result.crc32}"]`))
+        addUserLibRom(result.title, result.crc32);
 }
 
 const uploadRomInput = document.querySelector('#upload-rom-input');
 uploadRomInput.addEventListener('change', async (e) => {
-    // TODO add a new leaf for the rom...? need proper ordering
-    launchRomFile(e.target.files[0]);
+    launchRomFile(e.target.files[0]).catch(console.error);
 });
 
 // Handle drag-and-drop file uploads in same place while we're at it
@@ -381,7 +395,7 @@ lcdContainer.addEventListener('dragleave', (e) => {
 lcdContainer.addEventListener('drop', async (e) => {
     e.preventDefault();
     canvasInfo.classList.remove('visible');
-    launchRomFile(e.dataTransfer.files[0]);
+    launchRomFile(e.dataTransfer.files[0]).catch(console.error);
 });
 
 /* ############################################################################

@@ -72,10 +72,11 @@ document.addEventListener('visibilitychange', () => {
         if (audioCtx)
             audioCtx.suspend();
     } else {
-        // TODO this needs a guard for whether rom is loaded?
-        isPaused = false;
-        lastTimestamp = null;
-        requestAnimationFrame(loop);
+        if (currentRom.crc32) {
+            isPaused = false;
+            lastTimestamp = null;
+            requestAnimationFrame(loop);
+        }
         if (audioCtx)
             audioCtx.resume();
     }
@@ -196,6 +197,7 @@ export async function startRom(romBytes, serverRom) {
         if (!document.getElementById('header-button').matches(':hover'))
             setHeaderVisibility(false);
     }, 2000);
+    return { crc32, title: headerJson.title };
 }
 
 async function saveBbram() {
@@ -246,12 +248,6 @@ function drawHeader(headerJson, crc32) {
     drawText('ROM Version:', EDGE, 132);
     drawText(headerJson.rom_version, byte_ralign, 132);
 }
-
-// TODO: alternate way to load rom via query param, for direct links?
-// const romName = new URLSearchParams(window.location.search).get('rom');
-// if (!romName) {
-//     console.error('No ?rom=<name> query parameter');
-// } else {
 
 /* ############################################################################
 ###############################################################################
