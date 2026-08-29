@@ -9,7 +9,7 @@ import {
     CHEVRON_ICON_SVG, PIN_ICON_SVG, PIN_FILL_ICON_SVG,
     PENCIL_EDIT_SVG,
     VOLUME_UP_SVG, VOLUME_DOWN_SVG, VOLUME_OFF_SVG, VOLUME_MUTE_SVG,
-    HEADER_CARD_SVG, UPLOAD_FILE_SVG
+    HEADER_CARD_SVG, UPLOAD_FILE_SVG, FULLSCREEN_SVG
 } from "./40_assets.mjs";
 
 /* ############################################################################
@@ -25,6 +25,7 @@ const trigger = document.getElementById('sidebar-trigger');
 function showSidebar() {
     sidebar.classList.add('open');
     updateToggleIcon();
+    toggleButton.classList.add('fs-visible');
 }
 function maybeHideSidebar() {
     if (!DB.settings.pinned) {
@@ -33,6 +34,7 @@ function maybeHideSidebar() {
     }
 }
 function updateToggleIcon() {
+    toggleButton.classList.toggle('fs-visible', DB.settings.pinned);
     toggleButton.innerHTML = DB.settings.pinned ?
         PIN_FILL_ICON_SVG : (sidebar.classList.contains('open') ? PIN_ICON_SVG : CHEVRON_ICON_SVG);
     toggleButton.ariaPressed = DB.settings.pinned ? 'true' : 'false';
@@ -59,13 +61,22 @@ updateToggleIcon()
 // Icon that shows header info when hovering mouse
 const headerButton = document.getElementById('header-button');
 headerButton.innerHTML = HEADER_CARD_SVG;
-headerButton.addEventListener('mouseenter', () => { setHeaderVisibility(true);  });
-headerButton.addEventListener('mouseleave', () => { setHeaderVisibility(false); });
+headerButton.addEventListener('mouseenter', (e) => { setHeaderVisibility(true);  });
+headerButton.addEventListener('mouseleave', (e) => { setHeaderVisibility(false); });
 
 // Upload ROM file button that triggers file input
 const uploadRomButton = document.getElementById('upload-rom-button');
 uploadRomButton.innerHTML = UPLOAD_FILE_SVG;
-uploadRomButton.addEventListener('click', () => { uploadRomInput.click(); });
+uploadRomButton.addEventListener('click', (e) => { uploadRomInput.click(); });
+
+const fullscreenButton = document.getElementById('fullscreen-button');
+fullscreenButton.innerHTML = FULLSCREEN_SVG;
+fullscreenButton.addEventListener('click', (e) => {
+    if (document.fullscreenElement)
+        document.exitFullscreen();
+    else
+        document.body.requestFullscreen().catch(console.error);
+});
 
 // Set initial expanded / collapsed state of main sidebar sections, based on settings
 document.getElementById('sidebar-main-content').querySelectorAll(':scope > details, :scope > div > details')
