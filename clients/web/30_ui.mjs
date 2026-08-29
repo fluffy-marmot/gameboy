@@ -275,8 +275,10 @@ async function getServerRomsManifests() {
 
     // potentially load an extra server-side library provided by a query parameter
     // if one has ever been provided, it's also saved to persistent settings
-    if (params.has('load-library'))
+    const importLib = params.get('load-library');
+    if (importLib && !importLib.includes('://') && !importLib.startsWith('//'))
         DB.updateSetting('extraServerLibrary', params.get('load-library'));
+
     if (DB.settings.extraServerLibrary) {
         const libResponse = await fetch(DB.settings.extraServerLibrary, { cache: 'no-cache' });
         if (!libResponse.ok)
