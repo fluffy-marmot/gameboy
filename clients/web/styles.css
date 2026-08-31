@@ -56,6 +56,12 @@ body:fullscreen #sidebar-toggle:not(.fs-visible) {
     background-color: var(--clr-background);
 }
 
+@media (min-aspect-ratio: 7/5) {
+    #background-container {
+        margin-right: var(--sidebar-width);
+    }
+}
+
 /* for portrait mode fullscreen */
 #background-container:fullscreen #lcd-container {
     border: none;
