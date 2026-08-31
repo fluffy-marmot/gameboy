@@ -67,8 +67,15 @@ fullscreenButton.innerHTML = SVG.FULLSCREEN;
 fullscreenButton.addEventListener('click', (e) => {
     if (document.fullscreenElement)
         document.exitFullscreen();
-    else
-        document.body.requestFullscreen().catch(console.error);
+    else {
+        // hacky, but may help to fullscreen the background container for vertical screen users
+        // even if it makes the menu inaccessible, not sure this works properly but gets rid of dead space
+        // with menu hidden on the left side of the screen
+        const fullscreenTarget = window.innerHeight > window.innerWidth
+            ? document.getElementById('background-container')
+            : document.body;
+        fullscreenTarget.requestFullscreen().catch(console.error);
+    }
 });
 
 const githubButton = document.getElementById('github-button');

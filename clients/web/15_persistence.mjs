@@ -8,7 +8,7 @@ LocalStorage for saving UI settings across sessions
 const SETTINGS_KEY = 'gameboy-settings';
 
 const DEFAULT_SETTINGS = {
-    pinned: false,
+    pinned: true,
     volume: 1.0,
     muted: false,
     palette: 0,
@@ -25,10 +25,10 @@ const DEFAULT_SETTINGS = {
         select: 'Space',
         a: 'KeyS',
         b: 'KeyA',
-        up: 'KeyI',
-        down: 'KeyK',
-        left: 'KeyJ',
-        right: 'KeyL'
+        up: 'ArrowUp',
+        down: 'ArrowDown',
+        left: 'ArrowLeft',
+        right: 'ArrowRight'
     },
     extraServerLibrary: null
 };

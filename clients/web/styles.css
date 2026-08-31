@@ -5,14 +5,13 @@
 :root {
     --lcd-width: 160;
     --lcd-height: 144;
+    --lcd-area-margin: 10px;
 
     --clr-background: black;
     --clr-lcd-off: white;
     --clr-lcd-info-overlays: 0 5 0;
-
     --clr-border: darkslateblue;
     --clr-border-selected: yellow;
-
     --clr-sidebar: #1a1a1a;
     --clr-icon-button: rgba(255, 255, 255, 0.35);
     --clr-icon-button-hover: rgba(255, 255, 255, 0.85);
@@ -20,9 +19,12 @@
     --sidebar-icon-size: 32px;
     --sidebar-width: 160px;
 
-    --z-index-below: 10;
-    --z-index-middle: 20;
-    --z-index-above: 30;
+    --z-index-sidebar-below: 40;
+    --z-index-sidebar-middle: 50;
+    --z-index-sidebar-above: 60;
+
+    --z-index-lcd-middle: 20;
+    --z-index-lcd-above: 30;
 }
 
 html, body {
@@ -31,6 +33,12 @@ html, body {
     overflow: hidden;
 }
 
+body {
+    display: flex;
+    background-color: var(--clr-background);
+}
+
+/* for landscape mode fullscreen */
 body:fullscreen #lcd-container {
     border: none;
 }
@@ -39,11 +47,18 @@ body:fullscreen #sidebar-toggle:not(.fs-visible) {
 }
 
 #background-container {
+    flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     justify-content: center;
+    align-items: center;
     height: 100vh;
-    width: 100%;
     background-color: var(--clr-background);
+}
+
+/* for portrait mode fullscreen */
+#background-container:fullscreen #lcd-container {
+    border: none;
 }
 
 #upload-rom-input {
@@ -54,15 +69,19 @@ body:fullscreen #sidebar-toggle:not(.fs-visible) {
         LCD and its info overlay canvases
 ############################################################################ */
 
+
+
 #lcd-container {
     position: relative;
     border: 2px solid var(--clr-border);
+
+    box-sizing: border-box;
     aspect-ratio: var(--lcd-width) / var(--lcd-height);
-    max-width: 100%;
-    max-height: 100%;
+    width: min(100% - 2 * var(--lcd-area-margin), (100vh - 2 * var(--lcd-area-margin)) * var(--lcd-width) / var(--lcd-height));
     min-width: calc(var(--lcd-width) * 1px);
     min-height: calc(var(--lcd-height) * 1px);
-    margin: 10px;
+
+    margin: var(--lcd-area-margin);
 }
 
 #lcd-container canvas {
@@ -76,12 +95,12 @@ body:fullscreen #sidebar-toggle:not(.fs-visible) {
 
 #canvas-lcd {
     background-color: var(--clr-lcd-off);
-    z-index: var(--z-index-middle);
+    z-index: var(--z-index-lcd-middle);
 }
 
 .lcd-overlay {
     background-color: rgb(var(--clr-lcd-info-overlays) / 0.92);
-    z-index: var(--z-index-above);
+    z-index: var(--z-index-lcd-above);
     opacity: 0;
 }
 
@@ -118,19 +137,16 @@ body:fullscreen #sidebar-toggle:not(.fs-visible) {
     color: white;
     transform: translateX(-100%);
     transition: transform 0.2s ease-out;
-    z-index: var(--z-index-middle);
+    z-index: var(--z-index-sidebar-middle);
 }
 #sidebar.open {
     transform: translateX(0);
 }
 
 #sidebar-trigger {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: var(--sidebar-width);
+    flex: 0 0 var(--sidebar-width);
     height: 100%;
-    z-index: var(--z-index-below);
+    z-index: var(--z-index-sidebar-below);
 }
 
 /* Button that toggles sidebar pinned state */
@@ -138,7 +154,7 @@ body:fullscreen #sidebar-toggle:not(.fs-visible) {
     position: fixed;
     bottom: 4px;
     left: 4px;
-    z-index: var(--z-index-above);
+    z-index: var(--z-index-sidebar-above);
 }
 
 /* ############################################################################
@@ -155,6 +171,10 @@ body:fullscreen #sidebar-toggle:not(.fs-visible) {
 
 #sidebar input[type="range"] {
     accent-color: var(--clr-icon-button-hover);
+    cursor: pointer;
+}
+
+#sidebar summary {
     cursor: pointer;
 }
 
@@ -272,7 +292,7 @@ body:fullscreen #sidebar-toggle:not(.fs-visible) {
     border: 2px solid var(--clr-border);
     padding: 0;
     color: white;
-    z-index: var(--z-index-above);
+    z-index: var(--z-index-sidebar-above);
     pointer-events: none;
     white-space: nowrap;
 }
